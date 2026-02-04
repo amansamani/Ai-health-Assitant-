@@ -1,19 +1,24 @@
 const WorkoutPlan = require("../models/WorkoutPlan");
 
-// GET WORKOUT FOR USER GOAL
-const getWorkoutPlan = async (req, res) => {
+exports.getWorkouts = async (req, res) => {
   try {
-    const goal = req.user.goal;
+    const { goal, mode } = req.query;
 
-    const workouts = await WorkoutPlan.find({ goal });
+    if (!goal || !mode) {
+      return res
+        .status(400)
+        .json({ message: "goal and mode are required" });
+    }
 
-    res.json({
-      goal,
-      workouts,
-    });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+    const workouts = await WorkoutPlan.find({ goal, mode })
+      .sort({ day: 1 });
+  
+
+    res.status(200).json(workouts);
+  } catch (err) {
+    console.error("Get workouts error:", err);
+    res.status(500).json({ message: "Failed to fetch workouts" });
   }
+  
 };
 
-module.exports = { getWorkoutPlan };

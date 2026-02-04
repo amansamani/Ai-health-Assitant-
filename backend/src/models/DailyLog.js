@@ -9,22 +9,25 @@ const dailyLogSchema = new mongoose.Schema(
     },
     date: {
       type: Date,
-      default: () => new Date().setHours(0, 0, 0, 0),
+      required: true,
     },
     steps: {
       type: Number,
       default: 0,
     },
     water: {
-      type: Number, // in liters
+      type: Number, // liters
       default: 0,
     },
     sleep: {
-      type: Number, // in hours
+      type: Number, // hours
       default: 0,
     },
   },
   { timestamps: true }
 );
+
+// 🔥 VERY IMPORTANT: one log per user per day
+dailyLogSchema.index({ user: 1, date: 1 }, { unique: true });
 
 module.exports = mongoose.model("DailyLog", dailyLogSchema);

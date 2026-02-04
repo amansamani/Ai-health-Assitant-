@@ -19,7 +19,7 @@ app.use(express.json());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
-app.use("/api/workout", workoutRoutes);
+app.use("/api/workouts", workoutRoutes);
 app.use("/api/track", trackingRoutes);
 
 

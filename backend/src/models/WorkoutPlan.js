@@ -7,15 +7,41 @@ const workoutPlanSchema = new mongoose.Schema(
       enum: ["bulk", "lean", "fit"],
       required: true,
     },
-    day: {
+
+    mode: {
       type: String,
+      enum: ["equipment", "bodyweight"],
       required: true,
     },
+
+    day: {
+      type: Number, // Day 1, 2, 3...
+      required: true,
+    },
+
+    title: {
+      type: String, // e.g. "Full Body", "Leg Day"
+      required: true,
+    },
+
     exercises: [
       {
-        name: String,
-        sets: Number,
-        reps: String,
+        name: {
+          type: String,
+          required: true,
+        },
+        sets: {
+          type: Number,
+          required: true,
+        },
+        reps: {
+          type: String,
+          required: true,
+        },
+        imageKey: {
+          type: String,
+          required: true,
+        },
       },
     ],
   },

@@ -1,9 +1,10 @@
 const express = require("express");
-const protect = require("../middleware/authMiddleware");
-const { getWorkoutPlan } = require("../controllers/workoutController");
-
 const router = express.Router();
 
-router.get("/plan", protect, getWorkoutPlan);
+const { getWorkouts } = require("../controllers/workoutController");
+const auth = require("../middleware/authMiddleware");
+
+// GET /api/workouts?goal=lean&mode=bodyweight
+router.get("/", auth, getWorkouts);
 
 module.exports = router;

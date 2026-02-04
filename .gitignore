@@ -1,0 +1,17 @@
+# ===== Node / JS =====
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ===== Env =====
+.env
+
+# ===== Expo / React Native =====
+.expo/
+.expo-shared/
+android/
+ios/
+
+# ===== Temp =====
+.tmp.driveupload/
