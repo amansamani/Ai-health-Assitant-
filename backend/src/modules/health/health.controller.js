@@ -14,7 +14,23 @@ exports.createOrUpdateHealthProfile = async (req, res, next) => {
     );
 
     res.status(200).json(profile);
+  } catch (err) {
+    next(err);
+  }
+};
 
+// ✅ Add this missing function
+exports.getHealthProfile = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+
+    const profile = await HealthProfile.findOne({ user: userId });
+
+    if (!profile) {
+      return res.status(404).json({ message: "Health profile not found" });
+    }
+
+    res.status(200).json(profile);
   } catch (err) {
     next(err);
   }

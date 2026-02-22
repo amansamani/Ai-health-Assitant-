@@ -250,5 +250,7 @@ function calculateNewCalories(profile, evaluation) {
 }
 
 module.exports = {
-  generateDietPlan
+  generateDietPlan,
+  evaluateWeeklyProgress,
+  calculateNewCalories
 };

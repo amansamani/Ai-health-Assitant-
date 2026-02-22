@@ -1,9 +1,7 @@
 const HealthProfile = require("../health/health.model");
 const DietPlan = require("./dietPlan.model");
-const { generateDietPlan } = require("./nutrition.service");
 const DietProgress = require("./dietProgress.model");
-const { evaluateWeeklyProgress } = require("./nutrition.service");
-const { generateDietPlan } = require("./nutrition.service");
+const { generateDietPlan, evaluateWeeklyProgress, calculateNewCalories } = require("./nutrition.service");
 
 exports.generatePlan = async (req, res, next) => {
   try {
@@ -12,27 +10,19 @@ exports.generatePlan = async (req, res, next) => {
     const profile = await HealthProfile.findOne({ user: userId });
 
     if (!profile) {
-      return res.status(400).json({
-        message: "Health profile not found"
-      });
+      return res.status(400).json({ message: "Health profile not found" });
     }
 
-    // Generate meals
     const meals = await generateDietPlan(profile);
 
-    // Deactivate old plans
     await DietPlan.updateMany(
       { user: userId, isActive: true },
       { isActive: false }
     );
 
-    // Get latest version number
-    const latestPlan = await DietPlan.findOne({ user: userId })
-      .sort({ version: -1 });
-
+    const latestPlan = await DietPlan.findOne({ user: userId }).sort({ version: -1 });
     const nextVersion = latestPlan ? latestPlan.version + 1 : 1;
 
-    // Save new plan
     const newPlan = await DietPlan.create({
       user: userId,
       version: nextVersion,
@@ -47,7 +37,6 @@ exports.generatePlan = async (req, res, next) => {
     });
 
     res.status(201).json(newPlan);
-
   } catch (err) {
     next(err);
   }
@@ -63,13 +52,10 @@ exports.getCurrentPlan = async (req, res, next) => {
     }).sort({ createdAt: -1 });
 
     if (!activePlan) {
-      return res.status(404).json({
-        message: "No active diet plan found"
-      });
+      return res.status(404).json({ message: "No active diet plan found" });
     }
 
     res.status(200).json(activePlan);
-
   } catch (err) {
     next(err);
   }
@@ -78,28 +64,15 @@ exports.getCurrentPlan = async (req, res, next) => {
 exports.logDailyDiet = async (req, res, next) => {
   try {
     const userId = req.user.id;
-
-    const {
-      date,
-      mealsCompleted,
-      caloriesConsumed,
-      weight,
-      notes
-    } = req.body;
+    const { date, mealsCompleted, caloriesConsumed, weight, notes } = req.body;
 
     const log = await DietProgress.findOneAndUpdate(
       { user: userId, date },
-      {
-        mealsCompleted,
-        caloriesConsumed,
-        weight,
-        notes
-      },
+      { mealsCompleted, caloriesConsumed, weight, notes },
       { new: true, upsert: true }
     );
 
     res.status(200).json(log);
-
   } catch (err) {
     next(err);
   }
@@ -110,19 +83,13 @@ exports.getDailyDietLog = async (req, res, next) => {
     const userId = req.user.id;
     const { date } = req.query;
 
-    const log = await DietProgress.findOne({
-      user: userId,
-      date
-    });
+    const log = await DietProgress.findOne({ user: userId, date });
 
     if (!log) {
-      return res.status(404).json({
-        message: "No log found for this date"
-      });
+      return res.status(404).json({ message: "No log found for this date" });
     }
 
     res.status(200).json(log);
-
   } catch (err) {
     next(err);
   }
@@ -134,18 +101,21 @@ exports.runWeeklyAdjustment = async (req, res, next) => {
 
     const profile = await HealthProfile.findOne({ user: userId });
 
+    if (!profile) {
+      return res.status(404).json({ message: "Health profile not found" });
+    }
+
     const evaluation = await evaluateWeeklyProgress(userId, profile);
 
     if (!evaluation.adjust) {
       return res.status(200).json(evaluation);
     }
 
+    // ✅ Using calculateNewCalories from service (uses goal + weightChange logic)
     const adaptation = calculateNewCalories(profile, evaluation);
 
     if (adaptation.change === 0) {
-      return res.status(200).json({
-        message: "No calorie adjustment needed"
-      });
+      return res.status(200).json({ message: "No calorie adjustment needed", reason: adaptation.reason });
     }
 
     profile.targetCalories = adaptation.newCalories;
@@ -158,9 +128,7 @@ exports.runWeeklyAdjustment = async (req, res, next) => {
       { isActive: false }
     );
 
-    const latestPlan = await DietPlan.findOne({ user: userId })
-      .sort({ version: -1 });
-
+    const latestPlan = await DietPlan.findOne({ user: userId }).sort({ version: -1 });
     const nextVersion = latestPlan ? latestPlan.version + 1 : 1;
 
     const newPlan = await DietPlan.create({
@@ -176,11 +144,7 @@ exports.runWeeklyAdjustment = async (req, res, next) => {
       isActive: true
     });
 
-    res.status(200).json({
-      message: "New plan generated",
-      newPlan
-    });
-
+    res.status(200).json({ message: "New plan generated", newPlan });
   } catch (err) {
     next(err);
   }
