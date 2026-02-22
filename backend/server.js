@@ -11,14 +11,6 @@ const trackingRoutes = require("./src/routes/trackingRoutes");
 
 dotenv.config();
 
-require('./src/config/db'); 
-
-// connect database
-connectDB();
-
-const scheduleWeeklyJob = require('./src/jobs/scheduleWeekly');
-scheduleWeeklyJob();
-
 const app = express();
 
 // security middleware
@@ -41,8 +33,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/workouts", workoutRoutes);
 app.use("/api/track", trackingRoutes);
-app.use("/api/health", require("./modules/health/health.routes"));
-app.use("/api/nutrition", require("./modules/nutrition/nutrition.routes"));
+app.use("/api/health", require('./src/modules/health/health.routes'));
+app.use("/api/nutrition", require('./src/modules/nutrition/nutrition.routes'));
 
 // test route
 app.get("/", (req, res) => {
@@ -55,6 +47,23 @@ app.use((req, res) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+
+// ✅ Connect DB first, then start server + scheduler
+const startServer = async () => {
+  try {
+    await connectDB();
+    
+    // Schedule weekly job AFTER db is connected
+    const scheduleWeeklyJob = require('./src/jobs/scheduleWeekly');
+    await scheduleWeeklyJob();
+
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+    });
+  } catch (err) {
+    console.error('❌ Failed to start server:', err);
+    process.exit(1);
+  }
+};
+
+startServer();
