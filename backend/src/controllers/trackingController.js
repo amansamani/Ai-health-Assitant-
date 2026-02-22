@@ -1,36 +1,20 @@
 const DailyLog = require("../models/DailyLog");
 
-/**
- * Utility: get start & end of today
- */
 const getTodayRange = () => {
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
-
   const endOfToday = new Date();
   endOfToday.setHours(23, 59, 59, 999);
-
   return { startOfToday, endOfToday };
 };
 
-/**
- * ============================
- * GET /api/track/today
- * ============================
- * Returns today's tracking data
- */
 exports.getTodayTracking = async (req, res) => {
   try {
     const { startOfToday, endOfToday } = getTodayRange();
-
     const todayLog = await DailyLog.findOne({
       user: req.user.id,
-      date: {
-        $gte: startOfToday,
-        $lte: endOfToday,
-      },
+      date: { $gte: startOfToday, $lte: endOfToday },
     });
-
     res.status(200).json(todayLog);
   } catch (err) {
     console.error("Get today error:", err);
@@ -38,36 +22,30 @@ exports.getTodayTracking = async (req, res) => {
   }
 };
 
-/**
- * ============================
- * POST /api/track/today
- * ============================
- * Creates or updates today's tracking
- */
 exports.saveTodayTracking = async (req, res) => {
   try {
     const { steps, water, sleep } = req.body;
+
+    if (steps === undefined || water === undefined || sleep === undefined) {
+      return res.status(400).json({ message: "steps, water and sleep are required" });
+    }
+
     const { startOfToday, endOfToday } = getTodayRange();
 
     let track = await DailyLog.findOne({
       user: req.user.id,
-      date: {
-        $gte: startOfToday,
-        $lte: endOfToday,
-      },
+      date: { $gte: startOfToday, $lte: endOfToday },
     });
 
     if (track) {
-      // Update existing today record
       track.steps = steps;
       track.water = water;
       track.sleep = sleep;
       await track.save();
     } else {
-      // Create new today record
       track = await DailyLog.create({
         user: req.user.id,
-        date: startOfToday, // normalized date
+        date: startOfToday,
         steps,
         water,
         sleep,
@@ -81,27 +59,16 @@ exports.saveTodayTracking = async (req, res) => {
   }
 };
 
-/**
- * ============================
- * GET /api/track/recent/:days
- * ============================
- * Returns past days ONLY (excludes today)
- */
 exports.getRecentLogs = async (req, res) => {
   try {
-    const days = Number(req.params.days || 3);
-
+    const days = Math.min(Number(req.params.days) || 3, 30);
     const { startOfToday } = getTodayRange();
-
     const fromDate = new Date(startOfToday);
     fromDate.setDate(startOfToday.getDate() - days);
 
     const logs = await DailyLog.find({
       user: req.user.id,
-      date: {
-        $gte: fromDate,
-        $lt: startOfToday, // 🔥 excludes today
-      },
+      date: { $gte: fromDate, $lt: startOfToday },
     }).sort({ date: -1 });
 
     res.status(200).json(logs);
@@ -111,44 +78,28 @@ exports.getRecentLogs = async (req, res) => {
   }
 };
 
-/**
- * ============================
- * GET /api/track/weekly
- * ============================
- * Weekly summary (includes today)
- */
 exports.getWeeklySummary = async (req, res) => {
   try {
     const { startOfToday, endOfToday } = getTodayRange();
-
     const lastWeek = new Date(startOfToday);
     lastWeek.setDate(startOfToday.getDate() - 6);
 
     const logs = await DailyLog.find({
       user: req.user.id,
-      date: {
-        $gte: lastWeek,
-        $lte: endOfToday,
-      },
+      date: { $gte: lastWeek, $lte: endOfToday },
     });
 
     if (!logs.length) {
       return res.status(200).json({ message: "No data" });
     }
 
-    let totalSteps = 0;
-    let totalWater = 0;
-    let totalSleep = 0;
-    let bestDay = null;
+    let totalSteps = 0, totalWater = 0, totalSleep = 0, bestDay = null;
 
     logs.forEach((log) => {
       totalSteps += log.steps;
       totalWater += log.water;
       totalSleep += log.sleep;
-
-      if (!bestDay || log.steps > bestDay.steps) {
-        bestDay = log;
-      }
+      if (!bestDay || log.steps > bestDay.steps) bestDay = log;
     });
 
     res.status(200).json({
