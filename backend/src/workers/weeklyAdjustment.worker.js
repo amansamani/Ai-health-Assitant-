@@ -1,20 +1,27 @@
-const { Worker } = require("bullmq");
-const connection = require("../config/redis");
-const runWeeklyAdjustments = require("../services/weeklyAdjustment.service");
+const { Worker } = require('bullmq');
+const redisConnection = require('../config/redis');
+const weeklyAdjustmentService = require('../services/weeklyAdjustment.service');
 
 const worker = new Worker(
-  "weekly-adjustment",
-  async job => {
-    console.log("🔄 Running weekly adjustment job...");
-    await runWeeklyAdjustments();
+  'weeklyAdjustment',
+  async (job) => {
+    console.log(`🔄 Processing job ${job.id}:`, job.name);
+
+    switch (job.name) {
+      case 'adjustNutritionPlans':
+        await weeklyAdjustmentService.adjustAllUserPlans(job.data);
+        break;
+      default:
+        throw new Error(`Unknown job name: ${job.name}`);
+    }
   },
-  { connection }
+  {
+    connection: redisConnection,
+    concurrency: 5,
+  }
 );
 
-worker.on("completed", () => {
-  console.log("✅ Weekly job completed");
-});
+worker.on('completed', (job) => console.log(`✅ Job ${job.id} completed`));
+worker.on('failed', (job, err) => console.error(`❌ Job ${job.id} failed:`, err.message));
 
-worker.on("failed", (job, err) => {
-  console.error("❌ Weekly job failed:", err);
-});
+module.exports = worker;

@@ -1,16 +1,11 @@
-const IORedis = require("ioredis");
+const { Redis } = require('ioredis');
 
-const connection = new IORedis(process.env.REDIS_URL, {
-  maxRetriesPerRequest: null,
-  tls: process.env.NODE_ENV === "production" ? {} : undefined
+const redisConnection = new Redis(process.env.REDIS_URL, {
+  maxRetriesPerRequest: null, // REQUIRED for BullMQ
+  enableReadyCheck: false,    // Recommended for Railway
 });
 
-connection.on("connect", () => {
-  console.log("✅ Redis connected");
-});
+redisConnection.on('connect', () => console.log('✅ Redis connected'));
+redisConnection.on('error', (err) => console.error('❌ Redis error:', err));
 
-connection.on("error", (err) => {
-  console.error("❌ Redis error:", err);
-});
-
-module.exports = connection;
+module.exports = redisConnection;

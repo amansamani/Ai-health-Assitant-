@@ -1,8 +1,14 @@
-const { Queue } = require("bullmq");
-const connection = require("../config/redis");
+const { Queue } = require('bullmq');
+const redisConnection = require('../config/redis');
 
-const weeklyQueue = new Queue("weekly-adjustment", {
-  connection
+const weeklyAdjustmentQueue = new Queue('weeklyAdjustment', {
+  connection: redisConnection,
+  defaultJobOptions: {
+    attempts: 3,
+    backoff: { type: 'exponential', delay: 5000 },
+    removeOnComplete: 100,
+    removeOnFail: 200,
+  },
 });
 
-module.exports = weeklyQueue;
+module.exports = weeklyAdjustmentQueue;

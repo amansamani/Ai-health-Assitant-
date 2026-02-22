@@ -8,11 +8,16 @@ const authRoutes = require("./src/routes/authRoutes");
 const userRoutes = require("./src/routes/userRoutes");
 const workoutRoutes = require("./src/routes/workoutRoutes");
 const trackingRoutes = require("./src/routes/trackingRoutes");
-require("./src/config/redis");
+
 dotenv.config();
+
+require('./src/config/db'); 
 
 // connect database
 connectDB();
+
+const scheduleWeeklyJob = require('./src/jobs/scheduleWeekly');
+scheduleWeeklyJob();
 
 const app = express();
 
