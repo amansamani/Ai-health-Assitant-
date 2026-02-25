@@ -249,6 +249,38 @@ function calculateNewCalories(profile, evaluation) {
   };
 }
 
+function recalculateMacros(profile) {
+  const { targetCalories, weight, goal } = profile;
+
+  // 1️⃣ Protein anchor (2g per kg safe default)
+  const proteinGrams = Math.round(weight * 2);
+  const proteinCalories = proteinGrams * 4;
+
+  let carbPercent = 0.4;
+  let fatPercent = 0.3;
+
+  if (goal === "lose") {
+    carbPercent = 0.35;
+    fatPercent = 0.25;
+  }
+
+  if (goal === "gain") {
+    carbPercent = 0.5;
+    fatPercent = 0.2;
+  }
+
+  const remainingCalories = targetCalories - proteinCalories;
+
+  const carbCalories = remainingCalories * carbPercent;
+  const fatCalories = remainingCalories * fatPercent;
+
+  profile.proteinTarget = proteinGrams;
+  profile.carbTarget = Math.round(carbCalories / 4);
+  profile.fatTarget = Math.round(fatCalories / 9);
+
+  return profile;
+}
+
 module.exports = {
   generateDietPlan,
   evaluateWeeklyProgress,
