@@ -7,7 +7,7 @@ import {
   ActivityIndicator,
   Pressable,
 } from "react-native";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import API from "../services/api";
 import { useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
@@ -18,50 +18,29 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function WorkoutScreen() {
   const navigation = useNavigation();
-  const { token } = useContext(AuthContext);
+  const { token, userGoal } = useContext(AuthContext); // 👈 get goal from context
   const [workouts, setWorkouts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [mode, setMode] = useState("bodyweight");
-  const [userGoal, setUserGoal] = useState(null);
-
- useEffect(() => {
-  if (!token) return; // 🔥 WAIT FOR TOKEN
-  fetchUserGoal();
-}, [token]);
-
 
 useEffect(() => {
-  if (!token || !userGoal) return; // 🔥 WAIT FOR BOTH
-  fetchWorkouts();
-}, [mode, userGoal, token]);
-
-
-  const fetchUserGoal = async () => {
-    try {
-      const res = await API.get("/user/profile");
-      setUserGoal(res.data.goal);
-    } catch (err) {
-      console.log("Failed to fetch user goal");
-    }
-  };
+    if (!token || !userGoal) return;
+    fetchWorkouts();
+  }, [mode, userGoal, token]);
 
   const fetchWorkouts = async () => {
     try {
       setLoading(true);
       setError("");
-
-      const res = await API.get(
-        `/workouts?goal=${userGoal}&mode=${mode}`
-      );
-
+      const res = await API.get(`/workouts?goal=${userGoal}&mode=${mode}`);
       setWorkouts(res.data);
     } catch (err) {
       setError("Failed to load workouts");
     } finally {
       setLoading(false);
     }
-  };
+  }; [userGoal, mode]
 
   if (loading || !userGoal) {
     return (

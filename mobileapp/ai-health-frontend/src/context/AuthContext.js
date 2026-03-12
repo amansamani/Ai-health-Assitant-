@@ -1,50 +1,75 @@
-import { createContext, useState, useEffect } from "react";
+import { createContext, useState, useEffect, useCallback } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { setLogoutHandler } from "../services/api";
+import API from "../services/api";
 
 export const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
   const [userToken, setUserToken] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [userGoal, setUserGoal] = useState(null);
 
-  // 🔹 Load token on app start
+  const logout = useCallback(async () => {
+    console.log("🚨 logout() triggered");
+    await AsyncStorage.removeItem("token");
+    setUserToken(null);
+    setUserGoal(null);
+  }, []);
+
+  const fetchUserGoal = useCallback(async () => {
+    try {
+      const res = await API.get("/user/profile");
+      setUserGoal(res.data.goal);
+    } catch (err) {
+      // Not critical — silently fail, user goal just won't show
+      console.log("Could not fetch user goal:", err.response?.status);
+    }
+  }, []);
+
+  // login() saves token to storage and updates state.
+  // Calling setUserToken() here triggers AppNavigator to swap
+  // from AuthNavigator → MainNavigator automatically.
+  // Do NOT call fetchUserGoal() here — it races against HomeScreen mounting.
+  const login = async (token) => {
+    await AsyncStorage.setItem("token", token);
+    setUserToken(token);
+    console.log("✅ login() — userToken set, navigator will swap");
+  };
+
+  // On app restart: load token from storage, then fetch goal
   useEffect(() => {
     const loadToken = async () => {
       try {
         const token = await AsyncStorage.getItem("token");
         if (token) {
           setUserToken(token);
+          fetchUserGoal(); // safe here — only on cold app start
         }
       } catch (err) {
-        console.log("Failed to load token");
+        console.log("Failed to load token:", err);
       } finally {
         setLoading(false);
       }
     };
-
     loadToken();
-  }, []);
+    setLogoutHandler(logout);
+  }, [logout]);
 
-  // 🔹 LOGIN (THIS WAS MISSING)
-  const login = async (token) => {
-    await AsyncStorage.setItem("token", token);
-    setUserToken(token);
-  };
-
-  // 🔹 LOGOUT
-  const logout = async () => {
-    await AsyncStorage.removeItem("token");
-    setUserToken(null);
-  };
+  // ❌ REMOVED: useEffect watching userToken
+  // It was firing fetchUserGoal() immediately after login(),
+  // which raced against HomeScreen's API calls and triggered logout.
 
   return (
     <AuthContext.Provider
       value={{
         userToken,
-        token: userToken, // alias (you use `token` in screens)
-        login,            // ✅ NOW EXISTS
+        token: userToken,
+        login,
         logout,
         loading,
+        userGoal,
+        fetchUserGoal,
       }}
     >
       {children}

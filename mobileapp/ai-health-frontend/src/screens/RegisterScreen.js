@@ -1,45 +1,34 @@
 import { View, Text, TextInput, Pressable, StyleSheet } from "react-native";
-import { useState, useContext } from "react";
-import API from "../services/api";
-import { AuthContext } from "../context/AuthContext";
+import { useState } from "react";
 import { COLORS } from "../constants/theme";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function RegisterScreen({ navigation }) {
-  const { login } = useContext(AuthContext);
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [goal, setGoal] = useState("lean"); // default
-  const [loading, setLoading] = useState(false);
+  const [goal, setGoal] = useState("lean");
   const [error, setError] = useState("");
 
-  const handleRegister = async () => {
+  const handleRegister = () => {
     if (!name || !email || !password) {
       setError("All fields are required");
       return;
     }
 
-    try {
-      setLoading(true);
-      setError("");
+    const goalMap = {
+      bulk: "gain",
+      lean: "lose",
+      fit: "maintain",
+    };
 
-      const res = await API.post("/auth/register", {
-        name,
-        email,
-        password,
-      });
-
-      // backend returns token → auto login
-      login(res.data.token);
-    } catch (err) {
-  console.log("REGISTER ERROR:", err.response?.data || err.message);
-  setError(JSON.stringify(err.response?.data));
-}
- finally {
-      setLoading(false);
-    }
+    navigation.navigate("HealthProfile", {
+      name,
+      email,
+      password,
+      goal: goalMap[goal],
+    });
   };
 
   return (
@@ -99,10 +88,9 @@ export default function RegisterScreen({ navigation }) {
       <Pressable
         style={styles.button}
         onPress={handleRegister}
-        disabled={loading}
       >
         <Text style={styles.buttonText}>
-          {loading ? "Creating..." : "REGISTER"}
+          CONTINUE
         </Text>
       </Pressable>
 
@@ -120,62 +108,77 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     padding: 24,
+    backgroundColor: "#fff",
   },
+
   title: {
     fontSize: 24,
+    fontWeight: "700",
     textAlign: "center",
     marginBottom: 20,
   },
+
   input: {
     borderWidth: 1,
-    borderColor: "#ccc",
+    borderColor: "#ddd",
     padding: 12,
-    borderRadius: 6,
+    borderRadius: 8,
     marginBottom: 12,
   },
+
   label: {
     marginTop: 10,
     marginBottom: 6,
     color: "#555",
+    fontWeight: "500",
   },
+
   goalRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: 20,
   },
+
   goalBtn: {
     borderWidth: 1,
-    borderColor: COLORS.primary,
+    borderColor: "#4F46E5",
     paddingVertical: 10,
     paddingHorizontal: 14,
-    borderRadius: 6,
+    borderRadius: 8,
   },
+
   goalActive: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: "#4F46E5",
   },
+
   goalText: {
-    color: COLORS.primary,
-    fontWeight: "bold",
+    color: "#4F46E5",
+    fontWeight: "600",
   },
+
   goalTextActive: {
     color: "#fff",
   },
+
   button: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: "#4F46E5",
     padding: 14,
-    borderRadius: 6,
+    borderRadius: 8,
     alignItems: "center",
   },
+
   buttonText: {
     color: "#fff",
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: "700",
   },
+
   loginText: {
     marginTop: 20,
     textAlign: "center",
-    color: COLORS.primary,
+    color: "#4F46E5",
   },
+
   error: {
     color: "red",
     textAlign: "center",

@@ -8,6 +8,7 @@ import MainNavigator from "./MainNavigator";
 export default function AppNavigator() {
   const { token, loading } = useContext(AuthContext);
 
+
   // ⛔ BLOCK UI until token is checked
   if (loading) {
     return (

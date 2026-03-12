@@ -136,6 +136,13 @@ export default function HomeScreen({ navigation, route }) {
           <Text style={styles.actionTitle}>📊 Weekly Summary</Text>
           <Text style={styles.actionSub}>Last 7 days progress</Text>
         </Pressable>
+        <Pressable
+          style={styles.actionCard}
+          onPress={() => navigation.navigate("NutritionDashboard")}
+        >
+          <Text style={styles.actionTitle}>🥗 Nutrition Plan</Text>
+          <Text style={styles.actionSub}>View today's diet plan</Text>
+        </Pressable>
       </View>
     </SafeAreaView>
   );
