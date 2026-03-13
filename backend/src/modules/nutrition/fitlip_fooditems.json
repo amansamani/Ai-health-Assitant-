@@ -1,0 +1,456 @@
+[{
+  "_id": {
+    "$oid": "69996d48ae515fa459fcc2fb"
+  },
+  "name": "Roti",
+  "category": "lunch",
+  "dietType": "veg",
+  "isIndian": true,
+  "per100g": {
+    "calories": 297,
+    "protein": 9,
+    "carbs": 57,
+    "fats": 3,
+    "fiber": 4
+  },
+  "tags": [],
+  "__v": 0,
+  "createdAt": {
+    "$date": "2026-02-21T08:31:04.919Z"
+  },
+  "updatedAt": {
+    "$date": "2026-02-21T08:31:04.919Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "69996d48ae515fa459fcc2fe"
+  },
+  "name": "Chicken Breast",
+  "category": "dinner",
+  "dietType": "non-veg",
+  "isIndian": true,
+  "per100g": {
+    "calories": 165,
+    "protein": 31,
+    "carbs": 0,
+    "fats": 3.6,
+    "fiber": 0
+  },
+  "tags": [],
+  "__v": 0,
+  "createdAt": {
+    "$date": "2026-02-21T08:31:04.919Z"
+  },
+  "updatedAt": {
+    "$date": "2026-02-21T08:31:04.919Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "69996d48ae515fa459fcc301"
+  },
+  "name": "Milk (Full Cream)",
+  "category": "breakfast",
+  "dietType": "veg",
+  "isIndian": true,
+  "per100g": {
+    "calories": 60,
+    "protein": 3.2,
+    "carbs": 5,
+    "fats": 3.3,
+    "fiber": 0
+  },
+  "tags": [],
+  "__v": 0,
+  "createdAt": {
+    "$date": "2026-02-21T08:31:04.919Z"
+  },
+  "updatedAt": {
+    "$date": "2026-02-21T08:31:04.919Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "69996d48ae515fa459fcc303"
+  },
+  "name": "Rohu Fish",
+  "category": "dinner",
+  "dietType": "non-veg",
+  "isIndian": true,
+  "per100g": {
+    "calories": 97,
+    "protein": 17,
+    "carbs": 0,
+    "fats": 2,
+    "fiber": 0
+  },
+  "tags": [],
+  "__v": 0,
+  "createdAt": {
+    "$date": "2026-02-21T08:31:04.920Z"
+  },
+  "updatedAt": {
+    "$date": "2026-02-21T08:31:04.920Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "69996d48ae515fa459fcc304"
+  },
+  "name": "Banana",
+  "category": "snack",
+  "dietType": "veg",
+  "isIndian": true,
+  "per100g": {
+    "calories": 89,
+    "protein": 1.1,
+    "carbs": 23,
+    "fats": 0.3,
+    "fiber": 2.6
+  },
+  "tags": [],
+  "__v": 0,
+  "createdAt": {
+    "$date": "2026-02-21T08:31:04.920Z"
+  },
+  "updatedAt": {
+    "$date": "2026-02-21T08:31:04.920Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "69996d48ae515fa459fcc309"
+  },
+  "name": "Rajma (Cooked)",
+  "category": "lunch",
+  "dietType": "veg",
+  "isIndian": true,
+  "per100g": {
+    "calories": 127,
+    "protein": 8.7,
+    "carbs": 22.8,
+    "fats": 0.5,
+    "fiber": 6.4
+  },
+  "tags": [],
+  "__v": 0,
+  "createdAt": {
+    "$date": "2026-02-21T08:31:04.920Z"
+  },
+  "updatedAt": {
+    "$date": "2026-02-21T08:31:04.920Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "69996d48ae515fa459fcc30a"
+  },
+  "name": "Chole (Cooked Chickpeas)",
+  "category": "lunch",
+  "dietType": "veg",
+  "isIndian": true,
+  "per100g": {
+    "calories": 164,
+    "protein": 9,
+    "carbs": 27,
+    "fats": 2.6,
+    "fiber": 7.6
+  },
+  "tags": [],
+  "__v": 0,
+  "createdAt": {
+    "$date": "2026-02-21T08:31:04.920Z"
+  },
+  "updatedAt": {
+    "$date": "2026-02-21T08:31:04.920Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "69996d48ae515fa459fcc2fa"
+  },
+  "name": "White Rice (Cooked)",
+  "category": "lunch",
+  "dietType": "veg",
+  "isIndian": true,
+  "per100g": {
+    "calories": 130,
+    "protein": 2.4,
+    "carbs": 28,
+    "fats": 0.3,
+    "fiber": 0.4
+  },
+  "tags": [],
+  "__v": 0,
+  "createdAt": {
+    "$date": "2026-02-21T08:31:04.916Z"
+  },
+  "updatedAt": {
+    "$date": "2026-02-21T08:31:04.916Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "69996d48ae515fa459fcc2fc"
+  },
+  "name": "Paneer",
+  "category": "dinner",
+  "dietType": "veg",
+  "isIndian": true,
+  "per100g": {
+    "calories": 265,
+    "protein": 18,
+    "carbs": 1.2,
+    "fats": 20,
+    "fiber": 0
+  },
+  "tags": [],
+  "__v": 0,
+  "createdAt": {
+    "$date": "2026-02-21T08:31:04.919Z"
+  },
+  "updatedAt": {
+    "$date": "2026-02-21T08:31:04.919Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "69996d48ae515fa459fcc305"
+  },
+  "name": "Apple",
+  "category": "snack",
+  "dietType": "veg",
+  "isIndian": true,
+  "per100g": {
+    "calories": 52,
+    "protein": 0.3,
+    "carbs": 14,
+    "fats": 0.2,
+    "fiber": 2.4
+  },
+  "tags": [],
+  "__v": 0,
+  "createdAt": {
+    "$date": "2026-02-21T08:31:04.920Z"
+  },
+  "updatedAt": {
+    "$date": "2026-02-21T08:31:04.920Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "69996d48ae515fa459fcc308"
+  },
+  "name": "Brown Rice (Cooked)",
+  "category": "lunch",
+  "dietType": "veg",
+  "isIndian": true,
+  "per100g": {
+    "calories": 112,
+    "protein": 2.6,
+    "carbs": 23,
+    "fats": 0.9,
+    "fiber": 1.8
+  },
+  "tags": [],
+  "__v": 0,
+  "createdAt": {
+    "$date": "2026-02-21T08:31:04.920Z"
+  },
+  "updatedAt": {
+    "$date": "2026-02-21T08:31:04.920Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "69996d48ae515fa459fcc2fd"
+  },
+  "name": "Egg",
+  "category": "breakfast",
+  "dietType": "non-veg",
+  "isIndian": true,
+  "per100g": {
+    "calories": 155,
+    "protein": 13,
+    "carbs": 1.1,
+    "fats": 11,
+    "fiber": 0
+  },
+  "tags": [],
+  "__v": 0,
+  "createdAt": {
+    "$date": "2026-02-21T08:31:04.919Z"
+  },
+  "updatedAt": {
+    "$date": "2026-02-21T08:31:04.919Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "69996d48ae515fa459fcc300"
+  },
+  "name": "Dal (Cooked)",
+  "category": "lunch",
+  "dietType": "veg",
+  "isIndian": true,
+  "per100g": {
+    "calories": 116,
+    "protein": 9,
+    "carbs": 20,
+    "fats": 0.4,
+    "fiber": 7
+  },
+  "tags": [],
+  "__v": 0,
+  "createdAt": {
+    "$date": "2026-02-21T08:31:04.919Z"
+  },
+  "updatedAt": {
+    "$date": "2026-02-21T08:31:04.919Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "69996d48ae515fa459fcc302"
+  },
+  "name": "Curd",
+  "category": "lunch",
+  "dietType": "veg",
+  "isIndian": true,
+  "per100g": {
+    "calories": 61,
+    "protein": 3.5,
+    "carbs": 4.7,
+    "fats": 3.3,
+    "fiber": 0
+  },
+  "tags": [],
+  "__v": 0,
+  "createdAt": {
+    "$date": "2026-02-21T08:31:04.919Z"
+  },
+  "updatedAt": {
+    "$date": "2026-02-21T08:31:04.919Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "69996d48ae515fa459fcc30c"
+  },
+  "name": "Buttermilk",
+  "category": "snack",
+  "dietType": "veg",
+  "isIndian": true,
+  "per100g": {
+    "calories": 40,
+    "protein": 3,
+    "carbs": 5,
+    "fats": 1,
+    "fiber": 0
+  },
+  "tags": [],
+  "__v": 0,
+  "createdAt": {
+    "$date": "2026-02-21T08:31:04.920Z"
+  },
+  "updatedAt": {
+    "$date": "2026-02-21T08:31:04.920Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "69996d48ae515fa459fcc2ff"
+  },
+  "name": "Oats",
+  "category": "breakfast",
+  "dietType": "veg",
+  "isIndian": true,
+  "per100g": {
+    "calories": 389,
+    "protein": 17,
+    "carbs": 66,
+    "fats": 7,
+    "fiber": 10
+  },
+  "tags": [],
+  "__v": 0,
+  "createdAt": {
+    "$date": "2026-02-21T08:31:04.919Z"
+  },
+  "updatedAt": {
+    "$date": "2026-02-21T08:31:04.919Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "69996d48ae515fa459fcc306"
+  },
+  "name": "Peanuts",
+  "category": "snack",
+  "dietType": "veg",
+  "isIndian": true,
+  "per100g": {
+    "calories": 567,
+    "protein": 26,
+    "carbs": 16,
+    "fats": 49,
+    "fiber": 8
+  },
+  "tags": [],
+  "__v": 0,
+  "createdAt": {
+    "$date": "2026-02-21T08:31:04.920Z"
+  },
+  "updatedAt": {
+    "$date": "2026-02-21T08:31:04.920Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "69996d48ae515fa459fcc307"
+  },
+  "name": "Peanut Butter",
+  "category": "snack",
+  "dietType": "veg",
+  "isIndian": true,
+  "per100g": {
+    "calories": 588,
+    "protein": 25,
+    "carbs": 20,
+    "fats": 50,
+    "fiber": 6
+  },
+  "tags": [],
+  "__v": 0,
+  "createdAt": {
+    "$date": "2026-02-21T08:31:04.920Z"
+  },
+  "updatedAt": {
+    "$date": "2026-02-21T08:31:04.920Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "69996d48ae515fa459fcc30b"
+  },
+  "name": "Mixed Vegetables",
+  "category": "dinner",
+  "dietType": "veg",
+  "isIndian": true,
+  "per100g": {
+    "calories": 65,
+    "protein": 2,
+    "carbs": 12,
+    "fats": 0.5,
+    "fiber": 3
+  },
+  "tags": [],
+  "__v": 0,
+  "createdAt": {
+    "$date": "2026-02-21T08:31:04.920Z"
+  },
+  "updatedAt": {
+    "$date": "2026-02-21T08:31:04.920Z"
+  }
+}]

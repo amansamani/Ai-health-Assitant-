@@ -17,8 +17,9 @@ const dietProgressSchema = new mongoose.Schema(
     mealsCompleted: {
       breakfast: { type: Boolean, default: false },
       lunch: { type: Boolean, default: false },
-      dinner: { type: Boolean, default: false },
-      snack: { type: Boolean, default: false }
+      snack: { type: Boolean, default: false },
+      dinner: { type: Boolean, default: false }
+      
     },
 
     caloriesConsumed: {

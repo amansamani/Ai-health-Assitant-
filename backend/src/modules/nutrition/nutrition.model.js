@@ -17,7 +17,7 @@ const foodItemSchema = new mongoose.Schema(
 
     category: {
       type: String,
-      enum: ["breakfast", "lunch", "dinner", "snack"],
+      enum: ["breakfast", "lunch","snack","dinner"],
       required: true
     },
 

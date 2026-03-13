@@ -9,39 +9,41 @@ import WorkoutDetailScreen from "../screens/WorkoutDetailScreen";
 import NutritionDashboardScreen from "../screens/nutrition/NutritionDashboardScreen";
 import LogMealScreen from "../screens/nutrition/LogMealScreen";
 import ProgressScreen from "../screens/nutrition/ProgressScreen";
-// ❌ REMOVED: HealthProfileScreen does not belong in MainNavigator.
-// It is part of the onboarding flow and lives in AuthNavigator only.
-// Having it in both navigators caused React Navigation to display it
-// instead of HomeScreen when MainNavigator first mounted.
+import MealLoggerScreen from "../screens/nutrition/MealLoggerScreen"; // ✅ NEW — Today's log + calorie ring
 
 const Stack = createNativeStackNavigator();
 
 export default function MainNavigator() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="Home" component={HomeScreen} />
-      <Stack.Screen name="Profile" component={ProfileScreen} />
-      <Stack.Screen name="Workout" component={WorkoutScreen} />
-      <Stack.Screen name="Tracking" component={TrackingScreen} />
-      <Stack.Screen name="WeeklySummary" component={WeeklySummaryScreen} />
-      <Stack.Screen name="TrackDetail" component={TrackDetailScreen} />
+      <Stack.Screen name="Home"            component={HomeScreen} />
+      <Stack.Screen name="Profile"         component={ProfileScreen} />
+      <Stack.Screen name="Workout"         component={WorkoutScreen} />
+      <Stack.Screen name="Tracking"        component={TrackingScreen} />
+      <Stack.Screen name="WeeklySummary"   component={WeeklySummaryScreen} />
+      <Stack.Screen name="TrackDetail"     component={TrackDetailScreen} />
       <Stack.Screen
         name="WorkoutDetail"
         component={WorkoutDetailScreen}
-        options={{
-          animation: "slide_from_right",
-          animationDuration: 180,
-        }}
+        options={{ animation: "slide_from_right", animationDuration: 180 }}
       />
+      {/* ── Nutrition Plan (AI generated diet plan — existing) ── */}
       <Stack.Screen
         name="NutritionDashboard"
         component={NutritionDashboardScreen}
         options={{ title: "My Nutrition Plan" }}
       />
+      {/* ── Meal Logger (Today's log + calorie ring — NEW) ── */}
+      <Stack.Screen
+        name="MealLogger"
+        component={MealLoggerScreen}
+        options={{ headerShown: true, title: "Log Meal", headerBackTitle: "Home" }}
+      />
+      {/* ── Add Food (search & add food — opened from MealLogger) ── */}
       <Stack.Screen
         name="LogMeal"
         component={LogMealScreen}
-        options={{ title: "Log Today's Meals" }}
+        options={{ headerShown: true, title: "Add Food", headerBackTitle: "Log Meal" }}
       />
       <Stack.Screen
         name="Progress"

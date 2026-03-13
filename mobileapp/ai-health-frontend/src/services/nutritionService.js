@@ -1,13 +1,39 @@
 import api from "./api";
 
-// log meal
-export const logMeal = async (mealData) => {
-const response = await api.post("/nutrition/log-meal", mealData);
-return response.data;
+// ── Diet Plan ──────────────────────────────────────────────────────────────────
+export const getCurrentPlan = async () => {
+  const res = await api.get("/nutrition/current");
+  return res.data;
 };
 
-// get today's meal log
+export const generatePlan = async () => {
+  const res = await api.post("/nutrition/generate");
+  return res.data;
+};
+
+// ── Meal Logging ───────────────────────────────────────────────────────────────
+export const logMeal = async (mealData) => {
+  const res = await api.post("/nutrition/log-meal", mealData);
+  return res.data;
+};
+
 export const getTodayLog = async () => {
-const response = await api.get("/nutrition/today-log");
-return response.data;
+  const res = await api.get("/nutrition/today-log");
+  return res.data;
+};
+
+export const deleteMealLog = async (mealId) => {
+  const res = await api.delete(`/nutrition/meal/${mealId}`);
+  return res.data;
+};
+
+export const getMealHistory = async (days = 7) => {
+  const res = await api.get(`/nutrition/history?days=${days}`);
+  return res.data;
+};
+
+// ── Health Profile (for calorie goal) ─────────────────────────────────────────
+export const getHealthProfile = async () => {
+  const res = await api.get("/health/profile");
+  return res.data;
 };
