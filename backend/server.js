@@ -30,12 +30,9 @@ app.set("trust proxy", 1);
 app.use(helmet());
 
 app.use(cors({
-  origin: [
-    process.env.CLIENT_URL,
-    "http://localhost:3000",
-    "http://localhost:19006", // expo web
-  ],
-  credentials: true
+  origin: "*",
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+  allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
 /*
