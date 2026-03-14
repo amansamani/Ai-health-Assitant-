@@ -15,6 +15,38 @@ const INDIAN_QUICK_SUGGESTIONS = [
   "Samosa", "Rajma", "Chole", "Poha", "Butter Chicken",
 ];
 
+// ─── Piece-based overrides for common USDA foods ──────────────────────────────
+const PIECE_OVERRIDES = {
+  banana:      { unit: "piece", grams: 120 },
+  apple:       { unit: "piece", grams: 180 },
+  orange:      { unit: "piece", grams: 130 },
+  egg:         { unit: "piece", grams: 50  },
+  "egg white": { unit: "piece", grams: 33  },
+  roti:        { unit: "piece", grams: 40  },
+  chapati:     { unit: "piece", grams: 40  },
+  idli:        { unit: "piece", grams: 40  },
+  dosa:        { unit: "piece", grams: 80  },
+  paratha:     { unit: "piece", grams: 80  },
+  naan:        { unit: "piece", grams: 90  },
+  bread:       { unit: "piece", grams: 30  },
+  samosa:      { unit: "piece", grams: 60  },
+  guava:       { unit: "piece", grams: 150 },
+  date:        { unit: "piece", grams: 25  },
+  kachori:     { unit: "piece", grams: 60  },
+  vada:        { unit: "piece", grams: 50  },
+  ladoo:       { unit: "piece", grams: 40  },
+  rasgulla:    { unit: "piece", grams: 60  },
+  "gulab jamun": { unit: "piece", grams: 50 },
+};
+
+const getServing = (foodName) => {
+  const name = foodName.toLowerCase();
+  for (const [key, serving] of Object.entries(PIECE_OVERRIDES)) {
+    if (name.includes(key)) return serving;
+  }
+  return { unit: "g", grams: 100 };
+};
+
 // ─── USDA API ──────────────────────────────────────────────────────────────────
 const searchUSDA = async (query) => {
   const url = `https://api.nal.usda.gov/fdc/v1/foods/search?query=${encodeURIComponent(query)}&pageSize=10&api_key=${USDA_API_KEY}`;
@@ -32,14 +64,14 @@ const searchUSDA = async (query) => {
       carbs:    n(1005), fats:    n(1004),
       fiber:    n(1079), sugar:   n(2000), sodium: n(1093),
     };
+    const foodName = food.description || "Unknown";
     return {
       id:       String(food.fdcId),
-      name:     food.description || "Unknown",
+      name:     foodName,
       brand:    food.brandOwner || food.brandName || "USDA",
       category: food.foodCategory || "",
       isIndian: false,
-      // USDA foods are always gram-based
-      serving:  { unit: "g", grams: 100 },
+      serving:  getServing(foodName),
       per100g,
       raw: {
         calories: Math.round(per100g.calories),

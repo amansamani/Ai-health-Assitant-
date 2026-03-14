@@ -41,7 +41,7 @@ const INDIAN_FOOD_DB = [
   { id: "in_037", name: "Raita",                 serving: { unit: "g",     grams: 100 }, keywords: ["raita"],                                         calories: 52,  protein: 2.8,  carbs: 5.5,  fats: 2.0,  fiber: 0.5, sugar: 4.5, sodium: 180 },
 
   // ── Chicken & Meat ────────────────────────────────────────────────────────────
-  { id: "in_040", name: "Chicken Curry",         serving: { unit: "g",     grams: 100 }, keywords: ["chicken curry"],                                 calories: 175, protein: 18.0, carbs: 5.0,  fats: 9.5,  fiber: 1.0, sugar: 2.0, sodium: 450 },
+  { id: "in_040", name: "Chicken Curry",         serving: { unit: "g",     grams: 100 }, keywords: ["chicken curry","chicken masala"],                                 calories: 175, protein: 18.0, carbs: 5.0,  fats: 9.5,  fiber: 1.0, sugar: 2.0, sodium: 450 },
   { id: "in_041", name: "Butter Chicken",        serving: { unit: "g",     grams: 100 }, keywords: ["butter chicken", "murgh makhani"],               calories: 190, protein: 16.0, carbs: 7.0,  fats: 11.5, fiber: 1.5, sugar: 4.5, sodium: 480 },
   { id: "in_042", name: "Chicken Tikka Masala",  serving: { unit: "g",     grams: 100 }, keywords: ["chicken tikka masala", "chicken tikka"],         calories: 185, protein: 17.5, carbs: 8.0,  fats: 10.0, fiber: 1.5, sugar: 4.0, sodium: 500 },
   { id: "in_043", name: "Tandoori Chicken",      serving: { unit: "g",     grams: 100 }, keywords: ["tandoori chicken"],                              calories: 168, protein: 22.0, carbs: 3.5,  fats: 7.5,  fiber: 0.5, sugar: 1.5, sodium: 520 },
@@ -49,7 +49,8 @@ const INDIAN_FOOD_DB = [
   { id: "in_045", name: "Mutton Curry",          serving: { unit: "g",     grams: 100 }, keywords: ["mutton curry", "lamb curry"],                    calories: 218, protein: 20.0, carbs: 5.0,  fats: 13.0, fiber: 1.0, sugar: 2.0, sodium: 520 },
   { id: "in_046", name: "Egg Curry",             serving: { unit: "g",     grams: 100 }, keywords: ["egg curry", "anda curry"],                       calories: 148, protein: 10.0, carbs: 5.5,  fats: 10.0, fiber: 1.0, sugar: 2.5, sodium: 420 },
   { id: "in_047", name: "Keema (Minced Meat)",   serving: { unit: "g",     grams: 100 }, keywords: ["keema", "kheema", "minced meat"],                calories: 220, protein: 22.0, carbs: 4.0,  fats: 13.0, fiber: 1.0, sugar: 2.0, sodium: 480 },
-
+  { id: "in_048", name: "Chicken Breast",         serving: { unit: "g",     grams: 100 }, keywords: ["chicken breast"],                               calories: 165, protein: 30.0, carbs: 0.0,  fats: 3.6,  fiber: 0.0, sugar: 0.0, sodium: 75 },
+  { id: "in_049", name: "Egg Bhurji",       serving: { unit: "piece", grams: 50 },keywords: ["andaa", "egg", "egg bhurji", "andaa bhurji"],         calories: 170,protein:  12.0,carbs:    2.0,fats:     12.0,fiber:    0.4,sugar:    0.8,sodium:   150},
   // ── Biryani & Rice Dishes ─────────────────────────────────────────────────────
   { id: "in_050", name: "Veg Biryani",           serving: { unit: "g",     grams: 100 }, keywords: ["veg biryani", "vegetable biryani"],              calories: 165, protein: 4.5,  carbs: 28.0, fats: 4.5,  fiber: 2.5, sugar: 1.5, sodium: 420 },
   { id: "in_051", name: "Mutton Biryani",        serving: { unit: "g",     grams: 100 }, keywords: ["mutton biryani"],                                calories: 220, protein: 14.0, carbs: 25.0, fats: 8.0,  fiber: 1.5, sugar: 1.0, sodium: 500 },

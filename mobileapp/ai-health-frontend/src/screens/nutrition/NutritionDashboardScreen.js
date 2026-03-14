@@ -335,14 +335,6 @@ export default function NutritionDashboardScreen({ navigation }) {
 
         {/* ── Buttons ── */}
         <TouchableOpacity
-          style={[s.button, { backgroundColor: "#4CAF50" }]}
-          onPress={() => navigation.navigate("MealLogger")}
-          activeOpacity={0.85}
-        >
-          <Text style={s.buttonText}>🍛 Log Today's Meals</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
           style={[s.button, { backgroundColor: "#fff", borderWidth: 1.5, borderColor: "#e0e0e0" }]}
           onPress={() => {
             Alert.alert("Regenerate Plan", "This will create a new diet plan. Continue?", [

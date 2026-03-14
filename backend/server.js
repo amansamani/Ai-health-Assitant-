@@ -13,6 +13,7 @@ dotenv.config();
 
 const app = express();
 
+app.set("trust proxy", 1);
 // security middleware
 app.use(helmet());
 app.use(cors({
