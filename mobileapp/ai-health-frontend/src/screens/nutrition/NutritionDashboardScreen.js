@@ -12,6 +12,14 @@ const MEAL_META = {
   snack:     { icon: "🍎", color: "#8E24AA", bg: "#F3E5F5", label: "Snack"     },
 };
 
+// ── Helper: format quantity label ─────────────────────────────────────────────
+const formatQty = (food) => {
+  if (food.servingUnit === "piece" && food.pieces) {
+    return `${food.pieces} piece${food.pieces !== 1 ? "s" : ""} (${food.grams}g)`;
+  }
+  return `${food.grams}g`;
+};
+
 // ── Swap Modal ────────────────────────────────────────────────────────────────
 function SwapModal({ visible, meal, food, onClose, onSwapped }) {
   const [options, setOptions]   = useState([]);
@@ -71,9 +79,14 @@ function SwapModal({ visible, meal, food, onClose, onSwapped }) {
               keyExtractor={item => item._id}
               contentContainerStyle={{ paddingBottom: 20 }}
               renderItem={({ item }) => {
-                const isSwapping = swapping === item._id;
-                const cal100 = Math.round(item.per100g?.calories || 0);
-                const pro100 = item.per100g?.protein?.toFixed(1) || 0;
+                const isSwapping    = swapping === item._id;
+                const isPiece       = item.serving?.unit === "piece";
+                const cal100        = Math.round(item.per100g?.calories || 0);
+                const pro100        = (item.per100g?.protein || 0).toFixed(1);
+                const servingLabel  = isPiece
+                  ? `1 piece = ${item.serving.grams}g`
+                  : "per 100g";
+
                 return (
                   <TouchableOpacity
                     style={sw.optionRow}
@@ -87,22 +100,19 @@ function SwapModal({ visible, meal, food, onClose, onSwapped }) {
                     <View style={sw.optionInfo}>
                       <Text style={sw.optionName}>{item.name}</Text>
                       <Text style={sw.optionMacro}>
-                        {cal100} kcal · {pro100}g protein · per 100g
+                        {cal100} kcal · {pro100}g protein · {servingLabel}
                       </Text>
-                      {item.tags?.length > 0 && (
-                        <View style={sw.tagRow}>
-                          {item.tags.slice(0, 2).map(tag => (
-                            <View key={tag} style={[sw.tag, { backgroundColor: meta.bg }]}>
-                              <Text style={[sw.tagText, { color: meta.color }]}>{tag}</Text>
-                            </View>
-                          ))}
+                      {/* Piece badge */}
+                      {isPiece && (
+                        <View style={[sw.pieceBadge, { backgroundColor: "#e8f5e9" }]}>
+                          <Text style={[sw.pieceBadgeText, { color: "#2e7d32" }]}>
+                            🍽️ per piece ({item.serving.grams}g)
+                          </Text>
                         </View>
                       )}
                     </View>
                     <View style={[sw.swapBtn, { backgroundColor: isSwapping ? "#eee" : meta.color }]}>
-                      <Text style={sw.swapBtnText}>
-                        {isSwapping ? "..." : "Swap"}
-                      </Text>
+                      <Text style={sw.swapBtnText}>{isSwapping ? "..." : "Swap"}</Text>
                     </View>
                   </TouchableOpacity>
                 );
@@ -117,10 +127,10 @@ function SwapModal({ visible, meal, food, onClose, onSwapped }) {
 
 // ── Main Screen ───────────────────────────────────────────────────────────────
 export default function NutritionDashboardScreen({ navigation }) {
-  const [plan, setPlan]           = useState(null);
-  const [loading, setLoading]     = useState(true);
+  const [plan, setPlan]             = useState(null);
+  const [loading, setLoading]       = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [swapModal, setSwapModal] = useState({ visible: false, meal: null, food: null });
+  const [swapModal, setSwapModal]   = useState({ visible: false, meal: null, food: null });
 
   const fetchPlan = async () => {
     try {
@@ -160,7 +170,6 @@ export default function NutritionDashboardScreen({ navigation }) {
     );
   }
 
-  // Calculate total planned calories from meals
   const totalPlannedCals = Object.values(plan.meals).flat()
     .reduce((sum, f) => sum + (f.calories || 0), 0);
 
@@ -171,10 +180,14 @@ export default function NutritionDashboardScreen({ navigation }) {
         contentContainerStyle={s.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchPlan(); }} colors={["#4CAF50"]} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => { setRefreshing(true); fetchPlan(); }}
+            colors={["#4CAF50"]}
+          />
         }
       >
-        {/* ── Header ── */}
+        {/* ── Title ── */}
         <Text style={s.title}>Today's Diet Plan</Text>
 
         {/* ── Daily Targets ── */}
@@ -198,6 +211,7 @@ export default function NutritionDashboardScreen({ navigation }) {
               <Text style={s.macroLbl}>Fats</Text>
             </View>
           </View>
+
           {totalPlannedCals > 0 && (
             <View style={s.calProgressRow}>
               <Text style={s.calProgressText}>
@@ -214,8 +228,8 @@ export default function NutritionDashboardScreen({ navigation }) {
 
         {/* ── Meal Cards ── */}
         {["breakfast", "lunch", "dinner", "snack"].map((meal) => {
-          const meta  = MEAL_META[meal];
-          const foods = plan.meals[meal] || [];
+          const meta        = MEAL_META[meal];
+          const foods       = plan.meals[meal] || [];
           const mealTotalCal = foods.reduce((sum, f) => sum + (f.calories || 0), 0);
 
           return (
@@ -244,31 +258,41 @@ export default function NutritionDashboardScreen({ navigation }) {
               {foods.length > 0 ? (
                 <View style={s.foodList}>
                   {foods.map((food, idx) => {
-                    const cal  = food.calories || Math.round((food.grams / 100) * 0);
-                    const pro  = food.protein  || 0;
-                    const carb = food.carbs    || 0;
-                    const fat  = food.fats     || 0;
+                    const isPiece  = food.servingUnit === "piece" && food.pieces;
+                    const qtyLabel = formatQty(food);
 
                     return (
-                      <View key={idx} style={[s.foodRow, idx < foods.length - 1 && s.foodBorder]}>
+                      <View
+                        key={idx}
+                        style={[s.foodRow, idx < foods.length - 1 && s.foodBorder]}
+                      >
                         <View style={[s.dot, { backgroundColor: meta.color }]} />
 
                         <View style={{ flex: 1 }}>
-                          {/* Name + grams */}
+                          {/* Name row */}
                           <View style={s.foodTopRow}>
                             <Text style={s.foodName}>{food.name}</Text>
-                            <Text style={[s.foodGrams, { color: meta.color }]}>{food.grams}g</Text>
+                            {/* Qty badge */}
+                            <View style={[s.qtyBadge, {
+                              backgroundColor: isPiece ? "#e8f5e9" : meta.bg
+                            }]}>
+                              <Text style={[s.qtyBadgeText, {
+                                color: isPiece ? "#2e7d32" : meta.color
+                              }]}>
+                                {qtyLabel}
+                              </Text>
+                            </View>
                           </View>
 
-                          {/* Calories highlighted */}
+                          {/* Calories + macros row */}
                           <View style={s.foodCalRow}>
                             <View style={[s.calBadge, { backgroundColor: meta.bg }]}>
                               <Text style={[s.calBadgeText, { color: meta.color }]}>
-                                🔥 {cal} kcal
+                                🔥 {food.calories} kcal
                               </Text>
                             </View>
                             <Text style={s.foodMacroText}>
-                              P {pro}g · C {carb}g · F {fat}g
+                              P {food.protein}g · C {food.carbs}g · F {food.fats}g
                             </Text>
                           </View>
                         </View>
@@ -294,7 +318,9 @@ export default function NutritionDashboardScreen({ navigation }) {
                       try {
                         await API.post("/nutrition/generate");
                         fetchPlan();
-                      } catch { Alert.alert("Error", "Could not regenerate plan."); }
+                      } catch {
+                        Alert.alert("Error", "Could not regenerate plan.");
+                      }
                     }}
                   >
                     <Text style={[s.regenerateSmallText, { color: meta.color }]}>
@@ -308,22 +334,32 @@ export default function NutritionDashboardScreen({ navigation }) {
         })}
 
         {/* ── Buttons ── */}
-        
+        <TouchableOpacity
+          style={[s.button, { backgroundColor: "#4CAF50" }]}
+          onPress={() => navigation.navigate("MealLogger")}
+          activeOpacity={0.85}
+        >
+          <Text style={s.buttonText}>🍛 Log Today's Meals</Text>
+        </TouchableOpacity>
 
         <TouchableOpacity
           style={[s.button, { backgroundColor: "#fff", borderWidth: 1.5, borderColor: "#e0e0e0" }]}
-          onPress={async () => {
+          onPress={() => {
             Alert.alert("Regenerate Plan", "This will create a new diet plan. Continue?", [
               { text: "Cancel", style: "cancel" },
               {
-                text: "Yes, Regenerate", onPress: async () => {
+                text: "Yes, Regenerate",
+                onPress: async () => {
                   setLoading(true);
                   try {
                     await API.post("/nutrition/generate");
                     fetchPlan();
-                  } catch { Alert.alert("Error", "Could not regenerate plan."); setLoading(false); }
-                }
-              }
+                  } catch {
+                    Alert.alert("Error", "Could not regenerate plan.");
+                    setLoading(false);
+                  }
+                },
+              },
             ]);
           }}
           activeOpacity={0.85}
@@ -358,24 +394,23 @@ export default function NutritionDashboardScreen({ navigation }) {
 
 // ── Swap Modal Styles ─────────────────────────────────────────────────────────
 const sw = StyleSheet.create({
-  overlay:     { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
-  sheet:       { backgroundColor: "#fff", borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: "80%" },
-  sheetHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 },
-  sheetTitle:  { fontSize: 18, fontWeight: "800", color: "#1a1a1a" },
-  sheetSub:    { fontSize: 13, color: "#888", marginTop: 2 },
-  closeBtn:    { width: 30, height: 30, borderRadius: 15, backgroundColor: "#f5f5f5", justifyContent: "center", alignItems: "center" },
-  closeTxt:    { fontSize: 13, color: "#888" },
-  empty:       { textAlign: "center", color: "#aaa", fontSize: 14, marginTop: 30 },
-  optionRow:   { flexDirection: "row", alignItems: "center", paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: "#f5f5f5", gap: 10 },
-  optionIcon:  { width: 40, height: 40, borderRadius: 10, justifyContent: "center", alignItems: "center" },
-  optionInfo:  { flex: 1 },
-  optionName:  { fontSize: 14, fontWeight: "700", color: "#1a1a1a" },
-  optionMacro: { fontSize: 11, color: "#888", marginTop: 2 },
-  tagRow:      { flexDirection: "row", gap: 6, marginTop: 4 },
-  tag:         { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6 },
-  tagText:     { fontSize: 10, fontWeight: "600" },
-  swapBtn:     { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20 },
-  swapBtnText: { color: "#fff", fontWeight: "700", fontSize: 13 },
+  overlay:        { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
+  sheet:          { backgroundColor: "#fff", borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: "80%" },
+  sheetHeader:    { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 },
+  sheetTitle:     { fontSize: 18, fontWeight: "800", color: "#1a1a1a" },
+  sheetSub:       { fontSize: 13, color: "#888", marginTop: 2 },
+  closeBtn:       { width: 30, height: 30, borderRadius: 15, backgroundColor: "#f5f5f5", justifyContent: "center", alignItems: "center" },
+  closeTxt:       { fontSize: 13, color: "#888" },
+  empty:          { textAlign: "center", color: "#aaa", fontSize: 14, marginTop: 30 },
+  optionRow:      { flexDirection: "row", alignItems: "center", paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: "#f5f5f5", gap: 10 },
+  optionIcon:     { width: 40, height: 40, borderRadius: 10, justifyContent: "center", alignItems: "center" },
+  optionInfo:     { flex: 1 },
+  optionName:     { fontSize: 14, fontWeight: "700", color: "#1a1a1a" },
+  optionMacro:    { fontSize: 11, color: "#888", marginTop: 2 },
+  pieceBadge:     { alignSelf: "flex-start", paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6, marginTop: 4 },
+  pieceBadgeText: { fontSize: 10, fontWeight: "700" },
+  swapBtn:        { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20 },
+  swapBtnText:    { color: "#fff", fontWeight: "700", fontSize: 13 },
 });
 
 // ── Main Styles ───────────────────────────────────────────────────────────────
@@ -396,16 +431,15 @@ const s = StyleSheet.create({
     elevation: 3, shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.07, shadowRadius: 6,
   },
-  cardHeading: { fontSize: 12, fontWeight: "700", color: "#888", marginBottom: 12, textTransform: "uppercase", letterSpacing: 0.8 },
-  macroRow:    { flexDirection: "row", gap: 8 },
-  macroBox:    { flex: 1, borderRadius: 10, paddingVertical: 10, alignItems: "center" },
-  macroVal:    { fontSize: 16, fontWeight: "800" },
-  macroLbl:    { fontSize: 10, color: "#666", marginTop: 3, fontWeight: "600" },
-
-  calProgressRow:  { marginTop: 14 },
-  calProgressText: { fontSize: 11, color: "#888", marginBottom: 6 },
-  calProgressBg:   { height: 6, backgroundColor: "#f0f0f0", borderRadius: 3, overflow: "hidden" },
-  calProgressFill: { height: "100%", backgroundColor: "#4CAF50", borderRadius: 3 },
+  cardHeading:      { fontSize: 12, fontWeight: "700", color: "#888", marginBottom: 12, textTransform: "uppercase", letterSpacing: 0.8 },
+  macroRow:         { flexDirection: "row", gap: 8 },
+  macroBox:         { flex: 1, borderRadius: 10, paddingVertical: 10, alignItems: "center" },
+  macroVal:         { fontSize: 16, fontWeight: "800" },
+  macroLbl:         { fontSize: 10, color: "#666", marginTop: 3, fontWeight: "600" },
+  calProgressRow:   { marginTop: 14 },
+  calProgressText:  { fontSize: 11, color: "#888", marginBottom: 6 },
+  calProgressBg:    { height: 6, backgroundColor: "#f0f0f0", borderRadius: 3, overflow: "hidden" },
+  calProgressFill:  { height: "100%", backgroundColor: "#4CAF50", borderRadius: 3 },
 
   mealCard: {
     backgroundColor: "#fff", borderRadius: 14, padding: 14, marginBottom: 12,
@@ -424,13 +458,14 @@ const s = StyleSheet.create({
   foodBorder: { borderBottomWidth: 1, borderBottomColor: "#f9f9f9" },
   dot:        { width: 7, height: 7, borderRadius: 4, marginTop: 5 },
 
-  foodTopRow:     { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  foodName:       { fontSize: 14, fontWeight: "600", color: "#1a1a1a", flex: 1 },
-  foodGrams:      { fontSize: 13, fontWeight: "700", marginLeft: 8 },
-  foodCalRow:     { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 },
-  calBadge:       { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
-  calBadgeText:   { fontSize: 12, fontWeight: "700" },
-  foodMacroText:  { fontSize: 11, color: "#aaa" },
+  foodTopRow:    { flexDirection: "row", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 6 },
+  foodName:      { fontSize: 14, fontWeight: "600", color: "#1a1a1a", flex: 1 },
+  qtyBadge:      { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+  qtyBadgeText:  { fontSize: 12, fontWeight: "700" },
+  foodCalRow:    { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 5 },
+  calBadge:      { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+  calBadgeText:  { fontSize: 12, fontWeight: "700" },
+  foodMacroText: { fontSize: 11, color: "#aaa" },
 
   swapChip:     { borderWidth: 1.5, borderRadius: 16, paddingHorizontal: 10, paddingVertical: 5, marginLeft: 4 },
   swapChipText: { fontSize: 11, fontWeight: "700" },
