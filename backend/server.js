@@ -133,7 +133,7 @@ const startServer = async () => {
     const scheduleWeeklyJob = require("./src/jobs/scheduleWeekly");
     await scheduleWeeklyJob();
 
-    app.listen(PORT, () => {
+    app.listen(PORT, "0.0.0.0", () => {
       console.log(`🚀 Server running on port ${PORT}`);
     });
 

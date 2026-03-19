@@ -1,6 +1,6 @@
 import { createContext, useState, useEffect, useCallback } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { setLogoutHandler } from "../services/api";
+import { setLogoutHandler, setTokenCache, clearTokenCache } from "../services/api";
 import API from "../services/api";
 
 export const AuthContext = createContext();
@@ -9,37 +9,42 @@ export function AuthProvider({ children }) {
   const [userToken, setUserToken] = useState(null);
   const [loading, setLoading]     = useState(true);
   const [userGoal, setUserGoal]   = useState(null);
+  const [user, setUser]           = useState(null); // ← stores full profile
 
   const logout = useCallback(async () => {
     console.log("🚨 logout() triggered");
     await AsyncStorage.removeItem("token");
+    clearTokenCache();
     setUserToken(null);
     setUserGoal(null);
+    setUser(null);
   }, []);
 
-  // ── Fetch goal from health profile (where it's actually stored) ────────────
+  // ── Fetch profile (goal + name) ───────────────────────────────────────────
   const fetchUserGoal = useCallback(async () => {
     try {
-      const res = await API.get("/health");
-      // goal field: "lose" | "maintain" | "gain"
-      const goal = res.data?.goal ?? res.data?.data?.goal ?? null;
-      setUserGoal(goal);
+      const res = await API.get("/user/profile");
+      const data = res.data ?? {};
+      if (data.goal) setUserGoal(data.goal);
+      setUser(data); // ← save entire profile object
     } catch (err) {
-      // Not critical — silently ignore, goal just won't be set
+      // not critical
     }
   }, []);
 
   const login = async (token) => {
     await AsyncStorage.setItem("token", token);
+    setTokenCache(token);
     setUserToken(token);
-    console.log("✅ login() — userToken set, navigator will swap");
+    console.log("✅ login() — token cached and state updated");
   };
 
   useEffect(() => {
     const loadToken = async () => {
       try {
         const token = await AsyncStorage.getItem("token");
-        if (token) {
+        if (token && token !== "undefined" && token !== "null") {
+          setTokenCache(token);
           setUserToken(token);
           fetchUserGoal();
         }
@@ -55,15 +60,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider
-      value={{
-        userToken,
-        token:        userToken,
-        login,
-        logout,
-        loading,
-        userGoal,
-        fetchUserGoal,
-      }}
+      value={{ userToken, token: userToken, login, logout, loading, userGoal, fetchUserGoal, user }}
     >
       {children}
     </AuthContext.Provider>
