@@ -47,23 +47,35 @@ function FadeSlideIn({ delay = 0, children }) {
   );
 }
 
-// ─── Stat Pill ────────────────────────────────────────────────────────────────
-function StatPill({ icon, label, value, color, onPress }) {
+// ─── Stat Square (ring inside square card) ───────────────────────────────────
+function StatSquare({ icon, label, value, color, progress, onPress }) {
   const scale = useRef(new Animated.Value(1)).current;
+  const onPressIn  = () => Animated.spring(scale, { toValue: 0.95, useNativeDriver: true }).start();
+  const onPressOut = () => Animated.spring(scale, { toValue: 1,    useNativeDriver: true }).start();
 
-  const onPressIn = () =>
-    Animated.spring(scale, { toValue: 0.95, useNativeDriver: true }).start();
-  const onPressOut = () =>
-    Animated.spring(scale, { toValue: 1, useNativeDriver: true }).start();
+  const SIZE   = 72;
+  const STROKE = 6;
+  const RADIUS = (SIZE - STROKE) / 2;
+  const CIRC   = 2 * Math.PI * RADIUS;
+  const dash   = Math.min(progress, 1) * CIRC;
 
   return (
-    <Pressable onPress={onPress} onPressIn={onPressIn} onPressOut={onPressOut}>
-      <Animated.View style={[styles.statPill, { transform: [{ scale }] }]}>
-        <View style={[styles.statIconWrap, { backgroundColor: color + "22" }]}>
-          <Text style={styles.statIcon}>{icon}</Text>
+    <Pressable onPress={onPress} onPressIn={onPressIn} onPressOut={onPressOut}
+      style={{ width: (width - 56) / 3 }}>
+      <Animated.View style={[styles.statSquare, { transform: [{ scale }] }]}>
+        {/* Circular ring using SVG-like View trick */}
+        <View style={styles.ringContainer}>
+          <CircularProgressRing
+            progress={Math.min(progress, 1)}
+            valueText={icon}
+            label=""
+            color={color}
+            size={72}
+            strokeWidth={6}
+          />
         </View>
-        <Text style={styles.statValue}>{value}</Text>
-        <Text style={styles.statLabel}>{label}</Text>
+        <Text style={styles.squareValue}>{value}</Text>
+        <Text style={[styles.squareLabel, { color }]}>{label}</Text>
       </Animated.View>
     </Pressable>
   );
@@ -208,87 +220,55 @@ export default function HomeScreen({ navigation, route }) {
               </Text>
             </View>
 
-            {/* Right side ring */}
+            {/* Right side percentage badge */}
             <View style={styles.heroRight}>
-              <CircularProgressRing
-                progress={Math.min(steps / STEP_GOAL, 1)}
-                valueText={`${stepPct}%`}
-                label="Done"
-                color="#22C55E"
-                size={90}
-              />
+              <View style={styles.heroPctCircle}>
+                <Text style={styles.heroPctNum}>{stepPct}%</Text>
+                <Text style={styles.heroPctLabel}>Done</Text>
+              </View>
             </View>
           </LinearGradient>
         </FadeSlideIn>
 
-        {/* ── TRACK ROW ── */}
+        {/* ── TODAY'S STATS — squares with rings ── */}
         <FadeSlideIn delay={160}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Today's Stats</Text>
-            <Pressable
-              onPress={() => navigation.navigate("Tracking")}
-              style={styles.editBtn}
-            >
+            <Pressable onPress={() => navigation.navigate("Tracking")} style={styles.editBtn}>
               <Text style={styles.editBtnText}>✏️  Edit</Text>
             </Pressable>
           </View>
 
           <View style={styles.statRow}>
-            <StatPill
+            <StatSquare
               icon="👟"
               label="Steps"
               value={loading ? "—" : steps.toLocaleString()}
               color="#22C55E"
+              progress={Math.min(steps / STEP_GOAL, 1)}
               onPress={() => navigation.navigate("TrackDetail", { type: "steps" })}
             />
-            <StatPill
+            <StatSquare
               icon="💧"
               label="Water"
               value={loading ? "—" : `${water} L`}
               color="#3B82F6"
+              progress={Math.min(water / WATER_GOAL, 1)}
               onPress={() => navigation.navigate("TrackDetail", { type: "water" })}
             />
-            <StatPill
+            <StatSquare
               icon="🌙"
               label="Sleep"
               value={loading ? "—" : `${sleep}h`}
               color="#A855F7"
+              progress={Math.min(sleep / SLEEP_GOAL, 1)}
               onPress={() => navigation.navigate("TrackDetail", { type: "sleep" })}
             />
           </View>
         </FadeSlideIn>
 
-        {/* ── RING DETAIL ── */}
-        <FadeSlideIn delay={220}>
-          <View style={styles.ringsCard}>
-            <View style={styles.ringRow}>
-              <Pressable onPress={() => navigation.navigate("TrackDetail", { type: "steps" })}>
-                <CircularProgressRing
-                  progress={Math.min(steps / STEP_GOAL, 1)}
-                  valueText={loading ? "—" : `${steps}`}
-                  label="Steps" color="#22C55E"
-                />
-              </Pressable>
-              <Pressable onPress={() => navigation.navigate("TrackDetail", { type: "water" })}>
-                <CircularProgressRing
-                  progress={Math.min(water / WATER_GOAL, 1)}
-                  valueText={loading ? "—" : `${water} L`}
-                  label="Water" color="#3B82F6"
-                />
-              </Pressable>
-              <Pressable onPress={() => navigation.navigate("TrackDetail", { type: "sleep" })}>
-                <CircularProgressRing
-                  progress={Math.min(sleep / SLEEP_GOAL, 1)}
-                  valueText={loading ? "—" : `${sleep} h`}
-                  label="Sleep" color="#A855F7"
-                />
-              </Pressable>
-            </View>
-          </View>
-        </FadeSlideIn>
-
         {/* ── QUICK ACTIONS ── */}
-        <FadeSlideIn delay={300}>
+        <FadeSlideIn delay={240}>
           <Text style={[styles.sectionTitle, { marginBottom: 14 }]}>Quick Actions</Text>
 
           {/* Log Meal — full-width featured */}
@@ -365,8 +345,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 22,
   },
-  greeting: { fontSize: 20, fontWeight: "800", color: "#0F172A", letterSpacing: -0.5 },
-  subtitle:  { fontSize: 12, color: "#64748B", marginTop: 3 },
+  greeting: { fontSize: 24, fontWeight: "800", color: "#0F172A", letterSpacing: -0.5 },
+  subtitle:  { fontSize: 14, color: "#64748B", marginTop: 3 },
   avatar: {
     width: 44, height: 44, borderRadius: 22,
     justifyContent: "center", alignItems: "center",
@@ -389,12 +369,20 @@ const styles = StyleSheet.create({
     height: 220,
     borderRadius: 110,
     borderWidth: 40,
-    borderColor: "rgba(235, 19, 19, 0.03)",
+    borderColor: "rgba(255,255,255,0.03)",
     right: -60,
     top: -60,
   },
   heroLeft: { flex: 1, paddingRight: 12 },
   heroRight: { alignItems: "center" },
+  heroPctCircle: {
+    width: 88, height: 88, borderRadius: 44,
+    borderWidth: 4, borderColor: "#22C55E",
+    backgroundColor: "rgba(34,197,94,0.1)",
+    justifyContent: "center", alignItems: "center",
+  },
+  heroPctNum:   { fontSize: 22, fontWeight: "900", color: "#fff", letterSpacing: -0.5 },
+  heroPctLabel: { fontSize: 11, color: "#22C55E", fontWeight: "700", marginTop: 2 },
   heroBadgeWrap: {
     backgroundColor: "rgba(250,204,21,0.15)",
     borderWidth: 1,
@@ -408,11 +396,11 @@ const styles = StyleSheet.create({
   heroBadge: { color: "#FACC15", fontSize: 11, fontWeight: "800", letterSpacing: 0.5 },
   heroTitle: { fontSize: 14, color: "#94A3B8", fontWeight: "600", marginBottom: 4 },
   heroBig:   { fontSize: 36, fontWeight: "900", color: "#fff", letterSpacing: -1 },
-  heroUnit:  { fontSize: 13, color: "#3888f9", marginTop: 2, marginBottom: 14 },
+  heroUnit:  { fontSize: 13, color: "#64748B", marginTop: 2, marginBottom: 14 },
 
   heroBarBg: {
     height: 6, borderRadius: 3,
-    backgroundColor: "rgba(255, 0, 0, 0.1)",
+    backgroundColor: "rgba(255,255,255,0.1)",
     marginBottom: 8,
     overflow: "hidden",
   },
@@ -437,45 +425,25 @@ const styles = StyleSheet.create({
   },
   editBtnText: { fontSize: 13, fontWeight: "700", color: "#6366F1" },
 
-  // Stat Pills
+  // Stat Squares
   statRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 20,
-  },
-  statPill: {
-    backgroundColor: "#fff",
-    borderRadius: 18,
-    paddingVertical: 14,
-    paddingHorizontal: 10,
-    alignItems: "center",
-    width: (width - 56) / 3,
-    boxShadow: "0px 2px 8px rgba(15, 23, 42, 0.07)",
-  },
-  statIconWrap: {
-    width: 42, height: 42, borderRadius: 14,
-    justifyContent: "center", alignItems: "center",
-    marginBottom: 8,
-  },
-  statIcon:  { fontSize: 20 },
-  statValue: { fontSize: 15, fontWeight: "800", color: "#0F172A" },
-  statLabel: { fontSize: 11, color: "#94A3B8", marginTop: 2, fontWeight: "600" },
-
-  // Rings Card
-  ringsCard: {
-    backgroundColor: "#fff",
-    borderRadius: 22,
-    paddingVertical: 24,
-    paddingHorizontal: 16,
     marginBottom: 22,
-    boxShadow: "0px 2px 10px rgba(15, 23, 42, 0.07)",
-    overflow: "hidden",
   },
-  ringRow: {
-    flexDirection: "row",
-    justifyContent: "space-evenly",
+  statSquare: {
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    paddingVertical: 16,
+    paddingHorizontal: 8,
     alignItems: "center",
+    boxShadow: "0px 2px 10px rgba(15, 23, 42, 0.08)",
   },
+  ringContainer: {
+    marginBottom: 10,
+  },
+  squareValue: { fontSize: 14, fontWeight: "800", color: "#0F172A", letterSpacing: -0.3 },
+  squareLabel: { fontSize: 11, marginTop: 2, fontWeight: "700" },
 
   // Featured card
   featuredCard: {
