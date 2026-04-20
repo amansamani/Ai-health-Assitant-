@@ -49,11 +49,11 @@ const registerUser = async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
-        goal: user.goal,
       },
     });
 
   } catch (error) {
+    console.error("❌ REGISTER ERROR:", error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -67,11 +67,6 @@ const loginUser = async (req, res) => {
 
     if (!email || !password) {
       return res.status(400).json({ message: "All fields are required" });
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return res.status(400).json({ message: "Invalid email format" });
     }
 
     const user = await User.findOne({ email });
@@ -99,60 +94,72 @@ const loginUser = async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
-        goal: user.goal,
       },
     });
 
   } catch (error) {
+    console.error("❌ LOGIN ERROR:", error);
     res.status(500).json({ message: error.message });
   }
 };
 
 // ─────────────────────────────────────────
-// 1️⃣ FORGOT PASSWORD → SEND OTP
+// FORGOT PASSWORD → SEND OTP
 // ─────────────────────────────────────────
 const forgotPassword = async (req, res) => {
-
   const { email } = req.body;
 
   try {
+    console.log("📩 Forgot password for:", email);
 
     const user = await User.findOne({ email });
 
     if (!user) {
+      console.log("❌ User not found");
       return res.status(404).json({ message: "No account found with this email." });
     }
 
-    // Generate 6 digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
+    console.log("🔥 OTP GENERATED:", otp);
+
     user.otpCode = otp;
-    user.otpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+    user.otpExpires = Date.now() + 10 * 60 * 1000;
     user.otpVerified = false;
 
     await user.save();
 
-    await sendEmail(email, otp);
+    // 🔥 TRY EMAIL
+    try {
+      await sendEmail(email, otp);
+      console.log("✅ Email sent");
+    } catch (emailErr) {
+      console.error("❌ EMAIL ERROR:", emailErr);
+
+      // fallback: still return success for testing
+      return res.status(200).json({
+        message: "OTP generated (email failed, check logs)",
+        otp // 👈 TEMP (remove in production)
+      });
+    }
 
     res.status(200).json({
       message: "OTP sent to your email."
     });
 
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
+    console.error("❌ FORGOT PASSWORD ERROR:", err);
+    res.status(500).json({ message: err.message });
   }
 };
 
 // ─────────────────────────────────────────
-// 2️⃣ VERIFY OTP
+// VERIFY OTP
 // ─────────────────────────────────────────
 const verifyOtp = async (req, res) => {
-
   const { email, otp } = req.body;
 
   try {
-
     const user = await User.findOne({ email });
 
     if (!user) {
@@ -164,7 +171,7 @@ const verifyOtp = async (req, res) => {
     }
 
     if (user.otpExpires < Date.now()) {
-      return res.status(400).json({ message: "OTP has expired. Please try again." });
+      return res.status(400).json({ message: "OTP expired." });
     }
 
     user.otpVerified = true;
@@ -175,20 +182,18 @@ const verifyOtp = async (req, res) => {
     });
 
   } catch (err) {
-    console.error(err);
+    console.error("❌ VERIFY OTP ERROR:", err);
     res.status(500).json({ message: err.message });
   }
 };
 
 // ─────────────────────────────────────────
-// 3️⃣ RESET PASSWORD
+// RESET PASSWORD
 // ─────────────────────────────────────────
 const resetPassword = async (req, res) => {
-
   const { email, newPassword } = req.body;
 
   try {
-
     if (!newPassword || newPassword.length < 6) {
       return res.status(400).json({
         message: "Password must be at least 6 characters."
@@ -208,7 +213,6 @@ const resetPassword = async (req, res) => {
     const hashed = await bcrypt.hash(newPassword, 10);
 
     user.password = hashed;
-
     user.otpCode = undefined;
     user.otpExpires = undefined;
     user.otpVerified = false;
@@ -220,14 +224,11 @@ const resetPassword = async (req, res) => {
     });
 
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
+    console.error("❌ RESET PASSWORD ERROR:", err);
+    res.status(500).json({ message: err.message });
   }
 };
 
-// ─────────────────────────────────────────
-// EXPORT CONTROLLERS
-// ─────────────────────────────────────────
 module.exports = {
   registerUser,
   loginUser,
