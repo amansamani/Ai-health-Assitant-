@@ -148,6 +148,15 @@ export default function LoginScreen({ navigation }) {
                 onChangeText={setPassword}
                 secureTextEntry
               />
+              {/* Forgot Password */}
+<Pressable
+  onPress={() => navigation.navigate("ForgotPassword")}
+  style={{ alignSelf: "flex-end", marginBottom: 10 }}
+>
+  <Text style={{ color: "#6366F1", fontWeight: "600", fontSize: 13 }}>
+    Forgot Password?
+  </Text>
+</Pressable>
 
               {/* Login button */}
               <Pressable

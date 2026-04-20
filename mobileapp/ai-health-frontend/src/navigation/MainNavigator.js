@@ -10,9 +10,9 @@ import NutritionDashboardScreen from "../screens/nutrition/NutritionDashboardScr
 import LogMealScreen from "../screens/nutrition/LogMealScreen";
 import ProgressScreen from "../screens/nutrition/ProgressScreen";
 import MealLoggerScreen from "../screens/nutrition/MealLoggerScreen";
-import ForgotPassword from "./screens/ForgotPassword";
-import VerifyOtp      from "./screens/VerifyOtp";
-import ResetPassword  from "./screens/ResetPassword";
+import ForgotPassword from "../screens/ForgotPassword";
+import VerifyOtp      from "../screens/VerifyOtp";
+import ResetPassword  from "../screens/ResetPassword";
 const Stack = createNativeStackNavigator();
 
 export default function MainNavigator() {

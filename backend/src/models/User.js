@@ -17,6 +17,10 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    // 👇 Add these inside your existing userSchema
+    otpCode:        { type: String },
+    otpExpires:     { type: Date },
+    otpVerified:    { type: Boolean, default: false },
     age: Number,
     height: Number,
     weight: Number,
