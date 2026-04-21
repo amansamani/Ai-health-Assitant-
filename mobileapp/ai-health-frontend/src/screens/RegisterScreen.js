@@ -181,6 +181,7 @@ export default function RegisterScreen({ navigation }) {
         name,
         email,
         password,
+        token: data.token,
 });
     } catch (err) {
       setError(err.message);

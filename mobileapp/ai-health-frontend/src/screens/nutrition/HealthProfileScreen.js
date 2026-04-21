@@ -117,7 +117,7 @@ const DIET_OPTIONS = [
 
 export default function HealthProfileScreen({ navigation, route }) {
   const { login } = useContext(AuthContext);
-  const { name, email, password } = route.params ?? {};
+  const { name, email, password, token} = route.params ?? {};
 
   useEffect(() => {
   if (!name || !email || !password) {
@@ -139,24 +139,29 @@ export default function HealthProfileScreen({ navigation, route }) {
   const handleChange = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
   const submitProfile = async () => {
-    if (submitting) return;
-    setSubmitting(true);
-    try {
-      const res = await API.post("/auth/register", { name, email, password });
-      const { token } = res.data;
-      const authHeader = { headers: { Authorization: `Bearer ${token}` } };
-      await API.post("/health", {
-        age: Number(form.age), height: Number(form.height),
-        weight: Number(form.weight), gender: form.gender,
-        activityLevel: form.activityLevel, goal: form.goal, dietType: form.dietType,
-      }, authHeader);
-      await API.post("/nutrition/generate", {}, authHeader);
-      await login(token);
-    } catch (err) {
-      console.log("❌ ERROR:", err.response?.data || err.message);
-      setSubmitting(false);
-    }
-  };
+  if (submitting) return;
+  setSubmitting(true);
+  try {
+    const authHeader = { headers: { Authorization: `Bearer ${token}` } };
+
+    await API.post("/health", {
+      age: Number(form.age),
+      height: Number(form.height),
+      weight: Number(form.weight),
+      gender: form.gender,
+      activityLevel: form.activityLevel,
+      goal: form.goal,
+      dietType: form.dietType,
+    }, authHeader);
+
+    await API.post("/nutrition/generate", {}, authHeader);
+
+    await login(token); // This should trigger navigation to Home
+  } catch (err) {
+    console.log("❌ ERROR:", err.response?.data || err.message);
+    setSubmitting(false);
+  }
+};
 
   const activeGoal     = GOAL_OPTIONS.find((g) => g.key === form.goal);
   const activeActivity = ACTIVITY_OPTIONS.find((a) => a.key === form.activityLevel);
