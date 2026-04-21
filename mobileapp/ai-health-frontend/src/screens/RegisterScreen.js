@@ -180,9 +180,8 @@ export default function RegisterScreen({ navigation }) {
       navigation.navigate("HealthProfile", {
         name,
         email,
-        goal: goalMap[goal],
-      });
-
+        password,
+});
     } catch (err) {
       setError(err.message);
     } finally {

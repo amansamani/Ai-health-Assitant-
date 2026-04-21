@@ -119,10 +119,12 @@ export default function HealthProfileScreen({ navigation, route }) {
   const { login } = useContext(AuthContext);
   const { name, email, password } = route.params ?? {};
 
+  useEffect(() => {
   if (!name || !email || !password) {
     alert("Registration data missing");
     navigation.goBack();
   }
+  }, []);
 
   const [form, setForm] = useState({
     age: "", gender: "male", height: "", weight: "",
