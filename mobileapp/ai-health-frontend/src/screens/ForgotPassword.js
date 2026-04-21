@@ -10,25 +10,32 @@ export default function ForgotPassword({ navigation }) {
   const [loading, setLoading]   = useState(false);
 
   const handleSendOtp = async () => {
-    if (!email) {
-      Alert.alert("Error", "Please enter your email");
-      return;
-    }
+  if (!email) {
+    Alert.alert("Error", "Please enter your email");
+    return;
+  }
 
-    try {
-      setLoading(true);
-      await API.post("/auth/forgot-password", { email });
-      Alert.alert("Success", "OTP sent to your email!");
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    Alert.alert("Error", "Please enter a valid email");
+    return;
+  }
 
-      // Pass email to next screen
-      navigation.navigate("VerifyOtp", { email });
+  try {
+    setLoading(true);
+    
+    // Fire and don't wait — backend handles it async
+    API.post("/auth/forgot-password", { email }).catch(() => {});
 
-    } catch (err) {
-      Alert.alert("Error", err?.response?.data?.message || "Something went wrong");
-    } finally {
-      setLoading(false);
-    }
-  };
+    // Navigate immediately
+    navigation.navigate("VerifyOtp", { email });
+
+  } catch (err) {
+    Alert.alert("Error", "Something went wrong");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <View style={styles.container}>

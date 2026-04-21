@@ -107,49 +107,31 @@ const loginUser = async (req, res) => {
 // FORGOT PASSWORD → SEND OTP
 // ─────────────────────────────────────────
 const forgotPassword = async (req, res) => {
-  const { email } = req.body;
-
   try {
-    console.log("📩 Forgot password for:", email);
-
+    const { email } = req.body;
     const user = await User.findOne({ email });
 
     if (!user) {
-      console.log("❌ User not found");
       return res.status(404).json({ message: "No account found with this email." });
     }
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-
-    console.log("🔥 OTP GENERATED:", otp);
-
     user.otpCode = otp;
     user.otpExpires = Date.now() + 10 * 60 * 1000;
     user.otpVerified = false;
-
     await user.save();
 
-    // 🔥 TRY EMAIL
-    try {
-      await sendEmail(email, otp);
-      console.log("✅ Email sent");
-    } catch (emailErr) {
-      console.error("❌ EMAIL ERROR:", emailErr);
+    // ✅ Respond IMMEDIATELY, don't await email
+    res.status(200).json({ message: "OTP sent to your email." });
 
-      // fallback: still return success for testing
-      return res.status(200).json({
-        message: "OTP generated (email failed, check logs)",
-        otp // 👈 TEMP (remove in production)
-      });
-    }
+    // Send email in background AFTER responding
+    sendEmail(email, otp).catch(err => 
+      console.error("❌ EMAIL ERROR:", err.message)
+    );
 
-    res.status(200).json({
-      message: "OTP sent to your email."
-    });
-
-  } catch (err) {
-    console.error("❌ FORGOT PASSWORD ERROR:", err);
-    res.status(500).json({ message: err.message });
+  } catch (error) {
+    console.error("❌ FORGOT PASSWORD ERROR:", error);
+    res.status(500).json({ message: error.message });
   }
 };
 
