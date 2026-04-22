@@ -1,21 +1,13 @@
-const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const sendEmail = async (to, otp) => {
-  const transporter = nodemailer.createTransport({
-    host: "smtp.gmail.com",  // ✅ explicit host
-    port: 587,               // ✅ 587 instead of 465
-    secure: false,           // ✅ false for 587
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-  });
-
-  await transporter.sendMail({
-    from: `"FitLip" <${process.env.EMAIL_USER}>`,
+  await resend.emails.send({
+    from: "FitLip <onboarding@resend.dev>", // ✅ works without domain verification
     to,
     subject: "Your OTP Code",
-    html: `<h2>Your OTP is: <strong>${otp}</strong></h2><p>This OTP expires in 10 minutes.</p>`,
+    html: `<h2>Your OTP is: <strong>${otp}</strong></h2><p>Expires in 10 minutes.</p>`,
   });
 };
 
