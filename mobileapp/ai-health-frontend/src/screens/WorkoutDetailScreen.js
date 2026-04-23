@@ -1,7 +1,7 @@
-import React, { useEffect, useState, useCallback, memo, useRef } from "react";
+import React, { useEffect, useState, useCallback, memo, useRef, useMemo } from "react";
 import {
   Animated, View, Text, StyleSheet, FlatList,
-  Pressable, InteractionManager, Dimensions,
+  Pressable, Dimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -18,10 +18,10 @@ const ExerciseCard = memo(function ExerciseCard({ item, isCompleted, onToggle, d
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(fadeAnim,  { toValue: 1, duration: 400, delay, useNativeDriver: true }),
-      Animated.timing(slideAnim, { toValue: 0, duration: 400, delay, useNativeDriver: true }),
+      Animated.timing(fadeAnim,  { toValue: 1, duration: 350, delay, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 350, delay, useNativeDriver: true }),
     ]).start();
-  }, [delay]);
+  }, []);
 
   const onIn  = () => Animated.spring(scaleAnim, { toValue: 0.97, useNativeDriver: true }).start();
   const onOut = () => Animated.spring(scaleAnim, { toValue: 1,    useNativeDriver: true }).start();
@@ -35,10 +35,8 @@ const ExerciseCard = memo(function ExerciseCard({ item, isCompleted, onToggle, d
     }}>
       <Pressable onPress={() => onToggle(item.name)} onPressIn={onIn} onPressOut={onOut}>
         <View style={[styles.card, isCompleted && styles.cardCompleted]}>
-          {/* Completion overlay tint */}
           {isCompleted && <View style={styles.cardDoneTint} />}
 
-          {/* Left: SVG icon */}
           <View style={[styles.iconWrap, isCompleted && styles.iconWrapDone]}>
             {SvgIcon
               ? <SvgIcon width={52} height={52} />
@@ -46,7 +44,6 @@ const ExerciseCard = memo(function ExerciseCard({ item, isCompleted, onToggle, d
             }
           </View>
 
-          {/* Middle: name + meta */}
           <View style={styles.cardMid}>
             <Text style={[styles.exerciseName, isCompleted && styles.exerciseNameDone]}
               numberOfLines={1}>
@@ -67,7 +64,6 @@ const ExerciseCard = memo(function ExerciseCard({ item, isCompleted, onToggle, d
             </View>
           </View>
 
-          {/* Right: checkbox */}
           <Pressable onPress={() => onToggle(item.name)} style={styles.checkWrap}>
             {isCompleted
               ? (
@@ -88,19 +84,19 @@ const ExerciseCard = memo(function ExerciseCard({ item, isCompleted, onToggle, d
 export default function WorkoutDetailScreen({ route, navigation }) {
   const workout = route?.params?.workout;
   const [completed, setCompleted] = useState({});
-  const [ready, setReady]         = useState(false);
+
+  // ✅ Memoize exercises array — stable reference across renders
+  const exercises = useMemo(() => workout?.exercises ?? [], [workout]);
 
   const headerOpacity = useRef(new Animated.Value(0)).current;
   const headerSlide   = useRef(new Animated.Value(-10)).current;
 
   useEffect(() => {
-    InteractionManager.runAfterInteractions(() => {
-      setReady(true);
-      Animated.parallel([
-        Animated.timing(headerOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
-        Animated.timing(headerSlide,   { toValue: 0, duration: 500, useNativeDriver: true }),
-      ]).start();
-    });
+    // ✅ No InteractionManager — animate immediately on mount
+    Animated.parallel([
+      Animated.timing(headerOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
+      Animated.timing(headerSlide,   { toValue: 0, duration: 400, useNativeDriver: true }),
+    ]).start();
   }, []);
 
   if (!workout || !Array.isArray(workout.exercises)) {
@@ -118,7 +114,7 @@ export default function WorkoutDetailScreen({ route, navigation }) {
   }, []);
 
   const completedCount = Object.values(completed).filter(Boolean).length;
-  const total          = workout.exercises.length;
+  const total          = exercises.length;
   const pct            = total > 0 ? completedCount / total : 0;
   const allDone        = completedCount === total && total > 0;
 
@@ -127,28 +123,27 @@ export default function WorkoutDetailScreen({ route, navigation }) {
       item={item}
       isCompleted={!!completed[item.name]}
       onToggle={toggleExercise}
-      delay={index * 70}
+      delay={index * 40}
     />
   ), [completed, toggleExercise]);
 
   return (
     <SafeAreaView style={styles.container}>
       <FlatList
-        data={ready ? workout.exercises : []}
+        data={exercises}                  // ✅ always render — no conditional empty array
         keyExtractor={(item) => item.name}
         renderItem={renderItem}
-        initialNumToRender={4}
-        maxToRenderPerBatch={4}
-        windowSize={5}
+        initialNumToRender={6}            // ✅ up from 4
+        maxToRenderPerBatch={6}           // ✅ up from 4
+        windowSize={6}                    // ✅ up from 5
         removeClippedSubviews
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
 
+        // ✅ Keep as inline function — needed to access Animated refs from closure
         ListHeaderComponent={() => (
           <Animated.View style={{ opacity: headerOpacity, transform: [{ translateY: headerSlide }] }}>
-            {/* ── HERO ── */}
             <LinearGradient colors={["#0F172A", "#1E293B"]} style={styles.hero}>
-              {/* Decorative circle */}
               <View style={styles.heroDecor} />
 
               <Pressable onPress={() => navigation?.goBack()} style={styles.backBtn}>
@@ -161,10 +156,9 @@ export default function WorkoutDetailScreen({ route, navigation }) {
               <Text style={styles.heroTitle}>{workout.title}</Text>
               <Text style={styles.heroSub}>{total} exercises · Build strength & endurance</Text>
 
-              {/* Progress bar */}
               <View style={styles.progressWrap}>
                 <View style={styles.progressBar}>
-                  <Animated.View style={[styles.progressFill, { width: `${Math.round(pct * 100)}%` }]} />
+                  <View style={[styles.progressFill, { width: `${Math.round(pct * 100)}%` }]} />
                 </View>
                 <Text style={styles.progressLabel}>
                   {allDone ? "🎉 Workout complete!" : `${completedCount} / ${total} done`}
@@ -172,7 +166,6 @@ export default function WorkoutDetailScreen({ route, navigation }) {
               </View>
             </LinearGradient>
 
-            {/* ── STAT PILLS ── */}
             <View style={styles.statRow}>
               <View style={styles.statPill}>
                 <Text style={styles.statNum}>{total}</Text>
@@ -189,19 +182,11 @@ export default function WorkoutDetailScreen({ route, navigation }) {
             </View>
 
             <Text style={styles.sectionLabel}>EXERCISES</Text>
-
-            {/* Skeleton while loading */}
-            {!ready && (
-              <>
-                <SkeletonCard /><SkeletonCard />
-                <SkeletonCard /><SkeletonCard />
-              </>
-            )}
           </Animated.View>
         )}
 
         ListFooterComponent={() =>
-          ready && allDone ? (
+          allDone ? (
             <View style={styles.doneCard}>
               <Text style={styles.doneEmoji}>🎉</Text>
               <Text style={styles.doneTitle}>Workout Complete!</Text>
@@ -221,11 +206,10 @@ const styles = StyleSheet.create({
   center:      { flex: 1, justifyContent: "center", alignItems: "center" },
   loadingText: { color: "#94A3B8", fontSize: 15, fontWeight: "600" },
 
-  // Hero
   hero: {
     padding: 24, paddingTop: 16, paddingBottom: 28,
     borderBottomLeftRadius: 28, borderBottomRightRadius: 28,
-    marginBottom: 0, overflow: "hidden",
+    overflow: "hidden",
   },
   heroDecor: {
     position: "absolute", width: 260, height: 260,
@@ -257,18 +241,13 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.1)",
     overflow: "hidden",
   },
-  progressFill: {
-    height: "100%", borderRadius: 3,
-    backgroundColor: "#22C55E",
-  },
+  progressFill: { height: "100%", borderRadius: 3, backgroundColor: "#22C55E" },
   progressLabel: { fontSize: 12, color: "#94A3B8", fontWeight: "600" },
 
-  // Stat row
   statRow: {
     flexDirection: "row", justifyContent: "space-between",
     paddingHorizontal: 20, paddingVertical: 16,
     backgroundColor: "#fff",
-    borderBottomLeftRadius: 0, borderBottomRightRadius: 0,
     boxShadow: "0px 2px 10px rgba(15,23,42,0.07)",
     marginBottom: 20,
   },
@@ -276,13 +255,11 @@ const styles = StyleSheet.create({
   statNum:   { fontSize: 22, fontWeight: "900", color: "#0F172A", letterSpacing: -0.5 },
   statLabel: { fontSize: 11, color: "#94A3B8", marginTop: 3, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.4 },
 
-  // Section label
   sectionLabel: {
     fontSize: 11, fontWeight: "800", color: "#CBD5E1",
     letterSpacing: 1.2, marginBottom: 10, paddingHorizontal: 20,
   },
 
-  // Exercise card
   card: {
     backgroundColor: "#fff", borderRadius: 20,
     marginHorizontal: 20, marginBottom: 12,
@@ -319,7 +296,6 @@ const styles = StyleSheet.create({
   },
   metaText: { fontSize: 11, color: "#64748B", fontWeight: "600" },
 
-  // Checkbox
   checkWrap: { paddingLeft: 4 },
   checkDone: {
     width: 32, height: 32, borderRadius: 16,
@@ -331,7 +307,6 @@ const styles = StyleSheet.create({
     borderWidth: 2, borderColor: "#E2E8F0",
   },
 
-  // Done card
   doneCard: {
     margin: 20, backgroundColor: "#fff",
     borderRadius: 22, padding: 28,

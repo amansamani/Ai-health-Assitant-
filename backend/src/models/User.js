@@ -15,9 +15,10 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: true,
+      required: false, // 👈 changed from true (Google users have no password)
     },
-    // 👇 Add these inside your existing userSchema
+    googleId:  { type: String },         // 👈 new
+    picture:   { type: String },         // 👈 new
     otpCode:        { type: String },
     otpExpires:     { type: Date },
     otpVerified:    { type: Boolean, default: false },

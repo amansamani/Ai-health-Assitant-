@@ -10,7 +10,7 @@ import NutritionDashboardScreen from "../screens/nutrition/NutritionDashboardScr
 import LogMealScreen from "../screens/nutrition/LogMealScreen";
 import ProgressScreen from "../screens/nutrition/ProgressScreen";
 import MealLoggerScreen from "../screens/nutrition/MealLoggerScreen";
-import ForgotPassword from "../screens/ForgotPassword";
+
 const Stack = createNativeStackNavigator();
 
 export default function MainNavigator() {
@@ -22,7 +22,6 @@ export default function MainNavigator() {
       <Stack.Screen name="Tracking"        component={TrackingScreen} />
       <Stack.Screen name="WeeklySummary"   component={WeeklySummaryScreen} />
       <Stack.Screen name="TrackDetail"     component={TrackDetailScreen} />
-      <Stack.Screen name="ForgotPassword" component={ForgotPassword} />
       <Stack.Screen
         name="WorkoutDetail"
         component={WorkoutDetailScreen}

@@ -2,7 +2,10 @@ const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const sendEmail = require("../utils/sendEmail");
+const { OAuth2Client } = require('google-auth-library');
+const jwt = require('jsonwebtoken');
 
+const googleClient = new OAuth2Client(process.env.GOOGLE_WEB_CLIENT_ID);
 // ─────────────────────────────────────────
 // REGISTER USER
 // ─────────────────────────────────────────
@@ -210,11 +213,49 @@ const resetPassword = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+const googleLogin = async (req, res) => {
+  const { idToken } = req.body;
+
+  try {
+    // 1. Verify token with Google
+    const ticket = await googleClient.verifyIdToken({
+      idToken,
+      audience: process.env.GOOGLE_WEB_CLIENT_ID,
+    });
+    const { email, name, picture, sub: googleId } = ticket.getPayload();
+
+    // 2. Find or create user in MongoDB
+    let user = await User.findOne({ email });
+    if (!user) {
+      user = await User.create({
+        email,
+        name,
+        picture,
+        googleId,
+        password: "GOOGLE_AUTH", // placeholder since password is required
+      });
+    }
+
+    // 3. Return JWT
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "30d",
+    });
+
+    res.json({
+      token,
+      user: { name: user.name, email: user.email, picture: user.picture },
+    });
+  } catch (err) {
+    console.error('Google auth error:', err);
+    res.status(401).json({ error: "Invalid Google token" });
+  }
+};
 
 module.exports = {
   registerUser,
   loginUser,
   forgotPassword,
   verifyOtp,
-  resetPassword
+  resetPassword,
+  googleLogin,
 };
