@@ -12,9 +12,11 @@ import {
   ActivityIndicator
 } from "react-native";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useContext } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
+import GoogleSignInButton from '../components/GoogleSignInButton';
+import { AuthContext } from "../context/AuthContext";
 
 const { width } = Dimensions.get("window");
 
@@ -121,7 +123,9 @@ function GoalCard({ goal, selected, onPress }) {
   );
 }
 
+
 export default function RegisterScreen({ navigation }) {
+  const { login } = useContext(AuthContext);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -282,11 +286,27 @@ export default function RegisterScreen({ navigation }) {
 
           </Pressable>
 
-          <Pressable onPress={() => navigation.goBack()} style={styles.loginWrap}>
-            <Text style={styles.loginText}>
-              Already have an account? <Text style={styles.loginLink}>Sign In</Text>
-            </Text>
-          </Pressable>
+          {/* ── DIVIDER ── */}
+<View style={styles.dividerRow}>
+  <View style={styles.dividerLine} />
+  <Text style={styles.dividerText}>or</Text>
+  <View style={styles.dividerLine} />
+</View>
+
+{/* ── GOOGLE SIGN IN ── */}
+<GoogleSignInButton
+  onSuccess={(user) => {
+    login(user.token);
+  }}
+/>
+
+<View style={{ height: 16 }} />
+
+<Pressable onPress={() => navigation.goBack()} style={styles.loginWrap}>
+  <Text style={styles.loginText}>
+    Already have an account? <Text style={styles.loginLink}>Sign In</Text>
+  </Text>
+</Pressable>
 
         </ScrollView>
 
@@ -414,4 +434,12 @@ const styles = StyleSheet.create({
   // Back button
   backBtn: { marginBottom: 8, alignSelf: "flex-start" },
   backBtnText: { color: "#6366F1", fontWeight: "700", fontSize: 15 },
+
+  // Add inside StyleSheet.create({...})
+dividerRow: {
+  flexDirection: "row", alignItems: "center",
+  marginVertical: 16, gap: 12,
+},
+dividerLine: { flex: 1, height: 1, backgroundColor: "#E2E8F0" },
+dividerText: { fontSize: 13, color: "#CBD5E1", fontWeight: "600" },
 });

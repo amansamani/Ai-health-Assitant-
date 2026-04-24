@@ -248,6 +248,28 @@ const googleLogin = async (req, res) => {
     res.status(401).json({ error: "Invalid Google token" });
   }
 };
+const googleAccessLogin = async (req, res) => {
+  const { email, name, picture, googleId } = req.body;
+
+  try {
+    let user = await User.findOne({ email });
+    if (!user) {
+      user = await User.create({ email, name, picture, googleId });
+    }
+
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: '30d',
+    });
+
+    res.json({
+      token,
+      user: { name: user.name, email: user.email, picture: user.picture },
+    });
+  } catch (err) {
+    console.error('Google access login error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
 
 module.exports = {
   registerUser,
@@ -256,4 +278,5 @@ module.exports = {
   verifyOtp,
   resetPassword,
   googleLogin,
+  googleAccessLogin,
 };
