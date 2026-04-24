@@ -9,16 +9,18 @@ WebBrowser.maybeCompleteAuthSession();
 export default function GoogleSignInButton({ onSuccess }) {
 
   const [request, response, promptAsync] = Google.useAuthRequest({
-    webClientId: '701044360865-o2san4uegg1j0tpjk8q51eihm6e0g10l.apps.googleusercontent.com',
-    androidClientId:'701044360865-2pq4gdpjjku6ptmo3ojnqapjvirk1lco.apps.googleusercontent.com',
-    scopes: ['profile', 'email'],
-  });
+  expoClientId: '701044360865-o2san4uegg1j0tpjk8q51eihm6e0g10l.apps.googleusercontent.com', 
+  androidClientId: '701044360865-2pq4gdpjjku6ptmo3ojnqapjvirk1lco.apps.googleusercontent.com',
+  webClientId: '701044360865-o2san4uegg1j0tpjk8q51eihm6e0g10l.apps.googleusercontent.com',
+  scopes: ['profile', 'email'],
+});
 
   useEffect(() => {
     if (response?.type === 'success') {
       // Use access_token instead of id_token
-      const { access_token } = response.params;
-      fetchGoogleUser(access_token);
+      const { id_token } = response.params;
+
+      sendToBackend(id_token);
     }
     if (response?.type === 'error') {
       console.error('Google auth error:', response.error);
@@ -26,34 +28,24 @@ export default function GoogleSignInButton({ onSuccess }) {
   }, [response]);
 
   // Fetch user info directly from Google using access token
-  const fetchGoogleUser = async (accessToken) => {
-    try {
-      const userRes = await fetch('https://www.googleapis.com/userinfo/v2/me', {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-      const googleUser = await userRes.json();
-      console.log('Google user:', googleUser);
+  const sendToBackend = async (idToken) => {
+  try {
+    const res = await fetch('https://ai-health-assitant-production.up.railway.app/auth/google', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idToken }),
+    });
 
-      // Send to your backend
-      const res = await fetch('https://ai-health-assitant-production.up.railway.app/auth/google-access', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: googleUser.email,
-          name: googleUser.name,
-          picture: googleUser.picture,
-          googleId: googleUser.id,
-        }),
-      });
-      const data = await res.json();
-      if (data.token) {
-        await AsyncStorage.setItem('token', data.token);
-        onSuccess(data);
-      }
-    } catch (err) {
-      console.error('Error:', err);
+    const data = await res.json();
+
+    if (data.token) {
+      await AsyncStorage.setItem('token', data.token);
+      onSuccess(data);
     }
-  };
+  } catch (err) {
+    console.error('Error:', err);
+  }
+};
 
   return (
     <TouchableOpacity

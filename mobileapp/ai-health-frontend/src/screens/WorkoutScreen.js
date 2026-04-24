@@ -1,6 +1,6 @@
 import {
   View, Text, FlatList, StyleSheet,
-  ActivityIndicator, Pressable, Animated, Dimensions,
+  ActivityIndicator, Pressable, Animated, Dimensions, Platform,
 } from "react-native";
 import { useEffect, useState, useCallback, useRef, useContext } from "react";
 import API from "../services/api";
@@ -17,6 +17,19 @@ const GOAL_META = {
   lean:  { label: "Lean",  emoji: "🔥", color: "#EF4444", bg: "#FEE2E2" },
   fit:   { label: "Fit",   emoji: "⚡", color: "#22C55E", bg: "#DCFCE7" },
 };
+
+// ── Cross-platform shadow helper ───────────────────────────────────────────────
+const shadow = (elevation = 4) =>
+  Platform.select({
+    ios: {
+      shadowColor: "#0F172A",
+      shadowOffset: { width: 0, height: elevation / 2 },
+      shadowOpacity: 0.12,
+      shadowRadius: elevation,
+    },
+    android: { elevation },
+    default: {},
+  });
 
 // ── Fade + slide in ───────────────────────────────────────────────────────────
 function FadeSlideIn({ delay = 0, children }) {
@@ -47,12 +60,12 @@ function WorkoutCard({ item, index, goalColor, onPress }) {
   return (
     <FadeSlideIn delay={index * 60}>
       <Pressable onPress={onPress} onPressIn={onIn} onPressOut={onOut}>
-        <Animated.View style={[styles.card, { transform: [{ scale }] }]}>
+        <Animated.View style={[styles.card, shadow(4), { transform: [{ scale }] }]}>
           {/* Accent bar */}
           <View style={[styles.cardAccent, { backgroundColor: accentColor }]} />
 
           <View style={styles.cardContent}>
-            {/* Left: day badge + info */}
+            {/* Left: day badge */}
             <View style={styles.cardLeft}>
               <View style={[styles.dayBadge, { backgroundColor: accentColor + "18" }]}>
                 <Text style={[styles.dayNum, { color: accentColor }]}>{item.day}</Text>
@@ -67,11 +80,11 @@ function WorkoutCard({ item, index, goalColor, onPress }) {
                 <View style={styles.metaPill}>
                   <Text style={styles.metaText}>🏋️ {item.exercises.length} exercises</Text>
                 </View>
-                {item.duration && (
-                  <View style={styles.metaPill}>
+                {item.duration ? (
+                  <View style={[styles.metaPill, { marginLeft: 8 }]}>
                     <Text style={styles.metaText}>⏱ {item.duration} min</Text>
                   </View>
-                )}
+                ) : null}
               </View>
             </View>
 
@@ -88,7 +101,7 @@ function WorkoutCard({ item, index, goalColor, onPress }) {
 
 // ── Main Screen ───────────────────────────────────────────────────────────────
 export default function WorkoutScreen() {
-  const navigation        = useNavigation();
+  const navigation          = useNavigation();
   const { token, userGoal } = useContext(AuthContext);
   const [workouts, setWorkouts] = useState([]);
   const [loading, setLoading]   = useState(true);
@@ -97,12 +110,8 @@ export default function WorkoutScreen() {
 
   const goal = GOAL_META[userGoal] ?? GOAL_META.fit;
 
-  useEffect(() => {
-    if (!token || !userGoal) return;
-    fetchWorkouts();
-  }, [mode, userGoal, token]);
-
-  const fetchWorkouts = async () => {
+  // ── FIX: useCallback so the fn reference is stable ─────────────────────────
+  const fetchWorkouts = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
@@ -113,14 +122,33 @@ export default function WorkoutScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [userGoal, mode]);
+
+  useEffect(() => {
+    if (!token || !userGoal) {
+      // ── FIX: don't spin forever if userGoal is missing ────────────────────
+      if (!userGoal) setLoading(false);
+      return;
+    }
+    fetchWorkouts();
+  }, [fetchWorkouts, token, userGoal]);
 
   // ── Loading ──
-  if (loading || !userGoal) {
+  if (loading) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color="#6366F1" />
         <Text style={styles.loadingText}>Loading workouts…</Text>
+      </View>
+    );
+  }
+
+  // ── No goal set ──
+  if (!userGoal) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.errorEmoji}>🎯</Text>
+        <Text style={styles.errorText}>No goal set. Please update your profile.</Text>
       </View>
     );
   }
@@ -156,7 +184,6 @@ export default function WorkoutScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
 
-        // ── HEADER ──
         ListHeaderComponent={() => (
           <>
             {/* Title row */}
@@ -175,7 +202,7 @@ export default function WorkoutScreen() {
 
             {/* Stats bar */}
             <FadeSlideIn delay={80}>
-              <LinearGradient colors={["#0F172A", "#1E293B"]} style={styles.statsBar}>
+              <LinearGradient colors={["#0F172A", "#1E293B"]} style={[styles.statsBar, shadow(8)]}>
                 <View style={styles.statItem}>
                   <Text style={styles.statNum}>{workouts.length}</Text>
                   <Text style={styles.statLabel}>Days</Text>
@@ -198,7 +225,7 @@ export default function WorkoutScreen() {
             {/* Toggle */}
             <FadeSlideIn delay={140}>
               <View style={styles.toggleWrap}>
-                <View style={styles.toggleRow}>
+                <View style={[styles.toggleRow, shadow(2)]}>
                   {[
                     { key: "bodyweight", label: "No Equipment", icon: "🤸" },
                     { key: "equipment",  label: "With Equipment", icon: "🏋️" },
@@ -258,11 +285,11 @@ const styles = StyleSheet.create({
   screenTitle: { fontSize: 26, fontWeight: "900", color: "#0F172A", letterSpacing: -0.6 },
   screenSub:   { fontSize: 14, color: "#94A3B8", marginTop: 3, fontWeight: "500" },
   goalChip: {
-    flexDirection: "row", alignItems: "center", gap: 5,
+    flexDirection: "row", alignItems: "center",
     paddingHorizontal: 12, paddingVertical: 7,
     borderRadius: 20, borderWidth: 1,
   },
-  goalChipEmoji: { fontSize: 15 },
+  goalChipEmoji: { fontSize: 15, marginRight: 5 },
   goalChipText:  { fontSize: 13, fontWeight: "800" },
 
   // Stats bar
@@ -270,7 +297,6 @@ const styles = StyleSheet.create({
     borderRadius: 20, padding: 18,
     flexDirection: "row", justifyContent: "space-around",
     alignItems: "center", marginBottom: 16,
-    boxShadow: "0px 6px 20px rgba(15,23,42,0.25)",
   },
   statItem:   { alignItems: "center" },
   statNum:    { fontSize: 22, fontWeight: "900", color: "#fff", letterSpacing: -0.5 },
@@ -282,15 +308,14 @@ const styles = StyleSheet.create({
   toggleRow: {
     flexDirection: "row", backgroundColor: "#fff",
     borderRadius: 16, padding: 5,
-    boxShadow: "0px 2px 8px rgba(15,23,42,0.07)",
   },
   toggleBtn: {
     flex: 1, flexDirection: "row", alignItems: "center",
-    justifyContent: "center", gap: 6,
+    justifyContent: "center",
     paddingVertical: 11, borderRadius: 12,
   },
   toggleActive:     { backgroundColor: "#0F172A" },
-  toggleIcon:       { fontSize: 15 },
+  toggleIcon:       { fontSize: 15, marginRight: 6 },
   toggleText:       { fontSize: 14, fontWeight: "700", color: "#94A3B8" },
   toggleTextActive: { color: "#fff" },
 
@@ -304,14 +329,13 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: "#fff", borderRadius: 20,
     marginBottom: 12, overflow: "hidden",
-    boxShadow: "0px 2px 10px rgba(15,23,42,0.07)",
   },
   cardAccent:  { height: 3, width: "100%" },
   cardContent: {
     flexDirection: "row", alignItems: "center",
-    padding: 16, gap: 14,
+    padding: 16,
   },
-  cardLeft: { justifyContent: "center" },
+  cardLeft: { justifyContent: "center", marginRight: 14 },
   dayBadge: {
     width: 52, height: 52, borderRadius: 16,
     alignItems: "center", justifyContent: "center",
@@ -319,9 +343,9 @@ const styles = StyleSheet.create({
   dayNum:  { fontSize: 20, fontWeight: "900", lineHeight: 22 },
   dayWord: { fontSize: 9,  fontWeight: "800", letterSpacing: 1 },
 
-  cardMid:  { flex: 1 },
+  cardMid:   { flex: 1, marginRight: 14 },
   cardTitle: { fontSize: 16, fontWeight: "800", color: "#0F172A", marginBottom: 8, letterSpacing: -0.2 },
-  cardMeta:  { flexDirection: "row", gap: 8, flexWrap: "wrap" },
+  cardMeta:  { flexDirection: "row", flexWrap: "wrap" },
   metaPill: {
     backgroundColor: "#F1F5F9", borderRadius: 8,
     paddingHorizontal: 8, paddingVertical: 4,
