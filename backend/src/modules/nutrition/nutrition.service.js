@@ -234,7 +234,7 @@ function calculateNewCalories(profile, evaluation) {
 }
 
 // GET /api/nutrition/foods?tags=high-protein,gym&category=lunch&dietType=veg&search=paneer&match=any
-export const searchFoodsByFilter = async (params = {}) => {
+ const searchFoodsByFilter = async (params = {}) => {
   const query = new URLSearchParams();
   if (params.tags?.length)  query.set("tags",     params.tags.join(","));
   if (params.category)      query.set("category", params.category);
