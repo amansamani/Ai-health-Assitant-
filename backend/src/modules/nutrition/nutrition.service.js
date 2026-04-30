@@ -233,4 +233,16 @@ function calculateNewCalories(profile, evaluation) {
   };
 }
 
-module.exports = { generateDietPlan, evaluateWeeklyProgress, calculateNewCalories };
+// GET /api/nutrition/foods?tags=high-protein,gym&category=lunch&dietType=veg&search=paneer&match=any
+export const searchFoodsByFilter = async (params = {}) => {
+  const query = new URLSearchParams();
+  if (params.tags?.length)  query.set("tags",     params.tags.join(","));
+  if (params.category)      query.set("category", params.category);
+  if (params.dietType)      query.set("dietType", params.dietType);
+  if (params.search)        query.set("search",   params.search);
+  if (params.match)         query.set("match",    params.match);        // "any" | "all"
+  const res = await API.get(`/nutrition/foods?${query.toString()}`);
+  return res.data?.data || [];
+};
+
+module.exports = { generateDietPlan, evaluateWeeklyProgress, calculateNewCalories, searchFoodsByFilter };

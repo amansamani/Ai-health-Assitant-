@@ -20,4 +20,8 @@ router.get("/today-log",       auth, controller.getTodayLog);
 router.delete("/meal/:id",     auth, controller.deleteMeal);
 router.get("/history",         auth, controller.getMealHistory);
 
+// ── Food Search & Filter ───────────────────────────────────────────────────
+router.get("/foods",           auth, controller.getFoods);   // GET /api/nutrition/foods?tags=high-protein,gym
+
+
 module.exports = router;

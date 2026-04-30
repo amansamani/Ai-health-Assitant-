@@ -20,7 +20,8 @@
         "package": "com.amansamani.aihealthfrontend"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.amansamani.aihealthfrontend"
     },
     "web": {
       "output": "static",
@@ -45,6 +46,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "201b359d-32f6-4d73-916e-4e3d6fc64d2d"
+      }
+    },
+    "owner": "aman-samani"
   }
 }

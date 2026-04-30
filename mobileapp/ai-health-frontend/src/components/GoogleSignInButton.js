@@ -3,16 +3,22 @@ import * as WebBrowser from 'expo-web-browser';
 import { useEffect } from 'react';
 import { TouchableOpacity, Text, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as AuthSession from 'expo-auth-session';
 
 WebBrowser.maybeCompleteAuthSession();
 
 export default function GoogleSignInButton({ onSuccess }) {
 
+  const redirectUri = AuthSession.makeRedirectUri({
+  useProxy: true,
+});
+
   const [request, response, promptAsync] = Google.useAuthRequest({
-  expoClientId: '701044360865-o2san4uegg1j0tpjk8q51eihm6e0g10l.apps.googleusercontent.com', 
+  expoClientId: '701044360865-o2san4uegg1j0tpjk8q51eihm6e0g10l.apps.googleusercontent.com',
   androidClientId: '701044360865-2pq4gdpjjku6ptmo3ojnqapjvirk1lco.apps.googleusercontent.com',
   webClientId: '701044360865-o2san4uegg1j0tpjk8q51eihm6e0g10l.apps.googleusercontent.com',
   scopes: ['profile', 'email'],
+  redirectUri,
 });
 
   useEffect(() => {
@@ -51,7 +57,7 @@ export default function GoogleSignInButton({ onSuccess }) {
     <TouchableOpacity
       style={[styles.googleBtn, !request && { opacity: 0.6 }]}
       disabled={!request}
-      onPress={() => promptAsync()}
+      onPress={() => promptAsync({ useProxy: true })}
       activeOpacity={0.85}
     >
       <Text style={styles.googleIcon}>G</Text>

@@ -333,3 +333,40 @@ exports.getMealHistory = async (req, res, next) => {
     next(err);
   }
 };
+
+
+exports.getFoods = async (req, res, next) => {
+  try {
+    const { tags, category, dietType, search, match } = req.query;
+    const query = {};
+
+    // Filter by tags
+    if (tags) {
+      const tagArray = tags.split(",").map(t => t.trim()).filter(Boolean);
+      query.tags = match === "any"
+        ? { $in: tagArray }   // food has ANY of these tags
+        : { $all: tagArray };  // food has ALL of these tags (default)
+    }
+
+    // Filter by meal category
+    if (category) query.category = category;
+
+    // Filter by diet type — if user is veg, only show veg
+    if (dietType) {
+      query.dietType = dietType === "veg" ? "veg" : { $in: ["veg", "non-veg"] };
+    }
+
+    // Search by name
+    if (search) {
+      query.name = { $regex: search, $options: "i" };
+    }
+
+    const foods = await FoodItem.find(query)
+      .select("name category dietType per100g serving tags")
+      .limit(50);
+
+    return res.status(200).json({ success: true, count: foods.length, data: foods });
+  } catch (err) {
+    next(err);
+  }
+};
