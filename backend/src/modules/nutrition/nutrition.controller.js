@@ -10,6 +10,18 @@ const {
   calculateNewCalories,
 } = require("./nutrition.service");
 
+
+function getMacroTags(food) {
+  const { protein, carbs, fats } = food.per100g;
+  const tags = [];
+
+  if (protein >= 12) tags.push("high-protein");
+  if (carbs >= 40) tags.push("high-carb");
+  if (fats >= 15) tags.push("high-fat");
+
+  return tags;
+}
+
 // ─────────────────────────────────────────────────────────
 // DIET PLAN CONTROLLERS
 // ─────────────────────────────────────────────────────────
@@ -188,7 +200,7 @@ exports.getSwapOptions = async (req, res, next) => {
       breakfast: ["breakfast"],
       lunch: ["lunch"],
       dinner: ["dinner", "lunch"],
-      snacks: ["snacks"],
+      snack: ["snack"],
     };
 
     const categories = categoryMap[meal] || [meal];
@@ -205,7 +217,7 @@ exports.getSwapOptions = async (req, res, next) => {
       category: f.category,
       dietType: f.dietType,
       per100g: f.per100g,
-      tags: f.tags || [],
+      tags: getMacroTags(f),
     }));
 
     res.status(200).json({ success: true, data: formatted });
@@ -296,7 +308,7 @@ exports.logMeal = async (req, res, next) => {
       });
     }
 
-    if (!["breakfast", "lunch", "dinner", "snacks"].includes(mealType)) {
+    if (!["breakfast", "lunch", "dinner", "snack"].includes(mealType)) {
       return res.status(400).json({
         success: false,
         message: "Invalid mealType",
@@ -344,7 +356,7 @@ exports.getTodayLog = async (req, res, next) => {
       breakfast: [],
       lunch: [],
       dinner: [],
-      snacks: [],
+      snack: [],
     };
 
     let totals = {
@@ -440,18 +452,7 @@ exports.getFoods = async (req, res, next) => {
 
     const query = {};
 
-    if (tags) {
-      const tagArray = tags
-        .split(",")
-        .map((t) => t.trim())
-        .filter(Boolean);
-
-      if (tagArray.length > 0) {
-        query.tags =
-          match === "any" ? { $in: tagArray } : { $all: tagArray };
-      }
-    }
-
+    // 🔹 Basic filters only (NO tag filter here)
     if (category) query.category = category;
 
     if (dietType) {
@@ -463,14 +464,44 @@ exports.getFoods = async (req, res, next) => {
       query.name = { $regex: search, $options: "i" };
     }
 
+    // 🔹 Fetch foods
     const foods = await FoodItem.find(query)
-      .select("name category dietType per100g serving tags")
+      .select("name category dietType per100g serving")
       .limit(50);
+
+    // 🔥 ADD AUTO TAGS
+    let enrichedFoods = foods.map((f) => {
+      const autoTags = getMacroTags(f);
+
+      return {
+        ...f.toObject(),
+        tags: autoTags,
+      };
+    });
+
+    // 🔥 APPLY TAG FILTER AFTER TAG GENERATION
+    if (tags) {
+      const tagArray = tags
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean);
+
+      if (tagArray.length > 0) {
+        enrichedFoods =
+          match === "any"
+            ? enrichedFoods.filter((f) =>
+                f.tags.some((t) => tagArray.includes(t))
+              )
+            : enrichedFoods.filter((f) =>
+                tagArray.every((t) => f.tags.includes(t))
+              );
+      }
+    }
 
     res.status(200).json({
       success: true,
-      count: foods.length,
-      data: foods,
+      count: enrichedFoods.length,
+      data: enrichedFoods,
     });
   } catch (err) {
     next(err);

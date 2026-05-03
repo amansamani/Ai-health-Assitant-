@@ -9,8 +9,9 @@ import { searchFoodsByFilter } from "../../services/nutritionService";
 
 const USDA_API_KEY = "EEvdPZ0U1r3rWH9g5ElfGeYhassb8Y9XkJKFZlY2";
 
-const MEAL_TYPES = ["breakfast", "lunch", "dinner", "snacks"];
-const MEAL_ICONS = { breakfast: "🌅", lunch: "☀️", dinner: "🌙", snacks: "🍎" };
+// ✅ BUG 1 FIXED: was "snacks", backend expects "snack"
+const MEAL_TYPES = ["breakfast", "lunch", "dinner", "snack"];
+const MEAL_ICONS = { breakfast: "🌅", lunch: "☀️", dinner: "🌙", snack: "🍎" };
 const INDIAN_QUICK_SUGGESTIONS = [
   "Dal Makhani", "Roti", "Biryani", "Paneer", "Idli",
   "Samosa", "Rajma", "Chole", "Poha", "Butter Chicken",
@@ -47,6 +48,23 @@ const getServing = (foodName) => {
   }
   return { unit: "g", grams: 100 };
 };
+
+// ✅ BUG 2 FIX: Helper to derive macro tags on the frontend for USDA/search results
+// Uses relaxed thresholds for better coverage, especially Indian foods
+function getMacroTagsFrontend(food) {
+  const src = food.per100g || {};
+  const protein = src.protein ?? 0;
+  const carbs   = src.carbs   ?? 0;
+  const fats    = src.fats    ?? 0;
+  const tags = [];
+
+  // ✅ IMPROVEMENT: relaxed thresholds (was 15/40/15)
+  if (protein >= 12) tags.push("high-protein");
+  if (carbs   >= 45) tags.push("high-carb");
+  if (fats    >= 15) tags.push("high-fat");
+
+  return tags;
+}
 
 // ─── USDA API ──────────────────────────────────────────────────────────────────
 const searchUSDA = async (query) => {
@@ -237,42 +255,41 @@ export default function LogMealScreen({ route }) {
   const [filterResults, setFilterResults] = useState([]);
   const [filterLoading, setFilterLoading] = useState(false);
 
-
-
-  const TAG_OPTIONS   = ["high-protein", "low-carb", "gym", "weight-loss", "vegan", "quick"];
-const DIET_OPTIONS  = [{ label: "All",     value: null   },
+  const TAG_OPTIONS   = ["high-protein", "high-carb", "high-fat"];
+  const DIET_OPTIONS  = [{ label: "All",     value: null   },
                        { label: "Veg 🌿",  value: "veg"  },
                        { label: "Non-Veg 🍗", value: "non-veg" }];
 
   const applyFilters = async (filters) => {
-  setActiveFilters(filters);
-  setFilterVisible(false);
-  if (!filters.tags.length && !filters.dietType) return;   // nothing active
-  setFilterLoading(true);
-  setSelectedFood(null);
-  setSearchResults([]);
-  try {
-    const foods = await searchFoodsByFilter({
-      tags:     filters.tags,
-      dietType: filters.dietType,
-      match:    "any",
-    });
-    setFilterResults(foods);
-    if (foods.length === 0)
-      Alert.alert("No Results", "No foods match these filters.");
-  } catch {
-    Alert.alert("Error", "Filter search failed.");
-  } finally {
-    setFilterLoading(false);
-  }
-};
+    setActiveFilters(filters);
+    setFilterVisible(false);
+    if (!filters.tags.length && !filters.dietType) return;
+    setFilterLoading(true);
+    setSelectedFood(null);
+    setSearchResults([]);
+    try {
+      const foods = await searchFoodsByFilter({
+        tags:     filters.tags,
+        dietType: filters.dietType,
+        match:    "any",
+      });
+      setFilterResults(foods);
+      if (foods.length === 0)
+        Alert.alert("No Results", "No foods match these filters.");
+    } catch {
+      Alert.alert("Error", "Filter search failed.");
+    } finally {
+      setFilterLoading(false);
+    }
+  };
 
-const clearFilters = () => {
-  setActiveFilters({ dietType: null, tags: [] });
-  setFilterResults([]);
-};
+  const clearFilters = () => {
+    setActiveFilters({ dietType: null, tags: [] });
+    setFilterResults([]);
+  };
 
-const hasActiveFilters = activeFilters.tags.length > 0 || activeFilters.dietType;
+  const hasActiveFilters = activeFilters.tags.length > 0 || activeFilters.dietType;
+
   // ── Quantity state — grams (string) for gram-based, number for piece-based ──
   const [gramQty, setGramQty]   = useState("100");
   const [pieceQty, setPieceQty] = useState(1);
@@ -280,7 +297,7 @@ const hasActiveFilters = activeFilters.tags.length > 0 || activeFilters.dietType
   const debounceRef = useRef(null);
 
   // ── Derived: is this food piece-based? ──────────────────────────────────────
-  const isPiece      = selectedFood?.serving?.unit === "piece";
+  const isPiece       = selectedFood?.serving?.unit === "piece";
   const gramsPerPiece = selectedFood?.serving?.grams || 100;
 
   // ── Total grams used for nutrition calculation ───────────────────────────────
@@ -326,7 +343,6 @@ const hasActiveFilters = activeFilters.tags.length > 0 || activeFilters.dietType
   const handleSelectFood = (food) => {
     setSelectedFood(food);
     setSearchResults([]);
-    // Reset quantity based on serving type
     if (food.serving?.unit === "piece") {
       setPieceQty(1);
     } else {
@@ -350,7 +366,7 @@ const hasActiveFilters = activeFilters.tags.length > 0 || activeFilters.dietType
         food: {
           name:     selectedFood.name,
           brand:    selectedFood.brand || "",
-          quantity: totalGrams,          // always save in grams
+          quantity: totalGrams,
           unit:     "g",
           calories: nutrients.calories,
           protein:  Number(nutrients.protein),
@@ -417,172 +433,205 @@ const hasActiveFilters = activeFilters.tags.length > 0 || activeFilters.dietType
           ))}
         </View>
 
-       
         {/* Search + Filter row */}
-<Text style={styles.sectionLabel}>Search Food</Text>
-<View style={styles.searchRow}>
-  <TextInput
-    style={styles.searchInput}
-    placeholder='e.g. "paneer", "roti", "idli"'
-    placeholderTextColor="#aaa"
-    value={searchQuery}
-    onChangeText={handleQueryChange}
-    onSubmitEditing={handleSearch}
-    returnKeyType="search"
-    autoCapitalize="none"
-  />
-  <TouchableOpacity
-    style={[styles.filterIconBtn, hasActiveFilters && styles.filterIconBtnActive]}
-    onPress={() => setFilterVisible(true)}
-    activeOpacity={0.8}
-  >
-    <Text style={{ fontSize: 18 }}>⚙️</Text>
-    {hasActiveFilters && <View style={styles.filterDot} />}
-  </TouchableOpacity>
-  <TouchableOpacity
-    style={styles.searchBtn}
-    onPress={handleSearch}
-    disabled={searching}
-    activeOpacity={0.8}
-  >
-    {searching
-      ? <ActivityIndicator color="#fff" size="small" />
-      : <Text style={styles.searchBtnText}>Go</Text>
-    }
-  </TouchableOpacity>
-</View>
-
-{/* Active filter chips */}
-{hasActiveFilters && (
-  <View style={styles.activeFilterRow}>
-    {activeFilters.dietType && (
-      <View style={styles.activeChip}>
-        <Text style={styles.activeChipText}>{activeFilters.dietType}</Text>
-      </View>
-    )}
-    {activeFilters.tags.map(tag => (
-      <View key={tag} style={styles.activeChip}>
-        <Text style={styles.activeChipText}>#{tag}</Text>
-      </View>
-    ))}
-    <TouchableOpacity onPress={clearFilters} style={styles.clearFiltersBtn}>
-      <Text style={styles.clearFiltersText}>✕ Clear</Text>
-    </TouchableOpacity>
-  </View>
-)}
-
-{/* Filter loading */}
-{filterLoading && (
-  <View style={{ alignItems: "center", paddingVertical: 12 }}>
-    <ActivityIndicator color="#FF6F00" />
-    <Text style={{ color: "#888", fontSize: 12, marginTop: 6 }}>Filtering foods...</Text>
-  </View>
-)}
-
-{/* Filter results */}
-{!filterLoading && filterResults.length > 0 && searchResults.length === 0 && (
-  <View style={styles.resultsContainer}>
-    <Text style={styles.resultsLabel}>
-      {filterResults.length} filtered results
-    </Text>
-    {filterResults.map((item) => {
-      const isPieceItem = item.serving?.unit === "piece";
-      return (
-        <TouchableOpacity
-          key={item._id || item.id}
-          style={styles.resultItem}
-          onPress={() => { handleSelectFood(item); setFilterResults([]); }}
-          activeOpacity={0.7}
-        >
-          <View style={[styles.resultIconBox, { backgroundColor: "#f3e5f5" }]}>
-            <Text style={{ fontSize: 20 }}>🗂️</Text>
-          </View>
-          <View style={styles.resultInfo}>
-            <View style={styles.resultNameRow}>
-              <Text style={styles.resultName} numberOfLines={1}>
-                {item.name?.charAt(0).toUpperCase() + item.name?.slice(1).toLowerCase()}
-              </Text>
-              <View style={[styles.servingBadge, { backgroundColor: isPieceItem ? "#e8f5e9" : "#f3e5f5" }]}>
-                <Text style={[styles.servingBadgeText, { color: isPieceItem ? "#2e7d32" : "#6a1b9a" }]}>
-                  {isPieceItem ? `per piece (${item.serving.grams}g)` : "per 100g"}
-                </Text>
-              </View>
-            </View>
-            <Text style={[styles.resultBrand, { color: "#8E24AA" }]}>{item.category || "DB Food"}</Text>
-            <View style={styles.resultMacroRow}>
-              <Text style={styles.resultCalTag}>🔥 {Math.round(item.per100g?.calories || 0)} kcal</Text>
-              <Text style={styles.resultMacroTag}>P {(item.per100g?.protein || 0).toFixed(1)}g</Text>
-              <Text style={styles.resultMacroTag}>C {(item.per100g?.carbs || 0).toFixed(1)}g</Text>
-              <Text style={styles.resultMacroTag}>F {(item.per100g?.fats || 0).toFixed(1)}g</Text>
-            </View>
-          </View>
-          <Text style={styles.selectArrow}>›</Text>
-        </TouchableOpacity>
-      );
-    })}
-  </View>
-)}
-
-{/* Filter Bottom Sheet Modal */}
-<Modal visible={filterVisible} animationType="slide" transparent onRequestClose={() => setFilterVisible(false)}>
-  <View style={styles.filterOverlay}>
-    <View style={styles.filterSheet}>
-      <View style={styles.filterSheetHeader}>
-        <Text style={styles.filterSheetTitle}>Filter Foods</Text>
-        <TouchableOpacity onPress={() => setFilterVisible(false)} style={styles.filterCloseBtn}>
-          <Text style={{ color: "#888", fontSize: 13 }}>✕</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Diet Type */}
-      <Text style={styles.filterGroupLabel}>Diet Type</Text>
-      <View style={styles.filterChipRow}>
-        {DIET_OPTIONS.map(opt => (
+        <Text style={styles.sectionLabel}>Search Food</Text>
+        <View style={styles.searchRow}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder='e.g. "paneer", "roti", "idli"'
+            placeholderTextColor="#aaa"
+            value={searchQuery}
+            onChangeText={handleQueryChange}
+            onSubmitEditing={handleSearch}
+            returnKeyType="search"
+            autoCapitalize="none"
+          />
           <TouchableOpacity
-            key={String(opt.value)}
-            style={[styles.filterChip, activeFilters.dietType === opt.value && styles.filterChipActive]}
-            onPress={() => setActiveFilters(f => ({ ...f, dietType: opt.value }))}
+            style={[styles.filterIconBtn, hasActiveFilters && styles.filterIconBtnActive]}
+            onPress={() => setFilterVisible(true)}
+            activeOpacity={0.8}
           >
-            <Text style={[styles.filterChipText, activeFilters.dietType === opt.value && styles.filterChipTextActive]}>
-              {opt.label}
-            </Text>
+            <Text style={{ fontSize: 18 }}>⚙️</Text>
+            {hasActiveFilters && <View style={styles.filterDot} />}
           </TouchableOpacity>
-        ))}
-      </View>
+          <TouchableOpacity
+            style={styles.searchBtn}
+            onPress={handleSearch}
+            disabled={searching}
+            activeOpacity={0.8}
+          >
+            {searching
+              ? <ActivityIndicator color="#fff" size="small" />
+              : <Text style={styles.searchBtnText}>Go</Text>
+            }
+          </TouchableOpacity>
+        </View>
 
-      {/* Tags */}
-      <Text style={styles.filterGroupLabel}>Tags</Text>
-      <View style={styles.filterChipRow}>
-        {TAG_OPTIONS.map(tag => {
-          const isOn = activeFilters.tags.includes(tag);
-          return (
-            <TouchableOpacity
-              key={tag}
-              style={[styles.filterChip, isOn && styles.filterChipActive]}
-              onPress={() =>
-                setActiveFilters(f => ({
-                  ...f,
-                  tags: isOn ? f.tags.filter(t => t !== tag) : [...f.tags, tag],
-                }))
-              }
-            >
-              <Text style={[styles.filterChipText, isOn && styles.filterChipTextActive]}>
-                #{tag}
-              </Text>
+        {/* Active filter chips */}
+        {hasActiveFilters && (
+          <View style={styles.activeFilterRow}>
+            {activeFilters.dietType && (
+              <View style={styles.activeChip}>
+                <Text style={styles.activeChipText}>{activeFilters.dietType}</Text>
+              </View>
+            )}
+            {activeFilters.tags.map(tag => (
+              <View key={tag} style={styles.activeChip}>
+                <Text style={styles.activeChipText}>#{tag}</Text>
+              </View>
+            ))}
+            <TouchableOpacity onPress={clearFilters} style={styles.clearFiltersBtn}>
+              <Text style={styles.clearFiltersText}>✕ Clear</Text>
             </TouchableOpacity>
-          );
-        })}
-      </View>
+          </View>
+        )}
 
-      <TouchableOpacity
-        style={styles.filterApplyBtn}
-        onPress={() => applyFilters(activeFilters)}
-      >
-        <Text style={styles.filterApplyText}>Apply Filters</Text>
-      </TouchableOpacity>
-    </View>
-  </View>
-</Modal>
+        {/* Filter loading */}
+        {filterLoading && (
+          <View style={{ alignItems: "center", paddingVertical: 12 }}>
+            <ActivityIndicator color="#FF6F00" />
+            <Text style={{ color: "#888", fontSize: 12, marginTop: 6 }}>Filtering foods...</Text>
+          </View>
+        )}
+
+        {/* Filter results */}
+        {!filterLoading && filterResults.length > 0 && searchResults.length === 0 && (
+          <View style={styles.resultsContainer}>
+            <Text style={styles.resultsLabel}>
+              {filterResults.length} filtered results
+            </Text>
+            {filterResults.map((item) => {
+              const isPieceItem = item.serving?.unit === "piece";
+              // ✅ BUG 2 FIXED: use backend tags if present, else derive from macros
+              const tags = item.tags?.length > 0 ? item.tags : getMacroTagsFrontend(item);
+              return (
+                <TouchableOpacity
+                  key={item._id || item.id}
+                  style={styles.resultItem}
+                  onPress={() => { handleSelectFood(item); setFilterResults([]); }}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.resultIconBox, { backgroundColor: "#f3e5f5" }]}>
+                    <Text style={{ fontSize: 20 }}>🗂️</Text>
+                  </View>
+                  <View style={styles.resultInfo}>
+                    <View style={styles.resultNameRow}>
+                      <Text style={styles.resultName} numberOfLines={1}>
+                        {item.name?.charAt(0).toUpperCase() + item.name?.slice(1).toLowerCase()}
+                      </Text>
+                      <View style={[styles.servingBadge, { backgroundColor: isPieceItem ? "#e8f5e9" : "#f3e5f5" }]}>
+                        <Text style={[styles.servingBadgeText, { color: isPieceItem ? "#2e7d32" : "#6a1b9a" }]}>
+                          {isPieceItem ? `per piece (${item.serving.grams}g)` : "per 100g"}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={[styles.resultBrand, { color: "#8E24AA" }]}>{item.category || "DB Food"}</Text>
+                    <View style={styles.resultMacroRow}>
+                      <Text style={styles.resultCalTag}>🔥 {Math.round(item.per100g?.calories || 0)} kcal</Text>
+                      <Text style={styles.resultMacroTag}>P {(item.per100g?.protein || 0).toFixed(1)}g</Text>
+                      <Text style={styles.resultMacroTag}>C {(item.per100g?.carbs || 0).toFixed(1)}g</Text>
+                      <Text style={styles.resultMacroTag}>F {(item.per100g?.fats || 0).toFixed(1)}g</Text>
+                    </View>
+                    {/* ✅ BUG 2 FIXED: use resolved tags, not item.tags directly */}
+                    {tags.length > 0 && (
+                      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
+                        {tags.map((tag) => (
+                          <View
+                            key={tag}
+                            style={{
+                              backgroundColor:
+                                tag === "high-protein" ? "#e3f2fd" :
+                                tag === "high-carb" ? "#f3e5f5" :
+                                tag === "high-fat" ? "#fce4ec" : "#eee",
+                              paddingHorizontal: 8,
+                              paddingVertical: 3,
+                              borderRadius: 6,
+                            }}
+                          >
+                            <Text
+                              style={{
+                                fontSize: 10,
+                                fontWeight: "700",
+                                color:
+                                  tag === "high-protein" ? "#1565c0" :
+                                  tag === "high-carb" ? "#6a1b9a" :
+                                  tag === "high-fat" ? "#880e4f" : "#555",
+                              }}
+                            >
+                              {tag.replace("-", " ").toUpperCase()}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                  <Text style={styles.selectArrow}>›</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
+
+        {/* Filter Bottom Sheet Modal */}
+        <Modal visible={filterVisible} animationType="slide" transparent onRequestClose={() => setFilterVisible(false)}>
+          <View style={styles.filterOverlay}>
+            <View style={styles.filterSheet}>
+              <View style={styles.filterSheetHeader}>
+                <Text style={styles.filterSheetTitle}>Filter Foods</Text>
+                <TouchableOpacity onPress={() => setFilterVisible(false)} style={styles.filterCloseBtn}>
+                  <Text style={{ color: "#888", fontSize: 13 }}>✕</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Diet Type */}
+              <Text style={styles.filterGroupLabel}>Diet Type</Text>
+              <View style={styles.filterChipRow}>
+                {DIET_OPTIONS.map(opt => (
+                  <TouchableOpacity
+                    key={String(opt.value)}
+                    style={[styles.filterChip, activeFilters.dietType === opt.value && styles.filterChipActive]}
+                    onPress={() => setActiveFilters(f => ({ ...f, dietType: opt.value }))}
+                  >
+                    <Text style={[styles.filterChipText, activeFilters.dietType === opt.value && styles.filterChipTextActive]}>
+                      {opt.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Tags */}
+              <Text style={styles.filterGroupLabel}>Tags</Text>
+              <View style={styles.filterChipRow}>
+                {TAG_OPTIONS.map(tag => {
+                  const isOn = activeFilters.tags.includes(tag);
+                  return (
+                    <TouchableOpacity
+                      key={tag}
+                      style={[styles.filterChip, isOn && styles.filterChipActive]}
+                      onPress={() =>
+                        setActiveFilters(f => ({
+                          ...f,
+                          tags: isOn ? f.tags.filter(t => t !== tag) : [...f.tags, tag],
+                        }))
+                      }
+                    >
+                      <Text style={[styles.filterChipText, isOn && styles.filterChipTextActive]}>
+                        #{tag}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <TouchableOpacity
+                style={styles.filterApplyBtn}
+                onPress={() => applyFilters(activeFilters)}
+              >
+                <Text style={styles.filterApplyText}>Apply Filters</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
 
         {/* Legend */}
         <View style={styles.legendRow}>
@@ -621,6 +670,8 @@ const hasActiveFilters = activeFilters.tags.length > 0 || activeFilters.dietType
             <Text style={styles.resultsLabel}>{searchResults.length} results found</Text>
             {searchResults.map((item) => {
               const isPieceItem = item.serving?.unit === "piece";
+              // ✅ BUG 2 FIXED: derive tags for USDA/Indian search results (they have no backend tags)
+              const tags = item.tags?.length > 0 ? item.tags : getMacroTagsFrontend(item);
               return (
                 <TouchableOpacity
                   key={item.id}
@@ -636,7 +687,6 @@ const hasActiveFilters = activeFilters.tags.length > 0 || activeFilters.dietType
                       <Text style={styles.resultName} numberOfLines={1}>
                         {capitalize(item.name)}
                       </Text>
-                      {/* Serving unit badge */}
                       <View style={[styles.servingBadge, { backgroundColor: isPieceItem ? "#e8f5e9" : "#f3e5f5" }]}>
                         <Text style={[styles.servingBadgeText, { color: isPieceItem ? "#2e7d32" : "#6a1b9a" }]}>
                           {isPieceItem ? `per piece (${item.serving.grams}g)` : "per 100g"}
@@ -652,6 +702,38 @@ const hasActiveFilters = activeFilters.tags.length > 0 || activeFilters.dietType
                       <Text style={styles.resultMacroTag}>C {item.raw.carbs}g</Text>
                       <Text style={styles.resultMacroTag}>F {item.raw.fats}g</Text>
                     </View>
+                    {/* ✅ BUG 2 FIXED: show derived tags for all search results */}
+                    {tags.length > 0 && (
+                      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
+                        {tags.map((tag) => (
+                          <View
+                            key={tag}
+                            style={{
+                              backgroundColor:
+                                tag === "high-protein" ? "#e3f2fd" :
+                                tag === "high-carb" ? "#f3e5f5" :
+                                tag === "high-fat" ? "#fce4ec" : "#eee",
+                              paddingHorizontal: 8,
+                              paddingVertical: 3,
+                              borderRadius: 6,
+                            }}
+                          >
+                            <Text
+                              style={{
+                                fontSize: 10,
+                                fontWeight: "700",
+                                color:
+                                  tag === "high-protein" ? "#1565c0" :
+                                  tag === "high-carb" ? "#6a1b9a" :
+                                  tag === "high-fat" ? "#880e4f" : "#555",
+                              }}
+                            >
+                              {tag.replace("-", " ").toUpperCase()}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    )}
                   </View>
                   <Text style={styles.selectArrow}>›</Text>
                 </TouchableOpacity>
@@ -835,33 +917,27 @@ const styles = StyleSheet.create({
 
   divider: { height: 1, backgroundColor: "#f0f0f0", marginVertical: 14 },
 
-  // Shared quantity styles
   quantityHeading: { fontSize: 13, fontWeight: "700", color: "#444", marginBottom: 12 },
   quantityRow:     { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 12 },
   qtyBtn:          { width: 40, height: 40, borderRadius: 12, backgroundColor: "#f0f0f0", justifyContent: "center", alignItems: "center" },
   qtyBtnText:      { fontSize: 22, color: "#333", fontWeight: "600" },
 
-  // Gram input
   quantityInput: { width: 80, borderWidth: 2, borderColor: "#FF6F00", borderRadius: 12, padding: 8, textAlign: "center", fontSize: 20, fontWeight: "800", color: "#1a1a1a" },
   quantityUnit:  { fontSize: 16, fontWeight: "700", color: "#888" },
 
-  // Piece display
   pieceDisplay: { alignItems: "center", minWidth: 80 },
   pieceCount:   { fontSize: 32, fontWeight: "800", color: "#1a1a1a", lineHeight: 36 },
   pieceLabel:   { fontSize: 12, color: "#888", fontWeight: "500" },
 
-  // Grams indicator (shown below piece selector)
   gramsIndicator:     { backgroundColor: "#f5f5f5", borderRadius: 10, padding: 10, alignItems: "center", marginTop: 8 },
   gramsIndicatorText: { fontSize: 13, color: "#555", fontWeight: "500" },
 
-  // Presets
   presets:          { flexDirection: "row", gap: 8, marginBottom: 4 },
   presetBtn:        { flex: 1, paddingVertical: 7, borderRadius: 8, borderWidth: 1.5, borderColor: "#e0e0e0", alignItems: "center", backgroundColor: "#f9f9f9" },
   activePreset:     { backgroundColor: "#fff3e0", borderColor: "#FF6F00" },
   presetText:       { fontSize: 12, fontWeight: "600", color: "#888" },
   activePresetText: { color: "#FF6F00" },
 
-  // Nutrition
   nutritionHeading: { fontSize: 13, fontWeight: "700", color: "#444", marginBottom: 12 },
   nutritionGrid:    { flexDirection: "row", gap: 8, marginBottom: 10 },
   nutriBox:         { flex: 1, borderRadius: 12, padding: 10, alignItems: "center" },
@@ -873,33 +949,30 @@ const styles = StyleSheet.create({
   extraNutriLabel:  { fontSize: 11, color: "#999", marginTop: 2 },
   extraNutriDivider:{ width: 1, backgroundColor: "#e0e0e0" },
 
-  // Log button
   button:         { backgroundColor: "#FF6F00", padding: 16, borderRadius: 14, alignItems: "center", marginTop: 4, shadowColor: "#FF6F00", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 8, elevation: 5 },
   buttonDisabled: { backgroundColor: "#ffcc80", shadowOpacity: 0, elevation: 0 },
   buttonText:     { color: "#fff", fontWeight: "800", fontSize: 16, letterSpacing: 0.3 },
 
+  filterIconBtn:       { width: 46, height: 46, borderRadius: 12, backgroundColor: "#fff", borderWidth: 1.5, borderColor: "#e0e0e0", justifyContent: "center", alignItems: "center" },
+  filterIconBtnActive: { borderColor: "#FF6F00", backgroundColor: "#fff8f0" },
+  filterDot:           { position: "absolute", top: 8, right: 8, width: 7, height: 7, borderRadius: 4, backgroundColor: "#FF6F00" },
+  activeFilterRow:     { flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 10 },
+  activeChip:          { backgroundColor: "#fff3e0", borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
+  activeChipText:      { fontSize: 11, fontWeight: "700", color: "#FF6F00" },
+  clearFiltersBtn:     { backgroundColor: "#fce4ec", borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
+  clearFiltersText:    { fontSize: 11, fontWeight: "700", color: "#e53935" },
 
-  // Filter UI
-filterIconBtn:       { width: 46, height: 46, borderRadius: 12, backgroundColor: "#fff", borderWidth: 1.5, borderColor: "#e0e0e0", justifyContent: "center", alignItems: "center" },
-filterIconBtnActive: { borderColor: "#FF6F00", backgroundColor: "#fff8f0" },
-filterDot:           { position: "absolute", top: 8, right: 8, width: 7, height: 7, borderRadius: 4, backgroundColor: "#FF6F00" },
-activeFilterRow:     { flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 10 },
-activeChip:          { backgroundColor: "#fff3e0", borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
-activeChipText:      { fontSize: 11, fontWeight: "700", color: "#FF6F00" },
-clearFiltersBtn:     { backgroundColor: "#fce4ec", borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
-clearFiltersText:    { fontSize: 11, fontWeight: "700", color: "#e53935" },
-
-filterOverlay:       { flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end" },
-filterSheet:         { backgroundColor: "#fff", borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20 },
-filterSheetHeader:   { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
-filterSheetTitle:    { fontSize: 18, fontWeight: "800", color: "#1a1a1a" },
-filterCloseBtn:      { width: 28, height: 28, borderRadius: 14, backgroundColor: "#f5f5f5", justifyContent: "center", alignItems: "center" },
-filterGroupLabel:    { fontSize: 11, fontWeight: "700", color: "#888", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8, marginTop: 4 },
-filterChipRow:       { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 14 },
-filterChip:          { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1.5, borderColor: "#e0e0e0", backgroundColor: "#f9f9f9" },
-filterChipActive:    { backgroundColor: "#fff3e0", borderColor: "#FF6F00" },
-filterChipText:      { fontSize: 13, fontWeight: "600", color: "#888" },
-filterChipTextActive:{ color: "#FF6F00" },
-filterApplyBtn:      { backgroundColor: "#FF6F00", padding: 14, borderRadius: 14, alignItems: "center", marginTop: 6 },
-filterApplyText:     { color: "#fff", fontWeight: "800", fontSize: 15 },
+  filterOverlay:       { flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end" },
+  filterSheet:         { backgroundColor: "#fff", borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20 },
+  filterSheetHeader:   { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
+  filterSheetTitle:    { fontSize: 18, fontWeight: "800", color: "#1a1a1a" },
+  filterCloseBtn:      { width: 28, height: 28, borderRadius: 14, backgroundColor: "#f5f5f5", justifyContent: "center", alignItems: "center" },
+  filterGroupLabel:    { fontSize: 11, fontWeight: "700", color: "#888", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8, marginTop: 4 },
+  filterChipRow:       { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 14 },
+  filterChip:          { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1.5, borderColor: "#e0e0e0", backgroundColor: "#f9f9f9" },
+  filterChipActive:    { backgroundColor: "#fff3e0", borderColor: "#FF6F00" },
+  filterChipText:      { fontSize: 13, fontWeight: "600", color: "#888" },
+  filterChipTextActive:{ color: "#FF6F00" },
+  filterApplyBtn:      { backgroundColor: "#FF6F00", padding: 14, borderRadius: 14, alignItems: "center", marginTop: 6 },
+  filterApplyText:     { color: "#fff", fontWeight: "800", fontSize: 15 },
 });
