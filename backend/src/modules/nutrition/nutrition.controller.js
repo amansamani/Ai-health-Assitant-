@@ -264,6 +264,21 @@ const swapFood = async (req, res, next) => {
   }
 };
 
+const logDailyDiet = async (req, res, next) => {
+  try {
+    const { date, mealsCompleted, caloriesConsumed, weight, notes } = req.body;
+
+    const log = await DietProgress.findOneAndUpdate(
+      { user: req.user.id, date },
+      { mealsCompleted, caloriesConsumed, weight, notes },
+      { new: true, upsert: true }
+    );
+
+    res.status(200).json(log);
+  } catch (err) {
+    next(err);
+  }
+};
 module.exports = {
   generatePlan,
   getCurrentPlan,
