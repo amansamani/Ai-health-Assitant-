@@ -29,7 +29,7 @@ function getMacroTags(food) {
 // GENERATE DIET PLAN ✅ FIXED
 // ─────────────────────────────────────────────────────────
 
-exports.generatePlan = async (req, res, next) => {
+const generatePlan = async (req, res, next) => {
   try {
     const userId = req.user.id;
 
@@ -80,7 +80,7 @@ exports.generatePlan = async (req, res, next) => {
 // GET CURRENT PLAN ✅ FIXED
 // ─────────────────────────────────────────────────────────
 
-exports.getCurrentPlan = async (req, res, next) => {
+const getCurrentPlan = async (req, res, next) => {
   try {
     const plan = await DietPlan.findOne({
       user: req.user.id,
@@ -101,7 +101,7 @@ exports.getCurrentPlan = async (req, res, next) => {
 // WEEKLY ADJUSTMENT ✅ FIXED
 // ─────────────────────────────────────────────────────────
 
-exports.runWeeklyAdjustment = async (req, res, next) => {
+const runWeeklyAdjustment = async (req, res, next) => {
   try {
     const userId = req.user.id;
 
@@ -171,7 +171,7 @@ exports.runWeeklyAdjustment = async (req, res, next) => {
 // SWAP FOOD (UNCHANGED)
 // ─────────────────────────────────────────────────────────
 
-exports.getSwapOptions = async (req, res, next) => {
+const getSwapOptions = async (req, res, next) => {
   try {
     const { meal, foodId } = req.query;
     const userId = req.user.id;
@@ -218,7 +218,7 @@ exports.getSwapOptions = async (req, res, next) => {
   }
 };
 
-exports.swapFood = async (req, res, next) => {
+const swapFood = async (req, res, next) => {
   try {
     const { meal, oldFoodId, newFoodId, grams } = req.body;
     const userId = req.user.id;
@@ -262,4 +262,19 @@ exports.swapFood = async (req, res, next) => {
   } catch (err) {
     next(err);
   }
+};
+
+module.exports = {
+  generatePlan,
+  getCurrentPlan,
+  logDailyDiet,
+  getDailyDietLog,
+  runWeeklyAdjustment,
+  getSwapOptions,
+  swapFood,
+  logMeal,
+  getTodayLog,
+  deleteMeal,
+  getMealHistory,
+  getFoods,
 };
