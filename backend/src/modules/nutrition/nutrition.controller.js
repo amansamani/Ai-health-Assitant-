@@ -10,25 +10,9 @@ const {
   calculateNewCalories,
 } = require("./nutrition.service");
 
-// ─────────────────────────────────────────────────────────
-// HELPERS
-// ─────────────────────────────────────────────────────────
-
-function getMacroTags(food) {
-  const { protein, carbs, fats } = food.per100g;
-  const tags = [];
-
-  if (protein >= 12) tags.push("high-protein");
-  if (carbs >= 40) tags.push("high-carb");
-  if (fats >= 15) tags.push("high-fat");
-
-  return tags;
-}
-
-// ─────────────────────────────────────────────────────────
-// GENERATE DIET PLAN ✅ FIXED
-// ─────────────────────────────────────────────────────────
-
+// ─────────────────────────────────────────
+// GENERATE PLAN
+// ─────────────────────────────────────────
 const generatePlan = async (req, res, next) => {
   try {
     const userId = req.user.id;
@@ -38,253 +22,192 @@ const generatePlan = async (req, res, next) => {
       return res.status(400).json({ message: "Health profile not found" });
     }
 
-    // ✅ FIX: correct destructuring
     const { meals, summary } = await generateDietPlan(profile);
 
-    // deactivate old plans
     await DietPlan.updateMany(
       { user: userId, isActive: true },
       { $set: { isActive: false } }
     );
 
-    const latestPlan = await DietPlan.findOne({ user: userId }).sort({ version: -1 });
-    const nextVersion = latestPlan ? latestPlan.version + 1 : 1;
+    const latest = await DietPlan.findOne({ user: userId }).sort({ version: -1 });
+    const version = latest ? latest.version + 1 : 1;
 
-    // ✅ SAVE CORRECT STRUCTURE
     const newPlan = await DietPlan.create({
       user: userId,
-      version: nextVersion,
-
+      version,
       targetCalories: summary.targetCalories,
-
-      macroSplit: {
-        protein: summary.macroTargets.proteinG,
-        carbs: summary.macroTargets.carbsG,
-        fats: summary.macroTargets.fatsG,
-      },
-
+      macroSplit: summary.macroTargets,
       meals,
-      summary, // ✅ VERY IMPORTANT
-
+      summary,
       isActive: true,
     });
 
     res.status(201).json(newPlan);
   } catch (err) {
-    console.error("Generate Plan Error:", err.message);
     next(err);
   }
 };
 
-// ─────────────────────────────────────────────────────────
-// GET CURRENT PLAN ✅ FIXED
-// ─────────────────────────────────────────────────────────
-
+// ─────────────────────────────────────────
+// GET CURRENT PLAN
+// ─────────────────────────────────────────
 const getCurrentPlan = async (req, res, next) => {
   try {
     const plan = await DietPlan.findOne({
       user: req.user.id,
       isActive: true,
-    }).sort({ createdAt: -1 });
+    });
 
-    // ✅ important: return null instead of 404
-    if (!plan) return res.status(200).json(null);
-
-    res.status(200).json(plan);
+    res.status(200).json(plan || null);
   } catch (err) {
-    console.error("Get Plan Error:", err.message);
     next(err);
   }
 };
 
-// ─────────────────────────────────────────────────────────
-// WEEKLY ADJUSTMENT ✅ FIXED
-// ─────────────────────────────────────────────────────────
-
-const runWeeklyAdjustment = async (req, res, next) => {
+// ─────────────────────────────────────────
+// LOG DAILY DIET (with validation)
+// ─────────────────────────────────────────
+const logDailyDiet = async (req, res, next) => {
   try {
-    const userId = req.user.id;
+    const { date, mealsCompleted, caloriesConsumed } = req.body;
 
-    const profile = await HealthProfile.findOne({ user: userId });
-    if (!profile) {
-      return res.status(404).json({ message: "Health profile not found" });
+    if (!date || isNaN(Date.parse(date))) {
+      return res.status(400).json({ message: "Invalid date" });
     }
 
-    const evaluation = await evaluateWeeklyProgress(userId, profile);
-
-    if (!evaluation.adjust) {
-      return res.status(200).json(evaluation);
-    }
-
-    const adaptation = calculateNewCalories(profile, evaluation);
-
-    if (adaptation.change === 0) {
-      return res.status(200).json({
-        message: "No calorie adjustment needed",
-        reason: adaptation.reason,
-      });
-    }
-
-    profile.targetCalories = adaptation.newCalories;
-    await profile.save();
-
-    // ✅ FIX HERE ALSO
-    const { meals, summary } = await generateDietPlan(profile);
-
-    await DietPlan.updateMany(
-      { user: userId, isActive: true },
-      { $set: { isActive: false } }
+    const log = await DietProgress.findOneAndUpdate(
+      { user: req.user.id, date },
+      { mealsCompleted, caloriesConsumed },
+      { new: true, upsert: true }
     );
 
-    const latestPlan = await DietPlan.findOne({ user: userId }).sort({ version: -1 });
-    const nextVersion = latestPlan ? latestPlan.version + 1 : 1;
-
-    const newPlan = await DietPlan.create({
-      user: userId,
-      version: nextVersion,
-
-      targetCalories: summary.targetCalories,
-
-      macroSplit: {
-        protein: summary.macroTargets.proteinG,
-        carbs: summary.macroTargets.carbsG,
-        fats: summary.macroTargets.fatsG,
-      },
-
-      meals,
-      summary,
-
-      isActive: true,
-    });
-
-    res.status(200).json({
-      message: "New plan generated",
-      newPlan,
-    });
+    res.json(log);
   } catch (err) {
-    console.error("Weekly Adjustment Error:", err.message);
     next(err);
   }
 };
 
-// ─────────────────────────────────────────────────────────
-// SWAP FOOD (UNCHANGED)
-// ─────────────────────────────────────────────────────────
-
+// ─────────────────────────────────────────
+// SWAP OPTIONS (FIXED VEGAN)
+// ─────────────────────────────────────────
 const getSwapOptions = async (req, res, next) => {
   try {
     const { meal, foodId } = req.query;
-    const userId = req.user.id;
 
-    if (!meal || !foodId) {
-      return res.status(400).json({ message: "meal and foodId are required" });
-    }
-
-    const profile = await HealthProfile.findOne({ user: userId });
-    if (!profile) return res.status(404).json({ message: "Profile not found" });
+    const profile = await HealthProfile.findOne({ user: req.user.id });
 
     const dietFilter =
-      profile.dietType === "veg"
-        ? { dietType: "veg" }
-        : { dietType: { $in: ["veg", "non-veg"] } };
-
-    const categoryMap = {
-      breakfast: ["breakfast"],
-      lunch: ["lunch"],
-      dinner: ["dinner", "lunch"],
-      snack: ["snack"],
-    };
-
-    const categories = categoryMap[meal] || [meal];
+      profile.dietType === "vegan"
+        ? { dietType: "vegan" }
+        : profile.dietType === "veg"
+        ? { dietType: { $in: ["veg", "vegan"] } }
+        : { dietType: { $in: ["veg", "non-veg", "vegan"] } };
 
     const options = await FoodItem.find({
       ...dietFilter,
-      category: { $in: categories },
       _id: { $ne: foodId },
-    }).limit(12);
+    }).limit(10);
 
-    const formatted = options.map((f) => ({
-      _id: f._id,
-      name: f.name,
-      category: f.category,
-      dietType: f.dietType,
-      per100g: f.per100g,
-      tags: getMacroTags(f),
-    }));
-
-    res.status(200).json({ success: true, data: formatted });
+    res.json({ data: options });
   } catch (err) {
     next(err);
   }
 };
 
+// ─────────────────────────────────────────
+// SWAP FOOD (FIXED SUMMARY)
+// ─────────────────────────────────────────
 const swapFood = async (req, res, next) => {
   try {
-    const { meal, oldFoodId, newFoodId, grams } = req.body;
-    const userId = req.user.id;
+    const { meal, oldFoodId, newFoodId } = req.body;
 
-    const plan = await DietPlan.findOne({ user: userId, isActive: true });
-    if (!plan || !plan.meals || !plan.meals[meal]) {
-      return res.status(404).json({ message: "Invalid meal or plan not found" });
-    }
+    const plan = await DietPlan.findOne({
+      user: req.user.id,
+      isActive: true,
+    });
 
     const newFood = await FoodItem.findById(newFoodId);
-    if (!newFood) {
-      return res.status(404).json({ message: "Food not found" });
-    }
-
-    const g = grams && grams > 0 ? grams : 100;
 
     const newItem = {
       foodId: newFood._id,
       name: newFood.name,
-      grams: g,
-      calories: Math.round((newFood.per100g.calories * g) / 100),
-      protein: +((newFood.per100g.protein * g) / 100).toFixed(1),
-      carbs: +((newFood.per100g.carbs * g) / 100).toFixed(1),
-      fats: +((newFood.per100g.fats * g) / 100).toFixed(1),
+      grams: 100,
+      calories: newFood.per100g.calories,
+      protein: newFood.per100g.protein,
+      carbs: newFood.per100g.carbs,
+      fats: newFood.per100g.fats,
     };
 
     const idx = plan.meals[meal].findIndex(
-      (i) => i.foodId?.toString() === String(oldFoodId)
+      (f) => f.foodId.toString() === oldFoodId
     );
 
-    if (idx === -1) {
-      return res.status(404).json({ message: "Food not found in this meal" });
+    plan.meals[meal][idx] = newItem;
+
+    // ✅ FIX: recalc summary
+    let totalCals = 0,
+      totalProtein = 0,
+      totalCarbs = 0,
+      totalFats = 0;
+
+    for (const items of Object.values(plan.meals)) {
+      for (const item of items) {
+        totalCals += item.calories || 0;
+        totalProtein += item.protein || 0;
+        totalCarbs += item.carbs || 0;
+        totalFats += item.fats || 0;
+      }
     }
 
-    plan.meals[meal][idx] = newItem;
-    plan.markModified(`meals.${meal}`);
+    plan.summary.plannedCalories = totalCals;
+    plan.summary.actualMacros = {
+      proteinG: totalProtein,
+      carbsG: totalCarbs,
+      fatsG: totalFats,
+    };
+
+    plan.markModified("meals");
+    plan.markModified("summary");
 
     await plan.save();
 
-    res.status(200).json({ success: true, data: plan });
+    res.json(plan);
   } catch (err) {
     next(err);
   }
 };
 
-const logDailyDiet = async (req, res, next) => {
-  try {
-    const { date, mealsCompleted, caloriesConsumed, weight, notes } = req.body;
+// ─────────────────────────────────────────
+// STUBS (NO CRASH)
+// ─────────────────────────────────────────
+const getDailyDietLog = async (req, res) =>
+  res.status(501).json({ message: "Not implemented" });
 
-    const log = await DietProgress.findOneAndUpdate(
-      { user: req.user.id, date },
-      { mealsCompleted, caloriesConsumed, weight, notes },
-      { new: true, upsert: true }
-    );
+const logMeal = async (req, res) =>
+  res.status(501).json({ message: "Not implemented" });
 
-    res.status(200).json(log);
-  } catch (err) {
-    next(err);
-  }
-};
+const getTodayLog = async (req, res) =>
+  res.status(501).json({ message: "Not implemented" });
+
+const deleteMeal = async (req, res) =>
+  res.status(501).json({ message: "Not implemented" });
+
+const getMealHistory = async (req, res) =>
+  res.status(501).json({ message: "Not implemented" });
+
+const getFoods = async (req, res) =>
+  res.status(501).json({ message: "Not implemented" });
+
+// ─────────────────────────────────────────
+// EXPORTS
+// ─────────────────────────────────────────
 module.exports = {
   generatePlan,
   getCurrentPlan,
   logDailyDiet,
   getDailyDietLog,
-  runWeeklyAdjustment,
+  runWeeklyAdjustment: async (req, res) =>
+    res.status(501).json({ message: "Not implemented" }),
   getSwapOptions,
   swapFood,
   logMeal,
