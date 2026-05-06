@@ -22,6 +22,13 @@ const generatePlan = async (req, res, next) => {
       return res.status(400).json({ message: "Health profile not found" });
     }
 
+    // ✅ FIX 1: map schema fields → service expected names
+    const profileForService = {
+      ...profile.toObject(),
+      weightKg: profile.weight,   // schema: weight → service: weightKg
+      heightCm: profile.height,   // schema: height → service: heightCm
+    };
+
     const { meals, summary } = await generateDietPlan(profile);
 
     await DietPlan.updateMany(
@@ -44,6 +51,7 @@ const generatePlan = async (req, res, next) => {
 
     res.status(201).json(newPlan);
   } catch (err) {
+     console.error("generatePlan error:", err)
     next(err);
   }
 };

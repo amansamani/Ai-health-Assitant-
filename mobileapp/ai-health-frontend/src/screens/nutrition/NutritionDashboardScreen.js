@@ -26,9 +26,7 @@ const formatQty = (food) => {
   return `${food.grams}g`;
 };
 
-/** Safe accessor — backend returns proteinG / carbsG / fatsG */
 const getMacro = (macros, key) => {
-  // handle both "protein" and "proteinG" shapes
   return macros?.[key] ?? macros?.[`${key}G`] ?? macros?.[key.replace("G", "")] ?? 0;
 };
 
@@ -76,7 +74,6 @@ function SwapModal({ visible, meal, food, onClose, onSwapped }) {
     if (!visible || !food) return;
     setOptions([]);
     setLoading(true);
-    // foodId is the backend _id field stored in meal entry
     const id = food.foodId || food._id;
     API.get(`/nutrition/swap-options?meal=${meal}&foodId=${id}`)
       .then(res => setOptions(res.data?.data || []))
@@ -107,7 +104,6 @@ function SwapModal({ visible, meal, food, onClose, onSwapped }) {
       <View style={sw.overlay}>
         <View style={sw.sheet}>
 
-          {/* Header */}
           <View style={sw.header}>
             <View>
               <Text style={sw.title}>Swap "{food?.name}"</Text>
@@ -156,7 +152,6 @@ function SwapModal({ visible, meal, food, onClose, onSwapped }) {
                       </Text>
                       <Text style={sw.servingLine}>{servingLbl}</Text>
 
-                      {/* Diet type badge */}
                       {item.dietType && (
                         <View style={[sw.badge, { backgroundColor: item.dietType === "veg" ? "#e8f5e9" : "#fce4ec" }]}>
                           <Text style={[sw.badgeText, { color: item.dietType === "veg" ? "#2e7d32" : "#c62828" }]}>
@@ -194,7 +189,6 @@ function MealCard({ meal, foods, meta, onSwap, onRegenerate }) {
 
   return (
     <View style={[s.mealCard, { borderLeftColor: meta.color }]}>
-      {/* Header */}
       <View style={s.mealHeader}>
         <View style={[s.mealIconBox, { backgroundColor: meta.bg }]}>
           <Text style={{ fontSize: 22 }}>{meta.icon}</Text>
@@ -214,7 +208,6 @@ function MealCard({ meal, foods, meta, onSwap, onRegenerate }) {
         </View>
       </View>
 
-      {/* Food rows */}
       {foods.length > 0 ? (
         <View style={s.foodList}>
           {foods.map((food, idx) => {
@@ -224,7 +217,6 @@ function MealCard({ meal, foods, meta, onSwap, onRegenerate }) {
                 <View style={[s.dot, { backgroundColor: meta.color }]} />
 
                 <View style={{ flex: 1 }}>
-                  {/* Name + qty */}
                   <View style={s.foodTop}>
                     <Text style={s.foodName} numberOfLines={1}>{food.name}</Text>
                     <View style={[s.qtyBadge, { backgroundColor: isPiece ? "#e8f5e9" : meta.bg }]}>
@@ -234,7 +226,6 @@ function MealCard({ meal, foods, meta, onSwap, onRegenerate }) {
                     </View>
                   </View>
 
-                  {/* Calories + macros */}
                   <View style={s.foodMacroRow}>
                     <View style={[s.calChip, { backgroundColor: meta.bg }]}>
                       <Text style={[s.calChipTxt, { color: meta.color }]}>🔥 {food.calories} kcal</Text>
@@ -246,7 +237,6 @@ function MealCard({ meal, foods, meta, onSwap, onRegenerate }) {
                   </View>
                 </View>
 
-                {/* Swap */}
                 <TouchableOpacity
                   style={[s.swapChip, { borderColor: meta.color }]}
                   onPress={() => onSwap(meal, food)}
@@ -281,7 +271,6 @@ export default function NutritionDashboardScreen({ navigation }) {
   const fetchPlan = useCallback(async () => {
     try {
       const res = await API.get("/nutrition/current");
-      // Backend returns { meals, summary } — guard both
       if (res.data?.meals && res.data?.summary) {
         setPlan(res.data);
       } else {
@@ -297,6 +286,19 @@ export default function NutritionDashboardScreen({ navigation }) {
   }, []);
 
   useEffect(() => { fetchPlan(); }, [fetchPlan]);
+
+  // ✅ FIX: handleGenerate calls API instead of navigating
+  const handleGenerate = async () => {
+    setLoading(true);
+    try {
+      await API.post("/nutrition/generate");
+      await fetchPlan();
+    } catch (err) {
+      console.error("Generate plan error:", err.response?.data || err.message);
+      Alert.alert("Error", "Could not generate plan. Please try again.");
+      setLoading(false);
+    }
+  };
 
   const handleRegenerate = () => {
     Alert.alert(
@@ -338,25 +340,25 @@ export default function NutritionDashboardScreen({ navigation }) {
         <Text style={{ fontSize: 52, marginBottom: 14 }}>🥗</Text>
         <Text style={s.emptyTitle}>No Diet Plan Found</Text>
         <Text style={s.emptySub}>Generate your personalised plan to get started</Text>
-        <TouchableOpacity style={s.genBtn} onPress={() => navigation.navigate("Progress")}>
+        {/* ✅ FIX: was navigation.navigate("Progress") — now calls API */}
+        <TouchableOpacity style={s.genBtn} onPress={handleGenerate}>
           <Text style={s.genBtnTxt}>Generate My Plan</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
-  // ── Data from backend (summary shape) ──
+  // ── Data from backend ──
   const { meals, summary } = plan;
   const {
     targetCalories,
     plannedCalories,
-    macroTargets,    // { proteinG, carbsG, fatsG }
-    actualMacros,    // { proteinG, carbsG, fatsG, fiberG, sugarG }
-    macroAchievement,// { protein, carbs, fats } — % vs target
+    macroTargets,
+    actualMacros,
+    macroAchievement,
     profileSnapshot,
   } = summary;
 
-  // Normalise keys (backend uses proteinG/carbsG/fatsG)
   const targets = {
     protein: macroTargets?.proteinG ?? macroTargets?.protein ?? 0,
     carbs:   macroTargets?.carbsG   ?? macroTargets?.carbs   ?? 0,
@@ -424,7 +426,6 @@ export default function NutritionDashboardScreen({ navigation }) {
             </View>
           </View>
 
-          {/* Progress bar */}
           <View style={s.calBar}>
             <View style={[s.calBarFill, {
               width: `${calPct}%`,
@@ -438,32 +439,16 @@ export default function NutritionDashboardScreen({ navigation }) {
         <View style={s.card}>
           <Text style={s.cardHeading}>💪 MACRO BREAKDOWN</Text>
 
-          <MacroBar
-            label="Protein"
-            actual={actual.protein}
-            target={targets.protein}
-            color="#1E88E5"
-          />
-          <MacroBar
-            label="Carbohydrates"
-            actual={actual.carbs}
-            target={targets.carbs}
-            color="#43A047"
-          />
-          <MacroBar
-            label="Fats"
-            actual={actual.fats}
-            target={targets.fats}
-            color="#FF8F00"
-          />
+          <MacroBar label="Protein"       actual={actual.protein} target={targets.protein} color="#1E88E5" />
+          <MacroBar label="Carbohydrates" actual={actual.carbs}   target={targets.carbs}   color="#43A047" />
+          <MacroBar label="Fats"          actual={actual.fats}    target={targets.fats}    color="#FF8F00" />
 
-          {/* Achievement row */}
           {macroAchievement && (
             <View style={s.achRow}>
               {["protein", "carbs", "fats"].map((k) => {
                 const val = macroAchievement[k];
                 if (val == null) return null;
-                const ok  = val >= 80 && val <= 115;
+                const ok    = val >= 80 && val <= 115;
                 const color = ok ? "#4CAF50" : val > 115 ? "#e53935" : "#FF8F00";
                 return (
                   <View key={k} style={[s.achChip, { backgroundColor: ok ? "#e8f5e9" : "#fff3e0" }]}>
@@ -475,15 +460,10 @@ export default function NutritionDashboardScreen({ navigation }) {
             </View>
           )}
 
-          {/* Fiber / Sugar extras */}
           {(actual.fiber > 0 || actual.sugar > 0) && (
             <View style={s.extraRow}>
-              {actual.fiber > 0 && (
-                <Text style={s.extraTxt}>🌾 Fiber: {actual.fiber}g</Text>
-              )}
-              {actual.sugar > 0 && (
-                <Text style={s.extraTxt}>🍬 Sugar: {actual.sugar}g</Text>
-              )}
+              {actual.fiber > 0 && <Text style={s.extraTxt}>🌾 Fiber: {actual.fiber}g</Text>}
+              {actual.sugar > 0 && <Text style={s.extraTxt}>🍬 Sugar: {actual.sugar}g</Text>}
             </View>
           )}
         </View>
@@ -500,7 +480,7 @@ export default function NutritionDashboardScreen({ navigation }) {
           />
         ))}
 
-        {/* ── Progress button ── */}
+        {/* ── Weekly Progress button — untouched ── */}
         <TouchableOpacity
           style={[s.btn, { backgroundColor: "#1E88E5" }]}
           onPress={() => navigation.navigate("Progress")}
@@ -572,7 +552,6 @@ const s = StyleSheet.create({
   },
   cardHeading: { fontSize: 11, fontWeight: "800", color: "#aaa", marginBottom: 14, textTransform: "uppercase", letterSpacing: 1 },
 
-  // Calorie card
   calRow:     { flexDirection: "row", justifyContent: "space-around", alignItems: "center", marginBottom: 14 },
   calBlock:   { alignItems: "center" },
   calBig:     { fontSize: 26, fontWeight: "900", color: "#1a1a1a" },
@@ -582,17 +561,14 @@ const s = StyleSheet.create({
   calBarFill: { height: "100%", borderRadius: 4 },
   calPctTxt:  { fontSize: 11, color: "#aaa", textAlign: "right", fontWeight: "600" },
 
-  // Achievement chips
   achRow:     { flexDirection: "row", gap: 8, marginTop: 12 },
   achChip:    { flex: 1, borderRadius: 10, paddingVertical: 8, alignItems: "center" },
   achVal:     { fontSize: 16, fontWeight: "800" },
   achLbl:     { fontSize: 10, color: "#888", marginTop: 2, fontWeight: "600" },
 
-  // Extras
   extraRow:   { flexDirection: "row", gap: 12, marginTop: 10, borderTopWidth: 1, borderTopColor: "#f5f5f5", paddingTop: 10 },
   extraTxt:   { fontSize: 12, color: "#888", fontWeight: "600" },
 
-  // Meal card
   mealCard: {
     backgroundColor: "#fff", borderRadius: 16, padding: 14, marginBottom: 12,
     borderLeftWidth: 4, elevation: 3, shadowColor: "#000",
