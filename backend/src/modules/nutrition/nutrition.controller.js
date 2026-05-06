@@ -1,15 +1,35 @@
+"use strict";
+
 const HealthProfile = require("../health/health.model");
 const DietPlan      = require("./dietPlan.model");
 const DietProgress  = require("./dietProgress.model");
 const MealLog       = require("./mealLog.model");
-const FoodTemplate  = require("./foodTemplate.model");
 
 const {
   generateDietPlan,
   evaluateWeeklyProgress,
   calculateNewCalories,
   getTemplateMealSwaps,
+  getTemplate,                  // ← use cache, not raw DB
 } = require("./nutrition.service");
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GOAL NORMALIZER
+// Maps frontend/profile strings → internal strings used in template + logic
+// ─────────────────────────────────────────────────────────────────────────────
+const GOAL_MAP = {
+  lean:     "lose",
+  cut:      "lose",
+  lose:     "lose",
+  bulk:     "gain",
+  gain:     "gain",
+  fit:      "maintain",
+  maintain: "maintain",
+};
+
+function normalizeGoal(goal) {
+  return GOAL_MAP[goal?.toLowerCase()] || "maintain";
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GENERATE PLAN
@@ -20,6 +40,9 @@ const generatePlan = async (req, res, next) => {
 
     const profile = await HealthProfile.findOne({ user: userId });
     if (!profile) return res.status(400).json({ message: "Health profile not found" });
+
+    // Normalize goal before passing to service
+    profile.goal = normalizeGoal(profile.goal);
 
     const { meals, summary } = await generateDietPlan(profile);
 
@@ -83,7 +106,6 @@ const logDailyDiet = async (req, res, next) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // SWAP OPTIONS
 // GET /nutrition/swap-options?mealType=lunch&excludeId=ln_pro_003
-// Returns up to 6 alternative combos matching user's goal + dietType
 // ─────────────────────────────────────────────────────────────────────────────
 const getSwapOptions = async (req, res, next) => {
   try {
@@ -96,9 +118,12 @@ const getSwapOptions = async (req, res, next) => {
     const profile = await HealthProfile.findOne({ user: req.user.id });
     if (!profile) return res.status(400).json({ message: "Health profile not found" });
 
+    // Normalize goal
+    const goal = normalizeGoal(profile.goal);
+
     const options = await getTemplateMealSwaps(
       mealType,
-      profile.goal,
+      goal,
       profile.dietType,
       excludeId || null
     );
@@ -114,6 +139,8 @@ const getSwapOptions = async (req, res, next) => {
 // POST /nutrition/swap
 // Body: { mealType: "lunch", newMealId: "ln_pro_007" }
 // ─────────────────────────────────────────────────────────────────────────────
+const CALORIE_SPLIT = { breakfast: 0.25, lunch: 0.35, dinner: 0.30, snack: 0.10 };
+
 const swapFood = async (req, res, next) => {
   try {
     const { mealType, newMealId } = req.body;
@@ -125,14 +152,13 @@ const swapFood = async (req, res, next) => {
     const plan = await DietPlan.findOne({ user: req.user.id, isActive: true });
     if (!plan) return res.status(404).json({ message: "No active plan found" });
 
-    // Find new combo in DB template
-    const templateDoc = await FoodTemplate.findOne().lean();
-    const newCombo    = templateDoc?.meals?.find((m) => m.id === newMealId);
+    // ✅ Use cached template — not raw DB call
+    const allMeals = await getTemplate();
+    const newCombo = allMeals.find((m) => m.id === newMealId);
     if (!newCombo) return res.status(404).json({ message: "Meal template not found" });
 
-    // Scale to this slot's calorie budget
-    const CALORIE_SPLIT = { breakfast: 0.25, lunch: 0.35, dinner: 0.30, snack: 0.10 };
-    const calBudget     = plan.targetCalories * (CALORIE_SPLIT[mealType] || 0.25);
+    // Scale to calorie budget
+    const calBudget = plan.targetCalories * (CALORIE_SPLIT[mealType] || 0.25);
 
     const [minCals, maxCals] = newCombo.macroRange.calories;
     const scale = maxCals === minCals
@@ -163,6 +189,7 @@ const swapFood = async (req, res, next) => {
       fiber:    lerp(newCombo.macroRange.fiber),
     };
 
+    // Replace only this meal slot
     plan.meals[mealType] = [scaled];
 
     // Recalc summary totals
