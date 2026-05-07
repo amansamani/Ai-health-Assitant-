@@ -155,7 +155,9 @@ const swapFood = async (req, res, next) => {
 
     // ✅ Use cached template — not raw DB call
     const allMeals = await getTemplate();
+    console.log("🍱 total templates:", allMeals.length); // ADD
     const newCombo = allMeals.find((m) => m.id === newMealId);
+    console.log("🎯 newCombo found:", !!newCombo, "looking for id:", newMealId); // 
     if (!newCombo) return res.status(404).json({ message: "Meal template not found" });
 
     // Scale to calorie budget
