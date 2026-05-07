@@ -11,7 +11,10 @@ router.get("/log",             auth, controller.getDailyDietLog);
 router.post("/weekly-adjust",  auth, controller.runWeeklyAdjustment);
 
 // Change these two lines:
-router.post("/swap",        auth, controller.swapFood);      // was patch("/swap-food")
+router.post("/swap", auth, (req, res, next) => {
+  console.log("✅ /swap route hit", req.body);
+  next();
+}, controller.swapFood);    // was patch("/swap-food")
 router.get("/swap-options", auth, controller.getSwapOptions); // already correct
 
 // ── Meal Logging ──────────────────────────────────────────────────────────────

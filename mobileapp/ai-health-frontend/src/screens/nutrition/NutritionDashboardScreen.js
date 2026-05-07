@@ -86,6 +86,7 @@ function SwapModal({ visible, mealType, combo, onClose, onSwapped }) {
   const handleSwap = async (newMeal) => {
     setSwapping(newMeal.id);
     try {
+      console.log("📤 Calling swap with:", { mealType, newMealId: newMeal.id });
       // FIX: correct endpoint POST /nutrition/swap with { mealType, newMealId }
       await API.post("/nutrition/swap", {
         mealType,
