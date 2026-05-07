@@ -10,9 +10,9 @@ router.post("/log",            auth, controller.logDailyDiet);
 router.get("/log",             auth, controller.getDailyDietLog);
 router.post("/weekly-adjust",  auth, controller.runWeeklyAdjustment);
 
-// ── Swap food in plan (NEW) ───────────────────────────────────────────────────
-router.get("/swap-options",    auth, controller.getSwapOptions);   // GET  /api/nutrition/swap-options?meal=lunch&foodId=xxx
-router.patch("/swap-food",     auth, controller.swapFood);         // PATCH /api/nutrition/swap-food
+// Change these two lines:
+router.post("/swap",        auth, controller.swapFood);      // was patch("/swap-food")
+router.get("/swap-options", auth, controller.getSwapOptions); // already correct
 
 // ── Meal Logging ──────────────────────────────────────────────────────────────
 router.post("/log-meal",       auth, controller.logMeal);

@@ -4,6 +4,7 @@ const HealthProfile = require("../health/health.model");
 const DietPlan      = require("./dietPlan.model");
 const DietProgress  = require("./dietProgress.model");
 const MealLog       = require("./mealLog.model");
+const FoodItem = require("./foodItem.model");
 
 const {
   generateDietPlan,
@@ -221,16 +222,112 @@ const swapFood = async (req, res, next) => {
     next(err);
   }
 };
+const getFoods = async (req, res, next) => {
+  try {
+    const { q, tags, dietType, limit = 20 } = req.query;
 
+    const query = {};
+
+    // text search
+    if (q) {
+      query.name = { $regex: q, $options: "i" };
+    }
+
+    // tag filter — tags=high-protein,balanced
+    if (tags) {
+      const tagArr = tags.split(",").map(t => t.trim()).filter(Boolean);
+      if (tagArr.length) query.tags = { $in: tagArr };
+    }
+
+    // diet type filter
+    if (dietType) {
+      query.dietType = dietType;
+    }
+
+    const foods = await FoodItem.find(query)
+      .limit(Number(limit))
+      .lean();
+
+    res.json({ data: foods });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const logMeal = async (req, res, next) => {
+  try {
+    const { mealType, food } = req.body;
+
+    if (!mealType || !food) {
+      return res.status(400).json({ message: "mealType and food are required" });
+    }
+
+    // normalize "snack" → "snacks" to match schema enum
+    const normalizedMealType = mealType === "snack" ? "snacks" : mealType;
+
+    const log = await MealLog.create({
+      user:     req.user.id,
+      mealType: normalizedMealType,
+      food: {
+        name:     food.name,
+        brand:    food.brand     || "",
+        quantity: food.quantity  || 100,
+        unit:     food.unit      || "g",
+        calories: food.calories  || 0,
+        protein:  food.protein   || 0,
+        carbs:    food.carbs     || 0,
+        fats:     food.fats      || 0,
+        fiber:    food.fiber     || 0,
+        sugar:    food.sugar     || 0,
+        sodium:   food.sodium    || 0,
+      },
+    });
+
+    res.status(201).json({ message: "Meal logged", data: log });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getTodayLog = async (req, res, next) => {
+  try {
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const end = new Date();
+    end.setHours(23, 59, 59, 999);
+
+    const logs = await MealLog.find({
+      user:     req.user.id,
+      loggedAt: { $gte: start, $lte: end },
+    }).sort({ loggedAt: -1 }).lean();
+
+    // group by mealType
+    const grouped = { breakfast: [], lunch: [], dinner: [], snacks: [] };
+    for (const log of logs) {
+      if (grouped[log.mealType]) grouped[log.mealType].push(log);
+    }
+
+    // totals
+    const totals = logs.reduce((acc, log) => ({
+      calories: acc.calories + (log.food.calories || 0),
+      protein:  acc.protein  + (log.food.protein  || 0),
+      carbs:    acc.carbs    + (log.food.carbs     || 0),
+      fats:     acc.fats     + (log.food.fats      || 0),
+    }), { calories: 0, protein: 0, carbs: 0, fats: 0 });
+
+    res.json({ data: grouped, totals, count: logs.length });
+  } catch (err) {
+    next(err);
+  }
+};
 // ─────────────────────────────────────────────────────────────────────────────
 // STUBS
 // ─────────────────────────────────────────────────────────────────────────────
 const getDailyDietLog = async (req, res) => res.status(501).json({ message: "Not implemented" });
-const logMeal         = async (req, res) => res.status(501).json({ message: "Not implemented" });
-const getTodayLog     = async (req, res) => res.status(501).json({ message: "Not implemented" });
+
 const deleteMeal      = async (req, res) => res.status(501).json({ message: "Not implemented" });
 const getMealHistory  = async (req, res) => res.status(501).json({ message: "Not implemented" });
-const getFoods        = async (req, res) => res.status(501).json({ message: "Not implemented" });
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 module.exports = {
