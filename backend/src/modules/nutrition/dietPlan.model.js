@@ -2,20 +2,33 @@ const mongoose = require("mongoose");
 
 const mealItemSchema = new mongoose.Schema(
   {
-    foodId:   { type: mongoose.Schema.Types.ObjectId, ref: "FoodItem" },
-    name:     String,
-    category: String,
+    // ── Template identity ──
+    templateId: String,
+    mealName:   String,
+    cuisine:    String,
+    difficulty: String,
+    prepTime:   Number,
+    budget:     String,
+    tags:       [String],
 
-    grams:    Number,
+    // ── Ingredients ──
+    items: [
+      {
+        name:   String,
+        amount: Number,
+        unit:   String,
+        _id:    false,
+      },
+    ],
+
+    // ── Macros ──
     calories: Number,
     protein:  Number,
     carbs:    Number,
     fats:     Number,
-
     fiber:    Number,
-    sugar:    Number,
-    sodium:   Number,
 
+    // ── Legacy fields (keep for backward compat) ──
     servingUnit:   { type: String, default: "g" },
     gramsPerPiece: { type: Number, default: null },
     pieces:        { type: Number, default: null },

@@ -1,8 +1,8 @@
+"use strict";
 import React, { useEffect, useState, useCallback } from "react";
 import {
   View, Text, ActivityIndicator, ScrollView, StyleSheet,
   TouchableOpacity, RefreshControl, Modal, FlatList, Alert,
-  Animated,
 } from "react-native";
 import API from "../../services/api";
 
@@ -19,15 +19,13 @@ const MEAL_ORDER = ["breakfast", "lunch", "dinner", "snack"];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const formatQty = (food) => {
-  if (food.servingUnit === "piece" && food.pieces) {
-    return `${food.pieces} pc${food.pieces !== 1 ? "s" : ""} (${food.grams}g)`;
-  }
-  return `${food.grams}g`;
-};
-
-const getMacro = (macros, key) => {
-  return macros?.[key] ?? macros?.[`${key}G`] ?? macros?.[key.replace("G", "")] ?? 0;
+/**
+ * FIX: Backend returns items as { name, amount, unit } — not grams/pieces/servingUnit.
+ * Format amount+unit from template item shape.
+ */
+const formatQty = (item) => {
+  if (!item.amount && !item.unit) return "";
+  return item.unit ? `${item.amount} ${item.unit}` : `${item.amount}`;
 };
 
 const pct = (val, total) =>
@@ -63,37 +61,40 @@ const mb = StyleSheet.create({
 });
 
 // ─── SwapModal ────────────────────────────────────────────────────────────────
-
-function SwapModal({ visible, meal, food, onClose, onSwapped }) {
+/**
+ * FIX: API params renamed to match backend:
+ *   GET  /nutrition/swap-options?mealType=lunch&excludeId=xxx   (was meal= & foodId=)
+ *   POST /nutrition/swap  { mealType, newMealId }               (was PATCH /swap-food)
+ */
+function SwapModal({ visible, mealType, combo, onClose, onSwapped }) {
   const [options, setOptions]   = useState([]);
   const [loading, setLoading]   = useState(false);
   const [swapping, setSwapping] = useState(null);
-  const meta = MEAL_META[meal] || MEAL_META.lunch;
+  const meta = MEAL_META[mealType] || MEAL_META.lunch;
 
   useEffect(() => {
-    if (!visible || !food) return;
+    if (!visible || !combo) return;
     setOptions([]);
     setLoading(true);
-    const id = food.foodId || food._id;
-    API.get(`/nutrition/swap-options?meal=${meal}&foodId=${id}`)
+    // FIX: correct query params — mealType + excludeId (templateId from backend)
+    API.get(`/nutrition/swap-options?mealType=${mealType}&excludeId=${combo.templateId || ""}`)
       .then(res => setOptions(res.data?.data || []))
       .catch(() => setOptions([]))
       .finally(() => setLoading(false));
-  }, [visible, food, meal]);
+  }, [visible, combo, mealType]);
 
-  const handleSwap = async (newFood) => {
-    setSwapping(newFood._id);
+  const handleSwap = async (newMeal) => {
+    setSwapping(newMeal.id);
     try {
-      await API.patch("/nutrition/swap-food", {
-        meal,
-        oldFoodId: food.foodId || food._id,
-        newFoodId: newFood._id,
-        grams:     food.grams ?? 100,
+      // FIX: correct endpoint POST /nutrition/swap with { mealType, newMealId }
+      await API.post("/nutrition/swap", {
+        mealType,
+        newMealId: newMeal.id,
       });
       onSwapped();
       onClose();
     } catch {
-      Alert.alert("Swap Failed", "Could not swap food. Please try again.");
+      Alert.alert("Swap Failed", "Could not swap meal. Please try again.");
     } finally {
       setSwapping(null);
     }
@@ -106,7 +107,7 @@ function SwapModal({ visible, meal, food, onClose, onSwapped }) {
 
           <View style={sw.header}>
             <View>
-              <Text style={sw.title}>Swap "{food?.name}"</Text>
+              <Text style={sw.title}>Swap "{combo?.mealName}"</Text>
               <Text style={sw.sub}>{meta.label} alternatives</Text>
             </View>
             <TouchableOpacity onPress={onClose} style={sw.closeBtn}>
@@ -121,18 +122,18 @@ function SwapModal({ visible, meal, food, onClose, onSwapped }) {
           ) : (
             <FlatList
               data={options}
-              keyExtractor={item => item._id}
+              keyExtractor={item => item.id}
               contentContainerStyle={{ paddingBottom: 24 }}
               renderItem={({ item }) => {
-                const busy       = swapping === item._id;
-                const isPiece    = item.serving?.unit === "piece";
-                const cal100     = Math.round(item.per100g?.calories ?? 0);
-                const pro100     = (item.per100g?.protein ?? 0).toFixed(1);
-                const carb100    = (item.per100g?.carbs ?? 0).toFixed(1);
-                const fat100     = (item.per100g?.fats ?? 0).toFixed(1);
-                const servingLbl = isPiece
-                  ? `1 piece = ${item.serving.grams}g`
-                  : "per 100g";
+                const busy = swapping === item.id;
+                const [minCal, maxCal] = item.macroRange?.calories || [0, 0];
+                const [minPro, maxPro] = item.macroRange?.protein  || [0, 0];
+                const [minCarb, maxCarb] = item.macroRange?.carbs  || [0, 0];
+                const [minFat, maxFat]  = item.macroRange?.fats    || [0, 0];
+                const midCal  = Math.round((minCal + maxCal) / 2);
+                const midPro  = ((minPro + maxPro) / 2).toFixed(1);
+                const midCarb = ((minCarb + maxCarb) / 2).toFixed(1);
+                const midFat  = ((minFat + maxFat) / 2).toFixed(1);
 
                 return (
                   <TouchableOpacity
@@ -148,14 +149,15 @@ function SwapModal({ visible, meal, food, onClose, onSwapped }) {
                     <View style={sw.info}>
                       <Text style={sw.name}>{item.name}</Text>
                       <Text style={sw.macroLine}>
-                        {cal100} kcal · P {pro100}g · C {carb100}g · F {fat100}g
+                        ~{midCal} kcal · P {midPro}g · C {midCarb}g · F {midFat}g
                       </Text>
-                      <Text style={sw.servingLine}>{servingLbl}</Text>
-
+                      {item.cuisine && (
+                        <Text style={sw.servingLine}>{item.cuisine} · {item.difficulty}</Text>
+                      )}
                       {item.dietType && (
                         <View style={[sw.badge, { backgroundColor: item.dietType === "veg" ? "#e8f5e9" : "#fce4ec" }]}>
                           <Text style={[sw.badgeText, { color: item.dietType === "veg" ? "#2e7d32" : "#c62828" }]}>
-                            {item.dietType === "veg" ? "🌱 Veg" : item.dietType === "vegan" ? "🌿 Vegan" : "🍗 Non-veg"}
+                            {item.dietType === "veg" ? "🌱 Veg" : item.dietType === "eggetarian" ? "🥚 Eggetarian" : "🍗 Non-veg"}
                           </Text>
                         </View>
                       )}
@@ -182,10 +184,23 @@ function SwapModal({ visible, meal, food, onClose, onSwapped }) {
 }
 
 // ─── MealCard ─────────────────────────────────────────────────────────────────
-
-function MealCard({ meal, foods, meta, onSwap, onRegenerate }) {
-  const totalCal     = foods.reduce((s, f) => s + (f.calories ?? 0), 0);
-  const totalProtein = foods.reduce((s, f) => s + (f.protein ?? 0), 0);
+/**
+ * FIX: Backend shape per meal slot is an ARRAY of combo objects:
+ *   meals.lunch = [{
+ *     templateId, mealName, cuisine, difficulty, prepTime, budget, tags,
+ *     items: [{ name, amount, unit }],
+ *     calories, protein, carbs, fats, fiber
+ *   }]
+ *
+ * Previously frontend treated each combo as a flat food row — wrong.
+ * Now we:
+ *   - Show combo.mealName as the meal combo name
+ *   - Map combo.items for individual ingredient rows
+ *   - Use combo.calories/protein/carbs/fats for macros
+ */
+function MealCard({ mealType, combos, meta, onSwap, onRegenerate }) {
+  const totalCal     = combos.reduce((s, c) => s + (c.calories ?? 0), 0);
+  const totalProtein = combos.reduce((s, c) => s + (c.protein  ?? 0), 0);
 
   return (
     <View style={[s.mealCard, { borderLeftColor: meta.color }]}>
@@ -203,50 +218,69 @@ function MealCard({ meal, foods, meta, onSwap, onRegenerate }) {
         </View>
         <View style={[s.badge, { backgroundColor: meta.bg }]}>
           <Text style={[s.badgeTxt, { color: meta.color }]}>
-            {foods.length} item{foods.length !== 1 ? "s" : ""}
+            {combos.length} combo{combos.length !== 1 ? "s" : ""}
           </Text>
         </View>
       </View>
 
-      {foods.length > 0 ? (
+      {combos.length > 0 ? (
         <View style={s.foodList}>
-          {foods.map((food, idx) => {
-            const isPiece = food.servingUnit === "piece" && food.pieces;
-            return (
-              <View key={idx} style={[s.foodRow, idx < foods.length - 1 && s.foodDivider]}>
-                <View style={[s.dot, { backgroundColor: meta.color }]} />
+          {combos.map((combo, ci) => (
+            <View key={ci} style={[s.comboBlock, ci < combos.length - 1 && s.foodDivider]}>
 
+              {/* Combo name row */}
+              <View style={s.comboNameRow}>
                 <View style={{ flex: 1 }}>
-                  <View style={s.foodTop}>
-                    <Text style={s.foodName} numberOfLines={1}>{food.name}</Text>
-                    <View style={[s.qtyBadge, { backgroundColor: isPiece ? "#e8f5e9" : meta.bg }]}>
-                      <Text style={[s.qtyTxt, { color: isPiece ? "#2e7d32" : meta.color }]}>
-                        {formatQty(food)}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={s.foodMacroRow}>
-                    <View style={[s.calChip, { backgroundColor: meta.bg }]}>
-                      <Text style={[s.calChipTxt, { color: meta.color }]}>🔥 {food.calories} kcal</Text>
-                    </View>
-                    <Text style={s.macroTxt}>
-                      P {food.protein}g · C {food.carbs}g · F {food.fats}g
-                      {food.fiber ? ` · Fiber ${food.fiber}g` : ""}
+                  <Text style={s.comboName}>{combo.mealName}</Text>
+                  {(combo.cuisine || combo.prepTime) && (
+                    <Text style={s.comboMeta}>
+                      {[combo.cuisine, combo.prepTime ? `${combo.prepTime} min` : null]
+                        .filter(Boolean).join(" · ")}
                     </Text>
+                  )}
+                </View>
+
+                {/* Macro chips */}
+                <View style={s.macroPill}>
+                  <View style={[s.calChip, { backgroundColor: meta.bg }]}>
+                    <Text style={[s.calChipTxt, { color: meta.color }]}>🔥 {combo.calories} kcal</Text>
                   </View>
                 </View>
 
+                {/* Swap button — swaps the whole combo */}
                 <TouchableOpacity
                   style={[s.swapChip, { borderColor: meta.color }]}
-                  onPress={() => onSwap(meal, food)}
+                  onPress={() => onSwap(mealType, combo)}
                   activeOpacity={0.7}
                 >
                   <Text style={[s.swapChipTxt, { color: meta.color }]}>⇄ Swap</Text>
                 </TouchableOpacity>
               </View>
-            );
-          })}
+
+              {/* Macro summary row */}
+              <Text style={s.macroTxt}>
+                P {combo.protein ?? 0}g · C {combo.carbs ?? 0}g · F {combo.fats ?? 0}g
+                {combo.fiber ? ` · Fiber ${combo.fiber}g` : ""}
+              </Text>
+
+              {/* Ingredient items */}
+              {combo.items?.length > 0 && (
+                <View style={s.itemsList}>
+                  {combo.items.map((item, ii) => (
+                    <View key={ii} style={s.itemRow}>
+                      <View style={[s.dot, { backgroundColor: meta.color }]} />
+                      <Text style={s.itemName}>{item.name}</Text>
+                      <View style={[s.qtyBadge, { backgroundColor: meta.bg }]}>
+                        <Text style={[s.qtyTxt, { color: meta.color }]}>
+                          {formatQty(item)}
+                        </Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          ))}
         </View>
       ) : (
         <View style={s.emptyMeal}>
@@ -266,7 +300,8 @@ export default function NutritionDashboardScreen({ navigation }) {
   const [plan, setPlan]             = useState(null);
   const [loading, setLoading]       = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [swapState, setSwapState]   = useState({ visible: false, meal: null, food: null });
+  // FIX: swap state now tracks mealType + combo (not meal + food)
+  const [swapState, setSwapState]   = useState({ visible: false, mealType: null, combo: null });
 
   const fetchPlan = useCallback(async () => {
     try {
@@ -283,11 +318,11 @@ export default function NutritionDashboardScreen({ navigation }) {
       setLoading(false);
       setRefreshing(false);
     }
+
   }, []);
 
   useEffect(() => { fetchPlan(); }, [fetchPlan]);
 
-  // ✅ FIX: handleGenerate calls API instead of navigating
   const handleGenerate = async () => {
     setLoading(true);
     try {
@@ -323,7 +358,6 @@ export default function NutritionDashboardScreen({ navigation }) {
     );
   };
 
-  // ── Loading ──
   if (loading) {
     return (
       <View style={s.center}>
@@ -333,14 +367,12 @@ export default function NutritionDashboardScreen({ navigation }) {
     );
   }
 
-  // ── Empty state ──
   if (!plan) {
     return (
       <View style={s.center}>
         <Text style={{ fontSize: 52, marginBottom: 14 }}>🥗</Text>
         <Text style={s.emptyTitle}>No Diet Plan Found</Text>
         <Text style={s.emptySub}>Generate your personalised plan to get started</Text>
-        {/* ✅ FIX: was navigation.navigate("Progress") — now calls API */}
         <TouchableOpacity style={s.genBtn} onPress={handleGenerate}>
           <Text style={s.genBtnTxt}>Generate My Plan</Text>
         </TouchableOpacity>
@@ -348,7 +380,6 @@ export default function NutritionDashboardScreen({ navigation }) {
     );
   }
 
-  // ── Data from backend ──
   const { meals, summary } = plan;
   const {
     targetCalories,
@@ -372,10 +403,10 @@ export default function NutritionDashboardScreen({ navigation }) {
     sugar:   actualMacros?.sugarG   ?? actualMacros?.sugar   ?? 0,
   };
 
-  const calPct        = pct(plannedCalories, targetCalories);
-  const calDiff       = plannedCalories - targetCalories;
-  const calDiffLabel  = calDiff > 0 ? `+${calDiff}` : `${calDiff}`;
-  const calDiffColor  = Math.abs(calDiff) < 100 ? "#4CAF50" : calDiff > 0 ? "#FF8F00" : "#1E88E5";
+  const calPct       = pct(plannedCalories, targetCalories);
+  const calDiff      = plannedCalories - targetCalories;
+  const calDiffLabel = calDiff > 0 ? `+${calDiff}` : `${calDiff}`;
+  const calDiffColor = Math.abs(calDiff) < 100 ? "#4CAF50" : calDiff > 0 ? "#FF8F00" : "#1E88E5";
 
   return (
     <>
@@ -388,6 +419,7 @@ export default function NutritionDashboardScreen({ navigation }) {
             refreshing={refreshing}
             onRefresh={() => { setRefreshing(true); fetchPlan(); }}
             colors={["#4CAF50"]}
+            
           />
         }
       >
@@ -469,18 +501,18 @@ export default function NutritionDashboardScreen({ navigation }) {
         </View>
 
         {/* ── Meal Cards ── */}
-        {MEAL_ORDER.map((meal) => (
+        {MEAL_ORDER.map((mealType) => (
           <MealCard
-            key={meal}
-            meal={meal}
-            foods={meals[meal] ?? []}
-            meta={MEAL_META[meal]}
-            onSwap={(m, f) => setSwapState({ visible: true, meal: m, food: f })}
+            key={mealType}
+            mealType={mealType}
+            combos={meals[mealType] ?? []}
+            meta={MEAL_META[mealType]}
+            onSwap={(mt, combo) => setSwapState({ visible: true, mealType: mt, combo })}
             onRegenerate={handleRegenerate}
           />
         ))}
 
-        {/* ── Weekly Progress button — untouched ── */}
+        {/* ── Weekly Progress button ── */}
         <TouchableOpacity
           style={[s.btn, { backgroundColor: "#1E88E5" }]}
           onPress={() => navigation.navigate("Progress")}
@@ -495,9 +527,9 @@ export default function NutritionDashboardScreen({ navigation }) {
       {/* ── Swap Modal ── */}
       <SwapModal
         visible={swapState.visible}
-        meal={swapState.meal}
-        food={swapState.food}
-        onClose={() => setSwapState({ visible: false, meal: null, food: null })}
+        mealType={swapState.mealType}
+        combo={swapState.combo}
+        onClose={() => setSwapState({ visible: false, mealType: null, combo: null })}
         onSwapped={fetchPlan}
       />
     </>
@@ -582,9 +614,21 @@ const s = StyleSheet.create({
   badgeTxt:    { fontSize: 11, fontWeight: "700" },
 
   foodList:    { marginTop: 10, borderTopWidth: 1, borderTopColor: "#f5f5f5", paddingTop: 8 },
-  foodRow:     { flexDirection: "row", alignItems: "flex-start", paddingVertical: 10, gap: 8 },
+
+  // FIX: new combo-level styles
+  comboBlock:   { paddingVertical: 10 },
+  comboNameRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 },
+  comboName:    { fontSize: 14, fontWeight: "700", color: "#1a1a1a", flex: 1 },
+  comboMeta:    { fontSize: 11, color: "#aaa", marginTop: 1 },
+  macroPill:    { flexDirection: "row", gap: 4 },
+
   foodDivider: { borderBottomWidth: 1, borderBottomColor: "#f9f9f9" },
   dot:         { width: 7, height: 7, borderRadius: 4, marginTop: 5 },
+
+  // FIX: ingredient item row styles
+  itemsList:  { marginTop: 8, gap: 4 },
+  itemRow:    { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 3 },
+  itemName:   { fontSize: 13, color: "#333", flex: 1 },
 
   foodTop:     { flexDirection: "row", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 6 },
   foodName:    { fontSize: 14, fontWeight: "600", color: "#1a1a1a", flex: 1 },
@@ -594,9 +638,9 @@ const s = StyleSheet.create({
   foodMacroRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 5, flexWrap: "wrap" },
   calChip:      { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
   calChipTxt:   { fontSize: 12, fontWeight: "700" },
-  macroTxt:     { fontSize: 11, color: "#aaa" },
+  macroTxt:     { fontSize: 11, color: "#aaa", marginBottom: 6 },
 
-  swapChip:    { borderWidth: 1.5, borderRadius: 16, paddingHorizontal: 10, paddingVertical: 5, marginLeft: 4 },
+  swapChip:    { borderWidth: 1.5, borderRadius: 16, paddingHorizontal: 10, paddingVertical: 5 },
   swapChipTxt: { fontSize: 11, fontWeight: "700" },
 
   emptyMeal:    { paddingVertical: 16, alignItems: "center" },
