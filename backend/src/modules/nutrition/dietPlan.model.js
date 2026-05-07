@@ -2,7 +2,6 @@ const mongoose = require("mongoose");
 
 const mealItemSchema = new mongoose.Schema(
   {
-    // ── Template identity ──
     templateId: String,
     mealName:   String,
     cuisine:    String,
@@ -11,7 +10,6 @@ const mealItemSchema = new mongoose.Schema(
     budget:     String,
     tags:       [String],
 
-    // ── Ingredients ──
     items: [
       {
         name:   String,
@@ -21,14 +19,12 @@ const mealItemSchema = new mongoose.Schema(
       },
     ],
 
-    // ── Macros ──
     calories: Number,
     protein:  Number,
     carbs:    Number,
     fats:     Number,
     fiber:    Number,
 
-    // ── Legacy fields (keep for backward compat) ──
     servingUnit:   { type: String, default: "g" },
     gramsPerPiece: { type: Number, default: null },
     pieces:        { type: Number, default: null },
