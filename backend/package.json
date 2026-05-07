@@ -4,8 +4,8 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js",
+    "start": "node --max-old-space-size=4096 server.js",
+    "dev": "nodemon --max-old-space-size=4096 server.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "seed:food": "node src/seed/seedFood.js",
     "start:worker": "node src/workers/index.js",
