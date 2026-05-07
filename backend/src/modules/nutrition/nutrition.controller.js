@@ -224,31 +224,27 @@ const swapFood = async (req, res, next) => {
 };
 const getFoods = async (req, res, next) => {
   try {
-    const { q, tags, dietType, limit = 20 } = req.query;
+    // FIX: frontend sends "search" not "q"
+    const { search, q, tags, dietType, limit = 20 } = req.query;
+    const searchTerm = search || q; // accept both
 
     const query = {};
 
-    // text search
-    if (q) {
-      query.name = { $regex: q, $options: "i" };
+    if (searchTerm) {
+      query.name = { $regex: searchTerm.trim(), $options: "i" };
     }
 
-    // tag filter — tags=high-protein,balanced
     if (tags) {
       const tagArr = tags.split(",").map(t => t.trim()).filter(Boolean);
       if (tagArr.length) query.tags = { $in: tagArr };
     }
 
-    // diet type filter
-    if (dietType) {
-      query.dietType = dietType;
-    }
+    if (dietType) query.dietType = dietType;
 
-    const foods = await FoodItem.find(query)
-      .limit(Number(limit))
-      .lean();
+    const foods = await FoodItem.find(query).limit(Number(limit)).lean();
 
-    res.json({ data: foods });
+    // FIX: return shape frontend expects
+    res.json({ success: true, count: foods.length, data: foods });
   } catch (err) {
     next(err);
   }
