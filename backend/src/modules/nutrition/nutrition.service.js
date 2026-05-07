@@ -344,4 +344,5 @@ module.exports = {
   computeMacroTargets,
   getTemplateMealSwaps,
   warmTemplateCache,
+  getTemplate ,
 };
