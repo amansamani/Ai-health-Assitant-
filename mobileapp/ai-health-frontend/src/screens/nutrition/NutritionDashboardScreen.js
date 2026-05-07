@@ -513,14 +513,7 @@ export default function NutritionDashboardScreen({ navigation }) {
           />
         ))}
 
-        {/* ── Weekly Progress button ── */}
-        <TouchableOpacity
-          style={[s.btn, { backgroundColor: "#1E88E5" }]}
-          onPress={() => navigation.navigate("Progress")}
-          activeOpacity={0.85}
-        >
-          <Text style={s.btnTxt}>📊 View Weekly Progress</Text>
-        </TouchableOpacity>
+   
 
         <View style={{ height: 30 }} />
       </ScrollView>

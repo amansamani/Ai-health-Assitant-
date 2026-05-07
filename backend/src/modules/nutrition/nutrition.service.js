@@ -34,10 +34,10 @@ async function warmTemplateCache() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const CALORIE_SPLIT = {
-  breakfast: 0.25,
-  lunch:     0.35,
-  dinner:    0.30,
-  snack:     0.10,
+  breakfast: 0.28,
+  lunch:     0.37,
+  dinner:    0.28,
+  snack:     0.07,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -119,31 +119,43 @@ function getEligibleMeals(allMeals, mealType, goal, dietType) {
   );
 }
 
-function scoreMeal(meal, goal) {
+function scoreMeal(meal, goal, targetMealCals) {
   const s = meal.mealScore;
-  let score = s.realism * 1.0 + s.satiety * 1.5 + s.goalFit * 2.5 + s.proteinQuality * 1.5;
-  score *= 0.85 + Math.random() * 0.30;
+  const [minCal, maxCal] = meal.macroRange.calories;
+  const midCal = (minCal + maxCal) / 2;
+
+  // How well does this combo's calorie range cover the target?
+  const calorieFit = targetMealCals >= minCal && targetMealCals <= maxCal
+    ? 1.5  // target is within range — perfect
+    : targetMealCals > maxCal
+    ? maxCal / targetMealCals  // combo too small — penalize
+    : minCal / targetMealCals; // combo too large — slight penalty
+
+  let score =
+    s.realism       * 1.0 +
+    s.satiety       * 1.5 +
+    s.goalFit       * 2.5 +
+    s.proteinQuality * 1.5 +
+    calorieFit      * 3.0; // heavily weight calorie fit
+
+  score *= 0.85 + Math.random() * 0.20; // slight randomness
   return score;
 }
 
-function pickMeal(allMeals, mealType, goal, dietType, usedMealIds) {
-  // L1: goal + diet + not used
+function pickMeal(allMeals, mealType, goal, dietType, usedMealIds, targetMealCals) {
   let candidates = getEligibleMeals(allMeals, mealType, goal, dietType).filter(
     (m) => !usedMealIds.has(m.id)
   );
-  // L2: allow repeats
   if (!candidates.length) candidates = getEligibleMeals(allMeals, mealType, goal, dietType);
-  // L3: ignore goal
   if (!candidates.length) {
     const dt = dietType === "non-veg" ? ["veg", "eggetarian", "non-veg"] : ["veg"];
     candidates = allMeals.filter((m) => m.mealType === mealType && dt.includes(m.dietType));
   }
-  // L4: any
   if (!candidates.length) candidates = allMeals.filter((m) => m.mealType === mealType);
   if (!candidates.length) return null;
 
   return candidates
-    .map((m) => ({ meal: m, score: scoreMeal(m, goal) }))
+    .map((m) => ({ meal: m, score: scoreMeal(m, goal, targetMealCals) }))
     .sort((a, b) => b.score - a.score)[0].meal;
 }
 
@@ -154,9 +166,13 @@ function pickMeal(allMeals, mealType, goal, dietType, usedMealIds) {
 function scaleMealToCalories(templateMeal, targetMealCals) {
   const [minCals, maxCals] = templateMeal.macroRange.calories;
 
-  const scale = maxCals === minCals
-    ? 0.5
-    : Math.max(0, Math.min(1, (targetMealCals - minCals) / (maxCals - minCals)));
+  // Production fix: clamp scale between 0.85-1.0
+  // so we always serve near-maximum portions
+  const rawScale = maxCals === minCals
+    ? 1.0
+    : (targetMealCals - minCals) / (maxCals - minCals);
+
+  const scale = Math.max(0.85, Math.min(1.0, rawScale));
 
   const lerp = (range) => Math.round(range[0] + scale * (range[1] - range[0]));
 
@@ -198,7 +214,7 @@ async function generateDietPlan(profile) {
 
   for (const mealType of ["breakfast", "lunch", "dinner", "snack"]) {
     const calBudget   = targetCalories * CALORIE_SPLIT[mealType];
-    const chosenCombo = pickMeal(allMeals, mealType, goal, dietType, usedMealIds);
+     const chosenCombo = pickMeal(allMeals, mealType, goal, dietType, usedMealIds, calBudget);
 
     if (!chosenCombo) { meals[mealType] = []; continue; }
 
