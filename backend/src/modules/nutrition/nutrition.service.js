@@ -11,19 +11,20 @@ let _templateCache = null;
 async function getTemplate() {
   if (_templateCache) return _templateCache;
 
-  const doc = await FoodTemplate.findOne().lean();
-  if (!doc || !doc.meals?.length) {
-    throw new Error("Food template not found in DB. Please seed the foodtemplate collection.");
+  // FIX: each document IS a meal combo, not wrapped in .meals array
+  const docs = await FoodTemplate.find().lean();
+  if (!docs?.length) {
+    throw new Error("Food template not found. Please seed the foodtemplate collection.");
   }
 
-  _templateCache = doc.meals;
+  _templateCache = docs;
+  console.log("[FoodTemplate] Cache warmed —", _templateCache.length, "meal combos loaded.");
   return _templateCache;
 }
 
-/** Call once after DB connects in app.js / server.js */
+// Also fix warmTemplateCache:
 async function warmTemplateCache() {
   await getTemplate();
-  console.log("[FoodTemplate] Cache warmed —", _templateCache.length, "meal combos loaded.");
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

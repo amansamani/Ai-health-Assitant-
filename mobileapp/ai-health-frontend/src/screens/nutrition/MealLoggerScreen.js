@@ -90,6 +90,12 @@ export default function MealLoggerScreen({ navigation }) {
     weekday: "long", day: "numeric", month: "long",
   });
 
+  // ── Empty fallback ────────────────────────────────────────────────────────
+  const emptyLog = {
+    grouped: { breakfast: [], lunch: [], dinner: [], snacks: [] },
+    totals:  { calories: 0, protein: 0, carbs: 0, fats: 0 },
+  };
+
   const loadData = async () => {
     try {
       const [logRes, histRes, profileRes, planRes] = await Promise.allSettled([
@@ -99,27 +105,28 @@ export default function MealLoggerScreen({ navigation }) {
         getCurrentPlan(),
       ]);
 
-      // ── Today's log ──────────────────────────────────────────────────────────
-      if (logRes.status === "fulfilled") {
-        // handle both { data: {...} } and direct object
-        const logData = logRes.value?.data ?? logRes.value;
-        if (logData?.grouped) {
-          setTodayLog(logData);
-        } else {
+      // ── FIX: Today's log — backend returns { data: grouped, totals, count }
+      if (logRes.status === "fulfilled" && logRes.value) {
+        const val = logRes.value;
+        if (val?.totals && val?.data) {
+          // ✅ Correct shape: { data: {breakfast,lunch,...}, totals: {...} }
           setTodayLog({
-            grouped: { breakfast: [], lunch: [], dinner: [], snacks: [] },
-            totals:  { calories: 0, protein: 0, carbs: 0, fats: 0 },
+            grouped: val.data,
+            totals:  val.totals,
           });
+        } else if (val?.grouped && val?.totals) {
+          // fallback if shape changes
+          setTodayLog(val);
+        } else {
+          setTodayLog(emptyLog);
         }
       } else {
-        setTodayLog({
-          grouped: { breakfast: [], lunch: [], dinner: [], snacks: [] },
-          totals:  { calories: 0, protein: 0, carbs: 0, fats: 0 },
-        });
+        setTodayLog(emptyLog);
       }
 
-      // ── Past history ─────────────────────────────────────────────────────────
-      if (histRes.status === "fulfilled") {
+      // ── Past history ──────────────────────────────────────────────────────
+      // FIX: backend returns { data: [...meals] }
+      if (histRes.status === "fulfilled" && histRes.value) {
         const meals = histRes.value?.data ?? histRes.value ?? [];
         if (Array.isArray(meals)) {
           const grouped = {};
@@ -138,26 +145,24 @@ export default function MealLoggerScreen({ navigation }) {
         }
       }
 
-      // ── Goals: try diet plan first, then health profile ───────────────────────
+      // ── Goals: diet plan first, then health profile ───────────────────────
       let goalsSet = false;
 
-      // Try plan first
       if (planRes.status === "fulfilled" && planRes.value) {
         const p = planRes.value?.data ?? planRes.value;
+        // FIX: macroSplit uses proteinG/carbsG/fatsG keys from backend
         if (p?.targetCalories) {
           setGoals({
-            calories: p.targetCalories       || 2000,
-            protein:  p.macroSplit?.protein   || 120,
-            carbs:    p.macroSplit?.carbs     || 250,
-            fats:     p.macroSplit?.fats      || 65,
+            calories: p.targetCalories                                         || 2000,
+            protein:  p.summary?.macroTargets?.proteinG ?? p.macroSplit?.protein ?? 120,
+            carbs:    p.summary?.macroTargets?.carbsG   ?? p.macroSplit?.carbs   ?? 250,
+            fats:     p.summary?.macroTargets?.fatsG    ?? p.macroSplit?.fats    ??  65,
           });
           goalsSet = true;
         }
       }
 
-      // Fall back to health profile
       if (!goalsSet && profileRes.status === "fulfilled" && profileRes.value) {
-        // backend returns profile directly (not wrapped in .data)
         const p = profileRes.value?.data ?? profileRes.value;
         if (p?.targetCalories) {
           setGoals({
@@ -171,13 +176,17 @@ export default function MealLoggerScreen({ navigation }) {
 
     } catch (e) {
       console.error("MealLogger loadData error:", e.message);
+      setTodayLog(emptyLog);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
 
-  useFocusEffect(useCallback(() => { loadData(); }, []));
+  useFocusEffect(useCallback(() => {
+    setLoading(true);
+    loadData();
+  }, []));
 
   const handleRefresh = () => { setRefreshing(true); loadData(); };
 
