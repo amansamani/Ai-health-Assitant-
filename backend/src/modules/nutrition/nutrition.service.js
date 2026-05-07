@@ -11,8 +11,10 @@ let _templateCache = null;
 async function getTemplate() {
   if (_templateCache) return _templateCache;
 
-  // FIX: each document IS a meal combo, not wrapped in .meals array
-  const docs = await FoodTemplate.find().lean();
+  const docs = await FoodTemplate.find()
+    .select("id mealType name dietType goal cuisine difficulty prepTime budget mealScore items macroRange tags")
+    .lean();
+
   if (!docs?.length) {
     throw new Error("Food template not found. Please seed the foodtemplate collection.");
   }
