@@ -10,7 +10,7 @@ import NutritionDashboardScreen from "../screens/nutrition/NutritionDashboardScr
 import LogMealScreen from "../screens/nutrition/LogMealScreen";
 import ProgressScreen from "../screens/nutrition/ProgressScreen";
 import MealLoggerScreen from "../screens/nutrition/MealLoggerScreen";
-import EditHealthProfileScreen from "../screens/nutrition/HealthProfileScreen";
+import EditHealthProfileScreen from "../screens/Edithealthprofilescreen";
 const Stack = createNativeStackNavigator();
 
 export default function MainNavigator() {
