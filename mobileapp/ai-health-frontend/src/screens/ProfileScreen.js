@@ -199,6 +199,23 @@ export default function ProfileScreen({ navigation }) {
           </View>
         </FadeSlideIn>
 
+          <FadeSlideIn delay={200}>
+            <Pressable onPress={() => navigation.navigate("EditHealthProfile")} style={styles.card}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                <View style={[styles.infoIconWrap, { backgroundColor: "#F1F5F9" }]}>
+                  <Text style={{ fontSize: 18 }}>🏋️</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.cardTitle}>Health Profile</Text>
+                  <Text style={{ fontSize: 12, color: "#94A3B8", marginTop: 2 }}>
+                    Update weight, height, activity & more
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 18, color: "#94A3B8" }}>→</Text>
+              </View>
+            </Pressable>
+          </FadeSlideIn>
+
         {/* ── SAVE BUTTON ── */}
         <FadeSlideIn delay={320}>
           <Pressable
