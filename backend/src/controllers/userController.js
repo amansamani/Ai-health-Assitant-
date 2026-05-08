@@ -1,5 +1,5 @@
 const User = require("../models/User");
-const HealthProfile = require("../health/health.model");
+const HealthProfile = require("../modules/health/health.model");
 // GET PROFILE
 const getProfile = async (req, res) => {
   res.json(req.user);
