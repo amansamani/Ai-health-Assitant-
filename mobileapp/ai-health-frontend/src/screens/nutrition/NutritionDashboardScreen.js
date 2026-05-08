@@ -1,11 +1,11 @@
 "use strict";
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useContext, useRef } from "react";
 import {
   View, Text, ActivityIndicator, ScrollView, StyleSheet,
   TouchableOpacity, RefreshControl, Modal, FlatList, Alert,
 } from "react-native";
 import API from "../../services/api";
-
+import { AuthContext } from "../../context/AuthContext";
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const MEAL_META = {
@@ -301,6 +301,7 @@ export default function NutritionDashboardScreen({ navigation }) {
   const [plan, setPlan]             = useState(null);
   const [loading, setLoading]       = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const {userGoal} = useContext(AuthContext);
   // FIX: swap state now tracks mealType + combo (not meal + food)
   const [swapState, setSwapState]   = useState({ visible: false, mealType: null, combo: null });
 
@@ -323,6 +324,15 @@ export default function NutritionDashboardScreen({ navigation }) {
   }, []);
 
   useEffect(() => { fetchPlan(); }, [fetchPlan]);
+
+  const prevGoalRef = useRef(null);
+
+  useEffect(() => {
+  if (prevGoalRef.current && prevGoalRef.current !== userGoal) {
+    handleGenerate(); // goal changed → regenerate plan
+  }
+  prevGoalRef.current = userGoal;
+  }, [userGoal]);
 
   const handleGenerate = async () => {
     setLoading(true);

@@ -75,7 +75,7 @@ function InfoRow({ icon, label, value }) {
 
 // ── Main Screen ───────────────────────────────────────────────────────────────
 export default function ProfileScreen({ navigation }) {
-  const { logout, token } = useContext(AuthContext);
+  const { logout, token, setUserGoal } = useContext(AuthContext);
   const [profile, setProfile]           = useState(null);
   const [selectedGoal, setSelectedGoal] = useState("fit");
   const [loading, setLoading]           = useState(true);
@@ -113,6 +113,7 @@ export default function ProfileScreen({ navigation }) {
     try {
       setSaving(true);
       await API.put("/user/goal", { goal: selectedGoal });
+      setUserGoal(selectedGoal);
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch {

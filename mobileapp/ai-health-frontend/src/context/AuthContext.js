@@ -25,7 +25,7 @@ export function AuthProvider({ children }) {
     try {
       const res = await API.get("/user/profile");
       const data = res.data ?? {};
-      if (data.goal) setUserGoal(data.goal);
+      setUserGoal(data.goal ?? "fit");
       setUser(data); // ← save entire profile object
     } catch (err) {
       // not critical
@@ -60,7 +60,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider
-      value={{ userToken, token: userToken, login, logout, loading, userGoal, fetchUserGoal, user }}
+      value={{ userToken, token: userToken, login, logout, loading, userGoal, setUserGoal, fetchUserGoal, user }}
     >
       {children}
     </AuthContext.Provider>
