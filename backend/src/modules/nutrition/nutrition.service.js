@@ -45,9 +45,7 @@ const CALORIE_SPLIT = {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function computeTargetCalories(profile) {
-  if (profile.targetCalories && profile.targetCalories > 800) {
-    return profile.targetCalories;
-  }
+
 
   const weight = profile.weightKg || profile.weight;
   const height = profile.heightCm || profile.height;

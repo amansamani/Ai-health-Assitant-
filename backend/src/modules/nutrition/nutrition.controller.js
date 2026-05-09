@@ -44,7 +44,7 @@ const generatePlan = async (req, res, next) => {
 
     // Normalize goal before passing to service
     profile.goal = normalizeGoal(profile.goal);
-
+    delete profile.targetCalories;
     const { meals, summary } = await generateDietPlan(profile);
 
     await DietPlan.updateMany({ user: userId, isActive: true }, { $set: { isActive: false } });

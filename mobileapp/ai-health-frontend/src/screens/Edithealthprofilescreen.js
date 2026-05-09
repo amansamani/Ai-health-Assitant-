@@ -220,7 +220,7 @@ export default function EditHealthProfileScreen({ navigation }) {
       await API.post("/nutrition/generate");
       setShowRegen(false);
       Alert.alert("✅ Done!", "Your new diet plan has been generated based on your updated profile.", [
-        { text: "View Plan", onPress: () => navigation?.navigate("Nutrition") },
+        { text: "View Plan", onPress: () => navigation?.navigate("NutritionDashboard") },
         { text: "OK" },
       ]);
     } catch {
