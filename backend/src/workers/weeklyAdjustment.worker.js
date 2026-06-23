@@ -1,13 +1,13 @@
 const { Worker } = require('bullmq');
 const redisConnection = require('../config/redis');
-const runWeeklyAdjustments = require('../services/weeklyAdjustment.service');
+const runWeeklyAdjustments = require('../modules/nutrition/nutrition.service');
 
 const worker = new Worker(
   'weeklyAdjustment',
   async (job) => {
     console.log(`🔄 Processing weekly adjustment job ${job.id}`);
 
-    await runWeeklyAdjustments();
+    await runSmartWeeklyAdjustmentForAllUsers();
   },
   {
     connection: redisConnection,

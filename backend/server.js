@@ -129,9 +129,9 @@ const startServer = async () => {
 
     await connectDB();
 
-    // start background jobs
-    //const scheduleWeeklyJob = require("./src/jobs/scheduleWeekly");
-    //await scheduleWeeklyJob();
+// start background jobs
+const scheduleWeeklyJob = require("./src/jobs/scheduleWeekly");
+scheduleWeeklyJob().catch(err => console.error("⚠️ Weekly job scheduling failed (non-fatal):", err.message));
 
     app.listen(PORT, "0.0.0.0", () => {
       console.log(`🚀 Server running on port ${PORT}`);

@@ -20,7 +20,7 @@ const isValidToken = (token) =>
   token && token !== "undefined" && token !== "null";
 
 const API = axios.create({
-  baseURL: "https://ai-health-assitant-production.up.railway.app/api",
+  baseURL: "http://10.33.254.246:5000/api",
   timeout: 15000,
 });
 

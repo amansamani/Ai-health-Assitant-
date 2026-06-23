@@ -181,24 +181,6 @@ export default function ProfileScreen({ navigation }) {
           </View>
         </FadeSlideIn>
 
-        {/* ── GOAL SELECTOR ── */}
-        <FadeSlideIn delay={240}>
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Fitness Goal</Text>
-            <Text style={styles.cardSubtitle}>Choose what you're training for</Text>
-            <View style={styles.goalRow}>
-              {GOALS.map((g) => (
-                <GoalCard
-                  key={g.key}
-                  goal={g}
-                  selected={selectedGoal === g.key}
-                  onPress={() => setSelectedGoal(g.key)}
-                />
-              ))}
-            </View>
-          </View>
-        </FadeSlideIn>
-
           <FadeSlideIn delay={200}>
             <Pressable onPress={() => navigation.navigate("EditHealthProfile")} style={styles.card}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>

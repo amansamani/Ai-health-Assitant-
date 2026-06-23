@@ -2,6 +2,23 @@
 
 const DietProgress = require("./dietProgress.model");
 const FoodTemplate = require("./foodTemplate.model");
+const HealthProfile = require("../health/health.model");
+const DietPlan = require("./dietPlan.model");
+
+
+const GOAL_MAP = {
+  lean: "lose",
+  cut: "lose",
+  lose: "lose",
+  bulk: "gain",
+  gain: "gain",
+  fit: "maintain",
+  maintain: "maintain",
+};
+
+function normalizeGoal(goal) {
+  return GOAL_MAP[goal?.toLowerCase()] || "maintain";
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // IN-MEMORY CACHE  (fetched once per server boot)
@@ -349,6 +366,61 @@ function calculateNewCalories(profile, evaluation) {
   return { change: adjustment, newCalories, reason };
 }
 
+async function runSmartWeeklyAdjustment(userId) {
+  const evaluation = await evaluateWeeklyProgress(userId);
+  if (!evaluation.adjust) {
+    return { adjusted: false, reason: evaluation.reason };
+  }
+
+  const profile = await HealthProfile.findOne({ user: userId });
+  if (!profile) {
+    return { adjusted: false, reason: "No health profile found" };
+  }
+   profile.goal = normalizeGoal(profile.goal);
+
+  const result = calculateNewCalories(profile, evaluation);
+  if (!result.newCalories) {
+    return { adjusted: false, reason: result.reason };
+  }
+
+  profile.targetCalories = result.newCalories;
+  await profile.save();
+
+  const { meals, summary } = await generateDietPlan(profile);
+
+  await DietPlan.updateMany({ user: userId, isActive: true }, { isActive: false });
+  const latest = await DietPlan.findOne({ user: userId }).sort({ version: -1 });
+  const version = latest ? latest.version + 1 : 1;
+
+  const newPlan = await DietPlan.create({
+    user: userId,
+    version,
+    targetCalories: summary.targetCalories,
+    macroSplit: summary.macroTargets,
+    meals,
+    summary,
+    isActive: true,
+  });
+
+  return { adjusted: true, reason: result.reason, newCalories: result.newCalories, planId: newPlan._id };
+}
+
+// Same thing, but loops over every user — this is what the cron worker calls
+async function runSmartWeeklyAdjustmentForAllUsers() {
+  const profiles = await HealthProfile.find();
+  const results = [];
+  for (const profile of profiles) {
+    try {
+      const r = await runSmartWeeklyAdjustment(profile.user);
+      results.push({ user: profile.user, ...r });
+    } catch (err) {
+      console.error(`Weekly adjustment failed for ${profile.user}:`, err.message);
+      results.push({ user: profile.user, adjusted: false, reason: err.message });
+    }
+  }
+  return results;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 module.exports = {
   generateDietPlan,
@@ -359,4 +431,7 @@ module.exports = {
   getTemplateMealSwaps,
   warmTemplateCache,
   getTemplate ,
+  runSmartWeeklyAdjustment,
+  runSmartWeeklyAdjustmentForAllUsers,
+  normalizeGoal,
 };

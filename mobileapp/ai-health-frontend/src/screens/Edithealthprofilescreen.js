@@ -147,7 +147,6 @@ export default function EditHealthProfileScreen({ navigation }) {
   const [saving, setSaving]         = useState(false);
   const [saved, setSaved]           = useState(false);
   const [regenerating, setRegenerating] = useState(false);
-  const [showRegen, setShowRegen]   = useState(false);
 
   // Header fade
   const headerOpacity = useRef(new Animated.Value(0)).current;
@@ -183,52 +182,63 @@ export default function EditHealthProfileScreen({ navigation }) {
 
   const handleChange = (key, val) => setForm((prev) => ({ ...prev, [key]: val }));
 
-  const saveProfile = async () => {
-    if (!form.age || !form.height || !form.weight) {
-      Alert.alert("Missing Fields", "Please fill in Age, Height, and Weight.");
-      return;
-    }
-    try {
-      setSaving(true);
-      await API.put("/health", {
-        age:           Number(form.age),
-        gender:        form.gender,
-        height:        Number(form.height),
-        weight:        Number(form.weight),
-        activityLevel: form.activityLevel,
-        goal:          form.goal,
-        dietType:      form.dietType,
-      });
-      // Also sync goal to user model
-      const GOAL_TO_USER = { lose: "lean", maintain: "fit", gain: "bulk" };
-      await API.put("/user/goal", { goal: GOAL_TO_USER[form.goal] ?? "fit" });
+const saveProfile = async () => {
+  if (!form.age || !form.height || !form.weight) {
+    Alert.alert("Missing Fields", "Please fill in Age, Height, and Weight.");
+    return;
+  }
+  try {
+    setSaving(true);
+    await API.put("/health", {
+      age:           Number(form.age),
+      gender:        form.gender,
+      height:        Number(form.height),
+      weight:        Number(form.weight),
+      activityLevel: form.activityLevel,
+      goal:          form.goal,
+      dietType:      form.dietType,
+    });
+    const GOAL_TO_USER = { lose: "lean", maintain: "fit", gain: "bulk" };
+    await API.put("/user/goal", { goal: GOAL_TO_USER[form.goal] ?? "fit" });
+    await fetchUserGoal();
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+  } catch (err) {
+    Alert.alert("Error", err.response?.data?.message || "Failed to save profile.");
+    return;
+  } finally {
+    setSaving(false);
+  }
 
-      await fetchUserGoal(); // refresh context
-      setSaved(true);
-      setShowRegen(true);
-      setTimeout(() => setSaved(false), 2500);
-    } catch (err) {
-      Alert.alert("Error", err.response?.data?.message || "Failed to save profile.");
-    } finally {
-      setSaving(false);
-    }
-  };
+  // save succeeded — now regenerate
+  try {
+    setRegenerating(true);
+    await API.post("/nutrition/generate");
+    Alert.alert("✅ Done!", "Diet plan updated with your new profile.", [
+      { text: "View Plan", onPress: () => navigation?.navigate("NutritionDashboard") },
+      { text: "OK" },
+    ]);
+  } catch {
+    Alert.alert("⚠️ Saved", "Profile saved but plan regeneration failed. Try again later.");
+  } finally {
+    setRegenerating(false);
+  }
+};
 
-  const regeneratePlan = async () => {
-    try {
-      setRegenerating(true);
-      await API.post("/nutrition/generate");
-      setShowRegen(false);
-      Alert.alert("✅ Done!", "Your new diet plan has been generated based on your updated profile.", [
-        { text: "View Plan", onPress: () => navigation?.navigate("NutritionDashboard") },
-        { text: "OK" },
-      ]);
-    } catch {
-      Alert.alert("Error", "Could not regenerate plan. Try again.");
-    } finally {
-      setRegenerating(false);
-    }
-  };
+const regeneratePlan = async () => {
+  try {
+    setRegenerating(true);
+    await API.post("/nutrition/generate");
+    Alert.alert("✅ Done!", "Diet plan updated with your new profile.", [
+      { text: "View Plan", onPress: () => navigation?.navigate("NutritionDashboard") },
+      { text: "OK" },
+    ]);
+  } catch {
+    Alert.alert("Error", "Could not regenerate plan. Try again.");
+  } finally {
+    setRegenerating(false);
+  }
+};
 
   if (loading) {
     return (
@@ -261,26 +271,6 @@ export default function EditHealthProfileScreen({ navigation }) {
             </View>
             <View style={{ width: 40 }} />
           </Animated.View>
-
-          {/* ── REGEN BANNER ── */}
-          {showRegen && (
-            <Animated.View style={styles.regenBanner}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.regenBannerTitle}>Profile saved! 🎉</Text>
-                <Text style={styles.regenBannerSub}>Regenerate diet plan with new data?</Text>
-              </View>
-              <Pressable
-                onPress={regeneratePlan}
-                disabled={regenerating}
-                style={styles.regenBannerBtn}
-              >
-                {regenerating
-                  ? <ActivityIndicator size="small" color="#fff" />
-                  : <Text style={styles.regenBannerBtnText}>Regenerate</Text>
-                }
-              </Pressable>
-            </Animated.View>
-          )}
 
           {/* ── BODY METRICS ── */}
           <Section icon="📏" title="Body Metrics" delay={60}>

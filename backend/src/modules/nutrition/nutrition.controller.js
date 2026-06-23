@@ -11,7 +11,9 @@ const {
   evaluateWeeklyProgress,
   calculateNewCalories,
   getTemplateMealSwaps,
-  getTemplate,                  // ← use cache, not raw DB
+  getTemplate, 
+  runSmartWeeklyAdjustment,
+          
 } = require("./nutrition.service");
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -86,7 +88,7 @@ const getCurrentPlan = async (req, res, next) => {
 // ─────────────────────────────────────────────────────────────────────────────
 const logDailyDiet = async (req, res, next) => {
   try {
-    const { date, mealsCompleted, caloriesConsumed } = req.body;
+    const { date, mealsCompleted, caloriesConsumed, weight } = req.body;
 
     if (!date || isNaN(Date.parse(date))) {
       return res.status(400).json({ message: "Invalid date" });
@@ -94,7 +96,7 @@ const logDailyDiet = async (req, res, next) => {
 
     const log = await DietProgress.findOneAndUpdate(
       { user: req.user.id, date },
-      { mealsCompleted, caloriesConsumed },
+      { mealsCompleted, caloriesConsumed, weight },
       { new: true, upsert: true }
     );
 
@@ -326,6 +328,14 @@ const getDailyDietLog = async (req, res) => res.status(501).json({ message: "Not
 const deleteMeal      = async (req, res) => res.status(501).json({ message: "Not implemented" });
 const getMealHistory  = async (req, res) => res.status(501).json({ message: "Not implemented" });
 
+const runWeeklyAdjustment = async (req, res, next) => {
+  try {
+    const result = await runSmartWeeklyAdjustment(req.user.id);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 module.exports = {
@@ -333,7 +343,7 @@ module.exports = {
   getCurrentPlan,
   logDailyDiet,
   getDailyDietLog,
-  runWeeklyAdjustment: async (req, res) => res.status(501).json({ message: "Not implemented" }),
+  runWeeklyAdjustment,
   getSwapOptions,
   swapFood,
   logMeal,
