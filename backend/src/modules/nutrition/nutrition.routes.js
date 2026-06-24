@@ -10,6 +10,8 @@ router.get("/current",         auth, controller.getCurrentPlan);
 router.post("/log",            auth, controller.logDailyDiet);
 router.get("/log",             auth, controller.getDailyDietLog);
 router.post("/weekly-adjust",  auth, controller.runWeeklyAdjustment);
+router.get("/weekly-insight",  auth, controller.getWeeklyInsight);
+router.get("/weekly-insight-log", auth, controller.getWeeklyInsightLog);
 
 // ── Swap ──────────────────────────────────────────────────────────────────────
 router.post("/swap", auth, (req, res, next) => {

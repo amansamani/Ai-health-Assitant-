@@ -1,6 +1,7 @@
 import { View, ActivityIndicator } from "react-native";
-import { useContext } from "react";
+import { useContext, useEffect } from "react";
 import { AuthContext } from "../context/AuthContext";
+import { registerForPushNotificationsAsync } from "../services/pushNotifications";
 
 import AuthNavigator from "./AuthNavigator";
 import MainNavigator from "./MainNavigator";
@@ -8,6 +9,13 @@ import MainNavigator from "./MainNavigator";
 export default function AppNavigator() {
   const { token, loading } = useContext(AuthContext);
 
+  // Register push token once the user is authenticated. Safe to re-run on
+  // every login — it's a cheap no-op if permission/token are unchanged.
+  useEffect(() => {
+    if (token) {
+      registerForPushNotificationsAsync();
+    }
+  }, [token]);
 
   // ⛔ BLOCK UI until token is checked
   if (loading) {

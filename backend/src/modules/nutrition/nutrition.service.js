@@ -4,7 +4,10 @@ const DietProgress  = require("./dietProgress.model");
 const FoodTemplate  = require("./foodTemplate.model");
 const HealthProfile = require("../health/health.model");
 const DietPlan      = require("./dietPlan.model");
+const WeeklyInsight = require("./weeklyInsight.model");
+const User          = require("../../models/User");
 const { generateAiMealPlan } = require("../../services/ai.service");
+const { sendPushNotification } = require("../../utils/pushNotification");
 
 const GOAL_MAP = {
   lean:     "lose",
@@ -419,20 +422,72 @@ function calculateNewCalories(profile, evaluation) {
   return { change: adjustment, newCalories, reason };
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// WEEKLY INSIGHT PERSISTENCE + NOTIFICATION
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function saveWeeklyInsight(userId, payload) {
+  const insight = await WeeklyInsight.create({ user: userId, ...payload });
+
+  // Only push when we actually had enough data to evaluate (avoids spamming
+  // users during their first ramp-up week).
+  if (payload.adherence !== undefined) {
+    const user = await User.findById(userId).select("pushToken");
+    if (user?.pushToken) {
+      const deltaText =
+        payload.delta > 0 ? `+${payload.delta} kcal` :
+        payload.delta < 0 ? `${payload.delta} kcal` :
+        "No change";
+
+      const result = await sendPushNotification(
+        user.pushToken,
+        "Your weekly nutrition update is ready",
+        `${deltaText} — ${payload.reason}`,
+        { type: "weeklyInsight", insightId: insight._id.toString() }
+      );
+
+      if (result.sent) {
+        insight.notified = true;
+        await insight.save();
+      }
+    }
+  }
+
+  return insight;
+}
+
 async function runSmartWeeklyAdjustment(userId) {
   const evaluation = await evaluateWeeklyProgress(userId);
   if (!evaluation.adjust) {
+    await saveWeeklyInsight(userId, { adjusted: false, reason: evaluation.reason });
     return { adjusted: false, reason: evaluation.reason };
   }
 
   const profile = await HealthProfile.findOne({ user: userId });
   if (!profile) {
+    await saveWeeklyInsight(userId, {
+      adjusted: false,
+      reason: "No health profile found",
+      adherence: evaluation.adherence,
+      avgCalories: evaluation.avgCalories,
+      weightChange: evaluation.weightChange,
+    });
     return { adjusted: false, reason: "No health profile found" };
   }
   profile.goal = normalizeGoal(profile.goal);
 
+  const oldCalories = profile.targetCalories;
   const result = calculateNewCalories(profile, evaluation);
+
   if (!result.newCalories) {
+    await saveWeeklyInsight(userId, {
+      adjusted: false,
+      reason: result.reason,
+      oldCalories,
+      adherence: evaluation.adherence,
+      avgCalories: evaluation.avgCalories,
+      weightChange: evaluation.weightChange,
+    });
     return { adjusted: false, reason: result.reason };
   }
 
@@ -455,8 +510,28 @@ async function runSmartWeeklyAdjustment(userId) {
     isActive: true,
   });
 
+  await saveWeeklyInsight(userId, {
+    adjusted: result.change !== 0,
+    reason: result.reason,
+    oldCalories,
+    newCalories: result.newCalories,
+    delta: result.newCalories - (oldCalories || result.newCalories),
+    adherence: evaluation.adherence,
+    avgCalories: evaluation.avgCalories,
+    weightChange: evaluation.weightChange,
+  });
+
   return { adjusted: true, reason: result.reason, newCalories: result.newCalories, planId: newPlan._id };
 }
+
+async function getLatestWeeklyInsight(userId) {
+  return WeeklyInsight.findOne({ user: userId }).sort({ weekEnding: -1 });
+}
+
+async function getWeeklyInsightHistory(userId, limit = 8) {
+  return WeeklyInsight.find({ user: userId }).sort({ weekEnding: -1 }).limit(limit);
+}
+
 
 async function runSmartWeeklyAdjustmentForAllUsers() {
   const profiles = await HealthProfile.find();
@@ -485,5 +560,7 @@ module.exports = {
   getTemplate,
   runSmartWeeklyAdjustment,
   runSmartWeeklyAdjustmentForAllUsers,
+  getLatestWeeklyInsight,
+  getWeeklyInsightHistory,
   normalizeGoal,
 };

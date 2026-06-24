@@ -13,6 +13,8 @@ const {
   getTemplateMealSwaps,
   getTemplate, 
   runSmartWeeklyAdjustment,
+  getLatestWeeklyInsight,
+  getWeeklyInsightHistory,
           
 } = require("./nutrition.service");
 
@@ -338,12 +340,36 @@ const runWeeklyAdjustment = async (req, res, next) => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// WEEKLY INSIGHT (Phase 5 — "why calories adjusted" summary card)
+// ─────────────────────────────────────────────────────────────────────────────
+const getWeeklyInsight = async (req, res, next) => {
+  try {
+    const insight = await getLatestWeeklyInsight(req.user.id);
+    res.json(insight || null);
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getWeeklyInsightLog = async (req, res, next) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit, 10) || 8, 26);
+    const history = await getWeeklyInsightHistory(req.user.id, limit);
+    res.json(history);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 module.exports = {
   generatePlan,
   getCurrentPlan,
   logDailyDiet,
   getDailyDietLog,
   runWeeklyAdjustment,
+  getWeeklyInsight,
+  getWeeklyInsightLog,
   getSwapOptions,
   swapFood,
   logMeal,

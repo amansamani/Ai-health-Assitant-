@@ -34,4 +34,21 @@ const updateGoal = async (req, res) => {
   }
 };
 
-module.exports = { getProfile, updateGoal };
+// REGISTER PUSH TOKEN
+const registerPushToken = async (req, res) => {
+  try {
+    const { pushToken } = req.body;
+    if (!pushToken || typeof pushToken !== "string") {
+      return res.status(400).json({ message: "pushToken is required" });
+    }
+
+    req.user.pushToken = pushToken;
+    await req.user.save();
+
+    res.json({ message: "Push token registered" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = { getProfile, updateGoal, registerPushToken };

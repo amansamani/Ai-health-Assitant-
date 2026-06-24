@@ -11,6 +11,17 @@ export const generatePlan = async () => {
   return res.data;
 };
 
+// ── Weekly Insight (Phase 5) ────────────────────────────────────────────────
+export const getWeeklyInsight = async () => {
+  const res = await api.get("/nutrition/weekly-insight");
+  return res.data;
+};
+
+export const getWeeklyInsightLog = async (limit = 8) => {
+  const res = await api.get(`/nutrition/weekly-insight-log?limit=${limit}`);
+  return res.data;
+};
+
 // ── Meal Logging ───────────────────────────────────────────────────────────────
 export const logMeal = async (mealData) => {
   const res = await api.post("/nutrition/log-meal", mealData);

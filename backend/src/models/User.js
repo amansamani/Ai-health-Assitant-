@@ -30,6 +30,7 @@ const userSchema = new mongoose.Schema(
       enum: ["bulk", "lean", "fit"],
       default: "fit",
     },
+    pushToken: { type: String }, // Expo push token, set via /user/push-token
   },
   { timestamps: true }
 );
