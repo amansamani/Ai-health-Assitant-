@@ -1,6 +1,6 @@
 const { Worker } = require('bullmq');
 const redisConnection = require('../config/redis');
-const runWeeklyAdjustments = require('../modules/nutrition/nutrition.service');
+const { runSmartWeeklyAdjustmentForAllUsers } = require('../modules/nutrition/nutrition.service');
 
 const worker = new Worker(
   'weeklyAdjustment',

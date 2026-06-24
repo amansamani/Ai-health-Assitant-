@@ -1,18 +1,18 @@
 "use strict";
 
-const DietProgress = require("./dietProgress.model");
-const FoodTemplate = require("./foodTemplate.model");
+const DietProgress  = require("./dietProgress.model");
+const FoodTemplate  = require("./foodTemplate.model");
 const HealthProfile = require("../health/health.model");
-const DietPlan = require("./dietPlan.model");
-
+const DietPlan      = require("./dietPlan.model");
+const { generateAiMealPlan } = require("../../services/ai.service");
 
 const GOAL_MAP = {
-  lean: "lose",
-  cut: "lose",
-  lose: "lose",
-  bulk: "gain",
-  gain: "gain",
-  fit: "maintain",
+  lean:     "lose",
+  cut:      "lose",
+  lose:     "lose",
+  bulk:     "gain",
+  gain:     "gain",
+  fit:      "maintain",
   maintain: "maintain",
 };
 
@@ -21,7 +21,7 @@ function normalizeGoal(goal) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// IN-MEMORY CACHE  (fetched once per server boot)
+// IN-MEMORY CACHE
 // ─────────────────────────────────────────────────────────────────────────────
 let _templateCache = null;
 
@@ -41,7 +41,6 @@ async function getTemplate() {
   return _templateCache;
 }
 
-// Also fix warmTemplateCache:
 async function warmTemplateCache() {
   await getTemplate();
 }
@@ -62,8 +61,6 @@ const CALORIE_SPLIT = {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function computeTargetCalories(profile) {
-
-
   const weight = profile.weightKg || profile.weight;
   const height = profile.heightCm || profile.height;
   const { age, gender, activityLevel, goal } = profile;
@@ -112,14 +109,9 @@ function computeMacroTargets(profile, targetCalories) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TEMPLATE HELPERS
+// TEMPLATE HELPERS (used when AI is skipped)
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * dietType matching:
- *   vegan / veg → only "veg" combos (template has no "vegan" type)
- *   non-veg     → veg + eggetarian + non-veg
- */
 function getEligibleMeals(allMeals, mealType, goal, dietType) {
   const eligibleDietTypes =
     dietType === "non-veg"
@@ -137,23 +129,21 @@ function getEligibleMeals(allMeals, mealType, goal, dietType) {
 function scoreMeal(meal, goal, targetMealCals) {
   const s = meal.mealScore;
   const [minCal, maxCal] = meal.macroRange.calories;
-  const midCal = (minCal + maxCal) / 2;
 
-  // How well does this combo's calorie range cover the target?
   const calorieFit = targetMealCals >= minCal && targetMealCals <= maxCal
-    ? 1.5  // target is within range — perfect
+    ? 1.5
     : targetMealCals > maxCal
-    ? maxCal / targetMealCals  // combo too small — penalize
-    : minCal / targetMealCals; // combo too large — slight penalty
+    ? maxCal / targetMealCals
+    : minCal / targetMealCals;
 
   let score =
-    s.realism       * 1.0 +
-    s.satiety       * 1.5 +
-    s.goalFit       * 2.5 +
+    s.realism        * 1.0 +
+    s.satiety        * 1.5 +
+    s.goalFit        * 2.5 +
     s.proteinQuality * 1.5 +
-    calorieFit      * 3.0; // heavily weight calorie fit
+    calorieFit       * 3.0;
 
-  score *= 0.85 + Math.random() * 0.20; // slight randomness
+  score *= 0.85 + Math.random() * 0.20;
   return score;
 }
 
@@ -174,21 +164,14 @@ function pickMeal(allMeals, mealType, goal, dietType, usedMealIds, targetMealCal
     .sort((a, b) => b.score - a.score)[0].meal;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// PORTION SCALING
-// ─────────────────────────────────────────────────────────────────────────────
-
 function scaleMealToCalories(templateMeal, targetMealCals) {
   const [minCals, maxCals] = templateMeal.macroRange.calories;
 
-  // Production fix: clamp scale between 0.85-1.0
-  // so we always serve near-maximum portions
   const rawScale = maxCals === minCals
     ? 1.0
     : (targetMealCals - minCals) / (maxCals - minCals);
 
   const scale = Math.max(0.85, Math.min(1.0, rawScale));
-
   const lerp = (range) => Math.round(range[0] + scale * (range[1] - range[0]));
 
   return {
@@ -215,21 +198,18 @@ function scaleMealToCalories(templateMeal, targetMealCals) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// MAIN: generateDietPlan
+// TEMPLATE-BASED PLAN (fallback when user has no diseases/allergies)
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function generateDietPlan(profile) {
-  const targetCalories = computeTargetCalories(profile);
-  const macros         = computeMacroTargets(profile, targetCalories);
+async function generateTemplateMeals(profile, targetCalories) {
   const { goal, dietType } = profile;
-
-  const allMeals    = await getTemplate(); // from cache after first call
+  const allMeals    = await getTemplate();
   const usedMealIds = new Set();
   const meals       = {};
 
   for (const mealType of ["breakfast", "lunch", "dinner", "snack"]) {
-    const calBudget   = targetCalories * CALORIE_SPLIT[mealType];
-     const chosenCombo = pickMeal(allMeals, mealType, goal, dietType, usedMealIds, calBudget);
+    const calBudget    = targetCalories * CALORIE_SPLIT[mealType];
+    const chosenCombo  = pickMeal(allMeals, mealType, goal, dietType, usedMealIds, calBudget);
 
     if (!chosenCombo) { meals[mealType] = []; continue; }
 
@@ -237,15 +217,51 @@ async function generateDietPlan(profile) {
     meals[mealType] = [scaleMealToCalories(chosenCombo, calBudget)];
   }
 
-  const summary = buildSummary(meals, targetCalories, macros, profile);
-  return { meals, summary };
+  return { meals, aiAdvice: null, warnings: [], source: "template" };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SUMMARY
+// AI-BASED PLAN (used when user has diseases or allergies)
 // ─────────────────────────────────────────────────────────────────────────────
 
-function buildSummary(meals, targetCalories, macros, profile) {
+async function generateAiMeals(profile, targetCalories, macros) {
+  console.log("[AI] Generating personalized meal plan for user with conditions:", profile.diseases, "allergies:", profile.allergies);
+
+  const aiResult = await generateAiMealPlan(profile, targetCalories, macros);
+
+  // Shape AI meals to match DietPlan schema (mealItemSchema)
+  const meals = {};
+  for (const mealType of ["breakfast", "lunch", "dinner", "snack"]) {
+    meals[mealType] = (aiResult[mealType] || []).map((m) => ({
+      templateId: null,         // AI-generated, no template ID
+      mealName:   m.mealName,
+      cuisine:    "Indian",
+      difficulty: "easy",
+      prepTime:   null,
+      budget:     null,
+      tags:       m.tags || [],
+      items:      m.items,
+      calories:   m.calories,
+      protein:    m.protein,
+      carbs:      m.carbs,
+      fats:       m.fats,
+      fiber:      m.fiber || 0,
+    }));
+  }
+
+  return {
+    meals,
+    aiAdvice:  aiResult.aiAdvice,
+    warnings:  aiResult.warnings || [],
+    source:    "ai",
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SUMMARY BUILDER
+// ─────────────────────────────────────────────────────────────────────────────
+
+function buildSummary(meals, targetCalories, macros, profile, meta) {
   let totalCals = 0, totalProtein = 0, totalCarbs = 0, totalFats = 0, totalFiber = 0;
 
   for (const mealArr of Object.values(meals)) {
@@ -275,13 +291,50 @@ function buildSummary(meals, targetCalories, macros, profile) {
       fats:    macros.fatsG    ? +(totalFats    / macros.fatsG    * 100).toFixed(1) : null,
     },
     generatedAt: new Date().toISOString(),
+    source:      meta.source,      // "ai" or "template"
+    aiAdvice:    meta.aiAdvice,    // null if template
+    warnings:    meta.warnings,    // [] if template
     profileSnapshot: {
       goal:          profile.goal,
       dietType:      profile.dietType,
       weightKg:      profile.weightKg || profile.weight,
       activityLevel: profile.activityLevel,
+      diseases:      profile.diseases  || [],
+      allergies:     profile.allergies || [],
     },
   };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MAIN: generateDietPlan
+// Decides: AI if user has diseases or allergies, else template
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function generateDietPlan(profile) {
+  const targetCalories = computeTargetCalories(profile);
+  const macros         = computeMacroTargets(profile, targetCalories);
+
+  const hasConditions =
+    (profile.diseases  && profile.diseases.length  > 0) ||
+    (profile.allergies && profile.allergies.length > 0);
+
+  let result;
+
+  if (hasConditions && process.env.GEMINI_API_KEY) {
+    try {
+      result = await generateAiMeals(profile, targetCalories, macros);
+    } catch (err) {
+      // AI failed — log and fall back to templates silently
+      console.error("[AI] Meal generation failed, falling back to templates:", err.message);
+      result = await generateTemplateMeals(profile, targetCalories);
+      result.warnings = ["AI meal generation failed. Showing standard plan."];
+    }
+  } else {
+    result = await generateTemplateMeals(profile, targetCalories);
+  }
+
+  const summary = buildSummary(result.meals, targetCalories, macros, profile, result);
+  return { meals: result.meals, summary };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -304,7 +357,7 @@ async function getTemplateMealSwaps(mealType, goal, dietType, excludeId) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function evaluateWeeklyProgress(userId) {
-  const today = new Date();
+  const today    = new Date();
   const last7Days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(today);
     d.setDate(today.getDate() - i);
@@ -376,7 +429,7 @@ async function runSmartWeeklyAdjustment(userId) {
   if (!profile) {
     return { adjusted: false, reason: "No health profile found" };
   }
-   profile.goal = normalizeGoal(profile.goal);
+  profile.goal = normalizeGoal(profile.goal);
 
   const result = calculateNewCalories(profile, evaluation);
   if (!result.newCalories) {
@@ -389,14 +442,14 @@ async function runSmartWeeklyAdjustment(userId) {
   const { meals, summary } = await generateDietPlan(profile);
 
   await DietPlan.updateMany({ user: userId, isActive: true }, { isActive: false });
-  const latest = await DietPlan.findOne({ user: userId }).sort({ version: -1 });
+  const latest  = await DietPlan.findOne({ user: userId }).sort({ version: -1 });
   const version = latest ? latest.version + 1 : 1;
 
   const newPlan = await DietPlan.create({
     user: userId,
     version,
     targetCalories: summary.targetCalories,
-    macroSplit: summary.macroTargets,
+    macroSplit:     summary.macroTargets,
     meals,
     summary,
     isActive: true,
@@ -405,10 +458,9 @@ async function runSmartWeeklyAdjustment(userId) {
   return { adjusted: true, reason: result.reason, newCalories: result.newCalories, planId: newPlan._id };
 }
 
-// Same thing, but loops over every user — this is what the cron worker calls
 async function runSmartWeeklyAdjustmentForAllUsers() {
   const profiles = await HealthProfile.find();
-  const results = [];
+  const results  = [];
   for (const profile of profiles) {
     try {
       const r = await runSmartWeeklyAdjustment(profile.user);
@@ -430,7 +482,7 @@ module.exports = {
   computeMacroTargets,
   getTemplateMealSwaps,
   warmTemplateCache,
-  getTemplate ,
+  getTemplate,
   runSmartWeeklyAdjustment,
   runSmartWeeklyAdjustmentForAllUsers,
   normalizeGoal,

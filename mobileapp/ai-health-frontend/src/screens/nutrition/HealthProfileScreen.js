@@ -9,6 +9,9 @@ import API from "../../services/api";
 
 const { width } = Dimensions.get("window");
 
+const parseList = (str) =>
+  str.split(",").map(s => s.trim()).filter(Boolean);
+
 // ── Fade slide in ─────────────────────────────────────────────────────────────
 function FadeSlideIn({ delay = 0, children }) {
   const opacity    = useRef(new Animated.Value(0)).current;
@@ -120,15 +123,16 @@ export default function HealthProfileScreen({ navigation, route }) {
   const { name, email, password, token} = route.params ?? {};
 
   useEffect(() => {
-  if (!name || !email || !password) {
-    alert("Registration data missing");
-    navigation.goBack();
-  }
+    if (!name || !email || !password) {
+      alert("Registration data missing");
+      navigation.goBack();
+    }
   }, []);
 
   const [form, setForm] = useState({
     age: "", gender: "male", height: "", weight: "",
     activityLevel: "moderate", goal: "lose", dietType: "non-veg",
+    diseases: "", allergies: "",
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -139,32 +143,31 @@ export default function HealthProfileScreen({ navigation, route }) {
   const handleChange = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
   const submitProfile = async () => {
-  if (submitting) return;
-  setSubmitting(true);
-  try {
-    const authHeader = { headers: { Authorization: `Bearer ${token}` } };
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      const authHeader = { headers: { Authorization: `Bearer ${token}` } };
 
-    await API.post("/health", {
-      age: Number(form.age),
-      height: Number(form.height),
-      weight: Number(form.weight),
-      gender: form.gender,
-      activityLevel: form.activityLevel,
-      goal: form.goal,
-      dietType: form.dietType,
-    }, authHeader);
+      await API.post("/health", {
+        age:           Number(form.age),
+        height:        Number(form.height),
+        weight:        Number(form.weight),
+        gender:        form.gender,
+        activityLevel: form.activityLevel,
+        goal:          form.goal,
+        dietType:      form.dietType,
+        diseases:      parseList(form.diseases),
+        allergies:     parseList(form.allergies),
+      }, authHeader);
 
-    await API.post("/nutrition/generate", {}, authHeader);
+      await API.post("/nutrition/generate", {}, authHeader);
 
-    await login(token); // This should trigger navigation to Home
-  } catch (err) {
-    console.log("❌ ERROR:", err.response?.data || err.message);
-    setSubmitting(false);
-  }
-};
-
-  const activeGoal     = GOAL_OPTIONS.find((g) => g.key === form.goal);
-  const activeActivity = ACTIVITY_OPTIONS.find((a) => a.key === form.activityLevel);
+      await login(token);
+    } catch (err) {
+      console.log("❌ ERROR:", err.response?.data || err.message);
+      setSubmitting(false);
+    }
+  };
 
   return (
     <KeyboardAvoidingView
@@ -183,7 +186,6 @@ export default function HealthProfileScreen({ navigation, route }) {
         {/* ── HEADER ── */}
         <FadeSlideIn delay={0}>
           <View style={styles.headerWrap}>
-            {/* Step indicator */}
             <View style={styles.stepRow}>
               <View style={styles.stepDone}><Text style={styles.stepDoneText}>✓</Text></View>
               <View style={styles.stepLine} />
@@ -303,6 +305,26 @@ export default function HealthProfileScreen({ navigation, route }) {
           </SectionCard>
         </FadeSlideIn>
 
+        {/* ── HEALTH CONDITIONS ── */}
+        <FadeSlideIn delay={390}>
+          <SectionCard title="Health Conditions" icon="🏥">
+            <Text style={styles.fieldLabel}>Diseases / Conditions (comma separated)</Text>
+            <AnimatedInput
+              icon="💊"
+              placeholder="e.g. diabetes, hypertension"
+              value={form.diseases}
+              onChangeText={(v) => handleChange("diseases", v)}
+            />
+            <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Allergies (comma separated)</Text>
+            <AnimatedInput
+              icon="⚠️"
+              placeholder="e.g. peanuts, gluten, dairy"
+              value={form.allergies}
+              onChangeText={(v) => handleChange("allergies", v)}
+            />
+          </SectionCard>
+        </FadeSlideIn>
+
         {/* ── SUBMIT ── */}
         <FadeSlideIn delay={420}>
           <Pressable onPress={submitProfile} onPressIn={onBtnIn}
@@ -336,7 +358,6 @@ export default function HealthProfileScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   scroll: { padding: 20, paddingTop: 56 },
 
-  // Blobs
   blobTop: {
     position: "absolute", top: -80, right: -70,
     width: 220, height: 220, borderRadius: 110,
@@ -348,7 +369,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#A855F70C",
   },
 
-  // Header
   headerWrap:    { alignItems: "center", marginBottom: 28 },
   stepRow:       { flexDirection: "row", alignItems: "center", marginBottom: 14 },
   stepDone: {
@@ -367,7 +387,6 @@ const styles = StyleSheet.create({
   title:      { fontSize: 26, fontWeight: "900", color: "#0F172A", letterSpacing: -0.6, marginBottom: 6 },
   subtitle:   { fontSize: 14, color: "#94A3B8", fontWeight: "500" },
 
-  // Section card
   sectionCard: {
     backgroundColor: "#fff", borderRadius: 22,
     padding: 18, marginBottom: 14,
@@ -382,7 +401,6 @@ const styles = StyleSheet.create({
   sectionIcon:  { fontSize: 16 },
   sectionTitle: { fontSize: 15, fontWeight: "800", color: "#0F172A", letterSpacing: -0.2 },
 
-  // Input
   fieldLabel: { fontSize: 12, fontWeight: "700", color: "#64748B", marginBottom: 6, letterSpacing: 0.2 },
   metricsRow: { flexDirection: "row", marginBottom: 12 },
   inputWrap: {
@@ -397,7 +415,6 @@ const styles = StyleSheet.create({
     fontSize: 15, color: "#0F172A", fontWeight: "500",
   },
 
-  // Chips
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   chip: {
     flexDirection: "row", alignItems: "center",
@@ -408,7 +425,6 @@ const styles = StyleSheet.create({
   chipEmoji: { fontSize: 16 },
   chipText:  { fontSize: 13, color: "#64748B", fontWeight: "600" },
 
-  // Activity / Goal cards
   activityRow: { flexDirection: "row", gap: 10 },
   activityCard: {
     flex: 1, backgroundColor: "#F8FAFC",
@@ -424,7 +440,6 @@ const styles = StyleSheet.create({
   activityLabel: { fontSize: 12, fontWeight: "800", color: "#0F172A", marginBottom: 3 },
   activityDesc:  { fontSize: 10, color: "#94A3B8", textAlign: "center", fontWeight: "500" },
 
-  // Submit
   submitBtn: {
     borderRadius: 18, paddingVertical: 17,
     alignItems: "center", justifyContent: "center",

@@ -38,6 +38,11 @@ const healthProfileSchema = new mongoose.Schema(
       type: [String],
       default: []
     },
+    allergies: {
+       type: [String], 
+       default: [] 
+      },  
+
 
     // Calculated values (engine output)
     bmr: Number,

@@ -2,10 +2,11 @@
 import React, { useEffect, useState, useCallback, useContext, useRef } from "react";
 import {
   View, Text, ActivityIndicator, ScrollView, StyleSheet,
-  TouchableOpacity, RefreshControl, Modal, FlatList, Alert,
+  TouchableOpacity, RefreshControl, Modal, FlatList, Alert, Animated,
 } from "react-native";
 import API from "../../services/api";
 import { AuthContext } from "../../context/AuthContext";
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const MEAL_META = {
@@ -19,10 +20,6 @@ const MEAL_ORDER = ["breakfast", "lunch", "dinner", "snack"];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-/**
- * FIX: Backend returns items as { name, amount, unit } — not grams/pieces/servingUnit.
- * Format amount+unit from template item shape.
- */
 const formatQty = (item) => {
   if (!item.amount && !item.unit) return "";
   return item.unit ? `${item.amount} ${item.unit}` : `${item.amount}`;
@@ -30,6 +27,92 @@ const formatQty = (item) => {
 
 const pct = (val, total) =>
   total > 0 ? Math.min(Math.round((val / total) * 100), 100) : 0;
+
+// ─── AI Advice Banner ─────────────────────────────────────────────────────────
+
+function AiAdviceBanner({ advice, warnings }) {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(-8)).current;
+  const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim,  { toValue: 1, duration: 500, delay: 200, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 500, delay: 200, useNativeDriver: true }),
+    ]).start();
+  }, []);
+
+  if (!advice) return null;
+
+  return (
+    <Animated.View style={[ai.wrap, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+      {/* Header row */}
+      <View style={ai.headerRow}>
+        <View style={ai.iconWrap}>
+          <Text style={ai.icon}>🤖</Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <View style={ai.titleRow}>
+            <Text style={ai.title}>AI Personalised Plan</Text>
+            <View style={ai.badge}>
+              <Text style={ai.badgeTxt}>✦ GEMINI</Text>
+            </View>
+          </View>
+          <Text style={ai.sub}>Adapted for your health conditions</Text>
+        </View>
+        <TouchableOpacity onPress={() => setExpanded((p) => !p)} style={ai.expandBtn}>
+          <Text style={ai.expandIcon}>{expanded ? "▲" : "▼"}</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Advice text — always visible, truncated unless expanded */}
+      <Text
+        style={ai.adviceText}
+        numberOfLines={expanded ? undefined : 3}
+      >
+        {advice}
+      </Text>
+
+      {!expanded && (
+        <TouchableOpacity onPress={() => setExpanded(true)}>
+          <Text style={ai.readMore}>Read more ›</Text>
+        </TouchableOpacity>
+      )}
+
+      {/* Warnings */}
+      {warnings?.length > 0 && (
+        <View style={ai.warningsWrap}>
+          {warnings.map((w, i) => (
+            <View key={i} style={ai.warningChip}>
+              <Text style={ai.warningIcon}>⚠️</Text>
+              <Text style={ai.warningTxt}>{w}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+    </Animated.View>
+  );
+}
+
+// ─── Source Badge (shown in title row when source = template) ─────────────────
+
+function SourceBadge({ source }) {
+  if (source === "ai") return null; // AI banner handles this already
+  return (
+    <View style={sb.wrap}>
+      <Text style={sb.txt}>📋 Standard Plan</Text>
+    </View>
+  );
+}
+
+const sb = StyleSheet.create({
+  wrap: {
+    backgroundColor: "#F1F5F9", borderRadius: 10,
+    paddingHorizontal: 10, paddingVertical: 4, alignSelf: "flex-start",
+    marginBottom: 14,
+  },
+  txt: { fontSize: 11, fontWeight: "700", color: "#64748B" },
+});
 
 // ─── MacroBar ─────────────────────────────────────────────────────────────────
 
@@ -61,11 +144,7 @@ const mb = StyleSheet.create({
 });
 
 // ─── SwapModal ────────────────────────────────────────────────────────────────
-/**
- * FIX: API params renamed to match backend:
- *   GET  /nutrition/swap-options?mealType=lunch&excludeId=xxx   (was meal= & foodId=)
- *   POST /nutrition/swap  { mealType, newMealId }               (was PATCH /swap-food)
- */
+
 function SwapModal({ visible, mealType, combo, onClose, onSwapped }) {
   const [options, setOptions]   = useState([]);
   const [loading, setLoading]   = useState(false);
@@ -76,7 +155,6 @@ function SwapModal({ visible, mealType, combo, onClose, onSwapped }) {
     if (!visible || !combo) return;
     setOptions([]);
     setLoading(true);
-    // FIX: correct query params — mealType + excludeId (templateId from backend)
     API.get(`/nutrition/swap-options?mealType=${mealType}&excludeId=${combo.templateId || ""}`)
       .then(res => setOptions(res.data?.data || []))
       .catch(() => setOptions([]))
@@ -86,12 +164,7 @@ function SwapModal({ visible, mealType, combo, onClose, onSwapped }) {
   const handleSwap = async (newMeal) => {
     setSwapping(newMeal.id);
     try {
-      console.log("📤 Calling swap with:", { mealType, newMealId: newMeal.id });
-      // FIX: correct endpoint POST /nutrition/swap with { mealType, newMealId }
-      await API.post("/nutrition/swap", {
-        mealType,
-        newMealId: newMeal.id,
-      });
+      await API.post("/nutrition/swap", { mealType, newMealId: newMeal.id });
       onSwapped();
       onClose();
     } catch {
@@ -105,7 +178,6 @@ function SwapModal({ visible, mealType, combo, onClose, onSwapped }) {
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={sw.overlay}>
         <View style={sw.sheet}>
-
           <View style={sw.header}>
             <View>
               <Text style={sw.title}>Swap "{combo?.mealName}"</Text>
@@ -127,14 +199,14 @@ function SwapModal({ visible, mealType, combo, onClose, onSwapped }) {
               contentContainerStyle={{ paddingBottom: 24 }}
               renderItem={({ item }) => {
                 const busy = swapping === item.id;
-                const [minCal, maxCal] = item.macroRange?.calories || [0, 0];
-                const [minPro, maxPro] = item.macroRange?.protein  || [0, 0];
-                const [minCarb, maxCarb] = item.macroRange?.carbs  || [0, 0];
-                const [minFat, maxFat]  = item.macroRange?.fats    || [0, 0];
+                const [minCal, maxCal]   = item.macroRange?.calories || [0, 0];
+                const [minPro, maxPro]   = item.macroRange?.protein  || [0, 0];
+                const [minCarb, maxCarb] = item.macroRange?.carbs    || [0, 0];
+                const [minFat, maxFat]   = item.macroRange?.fats     || [0, 0];
                 const midCal  = Math.round((minCal + maxCal) / 2);
-                const midPro  = ((minPro + maxPro) / 2).toFixed(1);
+                const midPro  = ((minPro  + maxPro)  / 2).toFixed(1);
                 const midCarb = ((minCarb + maxCarb) / 2).toFixed(1);
-                const midFat  = ((minFat + maxFat) / 2).toFixed(1);
+                const midFat  = ((minFat  + maxFat)  / 2).toFixed(1);
 
                 return (
                   <TouchableOpacity
@@ -146,7 +218,6 @@ function SwapModal({ visible, mealType, combo, onClose, onSwapped }) {
                     <View style={[sw.iconBox, { backgroundColor: meta.bg }]}>
                       <Text style={{ fontSize: 20 }}>{meta.icon}</Text>
                     </View>
-
                     <View style={sw.info}>
                       <Text style={sw.name}>{item.name}</Text>
                       <Text style={sw.macroLine}>
@@ -163,7 +234,6 @@ function SwapModal({ visible, mealType, combo, onClose, onSwapped }) {
                         </View>
                       )}
                     </View>
-
                     <TouchableOpacity
                       style={[sw.swapBtn, { backgroundColor: busy ? "#eee" : meta.color }]}
                       onPress={() => handleSwap(item)}
@@ -185,20 +255,7 @@ function SwapModal({ visible, mealType, combo, onClose, onSwapped }) {
 }
 
 // ─── MealCard ─────────────────────────────────────────────────────────────────
-/**
- * FIX: Backend shape per meal slot is an ARRAY of combo objects:
- *   meals.lunch = [{
- *     templateId, mealName, cuisine, difficulty, prepTime, budget, tags,
- *     items: [{ name, amount, unit }],
- *     calories, protein, carbs, fats, fiber
- *   }]
- *
- * Previously frontend treated each combo as a flat food row — wrong.
- * Now we:
- *   - Show combo.mealName as the meal combo name
- *   - Map combo.items for individual ingredient rows
- *   - Use combo.calories/protein/carbs/fats for macros
- */
+
 function MealCard({ mealType, combos, meta, onSwap, onRegenerate }) {
   const totalCal     = combos.reduce((s, c) => s + (c.calories ?? 0), 0);
   const totalProtein = combos.reduce((s, c) => s + (c.protein  ?? 0), 0);
@@ -228,8 +285,6 @@ function MealCard({ mealType, combos, meta, onSwap, onRegenerate }) {
         <View style={s.foodList}>
           {combos.map((combo, ci) => (
             <View key={ci} style={[s.comboBlock, ci < combos.length - 1 && s.foodDivider]}>
-
-              {/* Combo name row */}
               <View style={s.comboNameRow}>
                 <View style={{ flex: 1 }}>
                   <Text style={s.comboName}>{combo.mealName}</Text>
@@ -240,15 +295,11 @@ function MealCard({ mealType, combos, meta, onSwap, onRegenerate }) {
                     </Text>
                   )}
                 </View>
-
-                {/* Macro chips */}
                 <View style={s.macroPill}>
                   <View style={[s.calChip, { backgroundColor: meta.bg }]}>
                     <Text style={[s.calChipTxt, { color: meta.color }]}>🔥 {combo.calories} kcal</Text>
                   </View>
                 </View>
-
-                {/* Swap button — swaps the whole combo */}
                 <TouchableOpacity
                   style={[s.swapChip, { borderColor: meta.color }]}
                   onPress={() => onSwap(mealType, combo)}
@@ -258,13 +309,11 @@ function MealCard({ mealType, combos, meta, onSwap, onRegenerate }) {
                 </TouchableOpacity>
               </View>
 
-              {/* Macro summary row */}
               <Text style={s.macroTxt}>
                 P {combo.protein ?? 0}g · C {combo.carbs ?? 0}g · F {combo.fats ?? 0}g
                 {combo.fiber ? ` · Fiber ${combo.fiber}g` : ""}
               </Text>
 
-              {/* Ingredient items */}
               {combo.items?.length > 0 && (
                 <View style={s.itemsList}>
                   {combo.items.map((item, ii) => (
@@ -301,8 +350,7 @@ export default function NutritionDashboardScreen({ navigation }) {
   const [plan, setPlan]             = useState(null);
   const [loading, setLoading]       = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const {userGoal} = useContext(AuthContext);
-  // FIX: swap state now tracks mealType + combo (not meal + food)
+  const { userGoal }                = useContext(AuthContext);
   const [swapState, setSwapState]   = useState({ visible: false, mealType: null, combo: null });
 
   const fetchPlan = useCallback(async () => {
@@ -320,18 +368,16 @@ export default function NutritionDashboardScreen({ navigation }) {
       setLoading(false);
       setRefreshing(false);
     }
-
   }, []);
 
   useEffect(() => { fetchPlan(); }, [fetchPlan]);
 
   const prevGoalRef = useRef(null);
-
   useEffect(() => {
-  if (prevGoalRef.current && prevGoalRef.current !== userGoal) {
-    handleGenerate(); // goal changed → regenerate plan
-  }
-  prevGoalRef.current = userGoal;
+    if (prevGoalRef.current && prevGoalRef.current !== userGoal) {
+      handleGenerate();
+    }
+    prevGoalRef.current = userGoal;
   }, [userGoal]);
 
   const handleGenerate = async () => {
@@ -399,6 +445,9 @@ export default function NutritionDashboardScreen({ navigation }) {
     actualMacros,
     macroAchievement,
     profileSnapshot,
+    source,
+    aiAdvice,
+    warnings,
   } = summary;
 
   const targets = {
@@ -430,7 +479,6 @@ export default function NutritionDashboardScreen({ navigation }) {
             refreshing={refreshing}
             onRefresh={() => { setRefreshing(true); fetchPlan(); }}
             colors={["#4CAF50"]}
-            
           />
         }
       >
@@ -448,6 +496,14 @@ export default function NutritionDashboardScreen({ navigation }) {
             <Text style={s.regenBtnTxt}>🔄</Text>
           </TouchableOpacity>
         </View>
+
+        {/* ── AI Advice Banner (only when source === "ai") ── */}
+        {source === "ai" && (
+          <AiAdviceBanner advice={aiAdvice} warnings={warnings} />
+        )}
+
+        {/* ── Standard Plan Badge (only when source === "template") ── */}
+        {source === "template" && <SourceBadge source={source} />}
 
         {/* ── Calorie summary card ── */}
         <View style={s.card}>
@@ -523,8 +579,6 @@ export default function NutritionDashboardScreen({ navigation }) {
           />
         ))}
 
-   
-
         <View style={{ height: 30 }} />
       </ScrollView>
 
@@ -539,6 +593,47 @@ export default function NutritionDashboardScreen({ navigation }) {
     </>
   );
 }
+
+// ─── AI Banner Styles ─────────────────────────────────────────────────────────
+
+const ai = StyleSheet.create({
+  wrap: {
+    backgroundColor: "#F0F4FF",
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 14,
+    borderWidth: 1.5,
+    borderColor: "#C7D2FE",
+  },
+  headerRow:  { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 10 },
+  iconWrap: {
+    width: 40, height: 40, borderRadius: 12,
+    backgroundColor: "#E0E7FF",
+    justifyContent: "center", alignItems: "center",
+  },
+  icon:       { fontSize: 20 },
+  titleRow:   { flexDirection: "row", alignItems: "center", gap: 8 },
+  title:      { fontSize: 14, fontWeight: "800", color: "#3730A3" },
+  sub:        { fontSize: 11, color: "#6366F1", fontWeight: "500", marginTop: 2 },
+  badge: {
+    backgroundColor: "#6366F1", borderRadius: 8,
+    paddingHorizontal: 7, paddingVertical: 2,
+  },
+  badgeTxt:   { fontSize: 9, fontWeight: "900", color: "#fff", letterSpacing: 0.5 },
+  expandBtn:  { width: 28, height: 28, borderRadius: 14, backgroundColor: "#E0E7FF", justifyContent: "center", alignItems: "center" },
+  expandIcon: { fontSize: 10, color: "#6366F1", fontWeight: "800" },
+  adviceText: { fontSize: 13, color: "#1E1B4B", lineHeight: 20, fontWeight: "500" },
+  readMore:   { fontSize: 12, color: "#6366F1", fontWeight: "700", marginTop: 4 },
+  warningsWrap: { marginTop: 12, gap: 6 },
+  warningChip: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    backgroundColor: "#FFF7ED", borderRadius: 10,
+    paddingHorizontal: 10, paddingVertical: 6,
+    borderWidth: 1, borderColor: "#FED7AA",
+  },
+  warningIcon: { fontSize: 13 },
+  warningTxt:  { fontSize: 12, color: "#92400E", fontWeight: "600", flex: 1 },
+});
 
 // ─── Swap Modal Styles ────────────────────────────────────────────────────────
 
@@ -618,44 +713,30 @@ const s = StyleSheet.create({
   badgeTxt:    { fontSize: 11, fontWeight: "700" },
 
   foodList:    { marginTop: 10, borderTopWidth: 1, borderTopColor: "#f5f5f5", paddingTop: 8 },
-
-  // FIX: new combo-level styles
   comboBlock:   { paddingVertical: 10 },
   comboNameRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 },
   comboName:    { fontSize: 14, fontWeight: "700", color: "#1a1a1a", flex: 1 },
   comboMeta:    { fontSize: 11, color: "#aaa", marginTop: 1 },
   macroPill:    { flexDirection: "row", gap: 4 },
-
-  foodDivider: { borderBottomWidth: 1, borderBottomColor: "#f9f9f9" },
-  dot:         { width: 7, height: 7, borderRadius: 4, marginTop: 5 },
-
-  // FIX: ingredient item row styles
-  itemsList:  { marginTop: 8, gap: 4 },
-  itemRow:    { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 3 },
-  itemName:   { fontSize: 13, color: "#333", flex: 1 },
-
-  foodTop:     { flexDirection: "row", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 6 },
-  foodName:    { fontSize: 14, fontWeight: "600", color: "#1a1a1a", flex: 1 },
-  qtyBadge:    { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
-  qtyTxt:      { fontSize: 12, fontWeight: "700" },
-
-  foodMacroRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 5, flexWrap: "wrap" },
+  foodDivider:  { borderBottomWidth: 1, borderBottomColor: "#f9f9f9" },
+  dot:          { width: 7, height: 7, borderRadius: 4, marginTop: 5 },
+  itemsList:    { marginTop: 8, gap: 4 },
+  itemRow:      { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 3 },
+  itemName:     { fontSize: 13, color: "#333", flex: 1 },
+  qtyBadge:     { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+  qtyTxt:       { fontSize: 12, fontWeight: "700" },
   calChip:      { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
   calChipTxt:   { fontSize: 12, fontWeight: "700" },
   macroTxt:     { fontSize: 11, color: "#aaa", marginBottom: 6 },
-
-  swapChip:    { borderWidth: 1.5, borderRadius: 16, paddingHorizontal: 10, paddingVertical: 5 },
-  swapChipTxt: { fontSize: 11, fontWeight: "700" },
-
+  swapChip:     { borderWidth: 1.5, borderRadius: 16, paddingHorizontal: 10, paddingVertical: 5 },
+  swapChipTxt:  { fontSize: 11, fontWeight: "700" },
   emptyMeal:    { paddingVertical: 16, alignItems: "center" },
   emptyMealTxt: { fontSize: 13, color: "#ccc", fontStyle: "italic", marginBottom: 8 },
   regenSmall:   { borderWidth: 1.5, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6 },
   regenSmallTxt:{ fontSize: 12, fontWeight: "700" },
-
-  btn: {
-    padding: 15, borderRadius: 12, alignItems: "center", marginBottom: 12,
-    elevation: 2, shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1, shadowRadius: 4,
-  },
-  btnTxt: { color: "#fff", fontWeight: "800", fontSize: 15 },
+  foodTop:      { flexDirection: "row", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 6 },
+  foodName:     { fontSize: 14, fontWeight: "600", color: "#1a1a1a", flex: 1 },
+  foodMacroRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 5, flexWrap: "wrap" },
+  btn:          { padding: 15, borderRadius: 12, alignItems: "center", marginBottom: 12, elevation: 2 },
+  btnTxt:       { color: "#fff", fontWeight: "800", fontSize: 15 },
 });

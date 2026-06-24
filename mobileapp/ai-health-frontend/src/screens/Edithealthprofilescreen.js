@@ -9,6 +9,12 @@ import { LinearGradient } from "expo-linear-gradient";
 import { AuthContext } from "../context/AuthContext";
 import API from "../services/api";
 
+const parseList = (str) =>
+  str.split(",").map(s => s.trim()).filter(Boolean);
+
+const listToString = (arr) =>
+  Array.isArray(arr) ? arr.join(", ") : "";
+
 // ── Animated Input ────────────────────────────────────────────────────────────
 function AnimatedInput({ icon, label, placeholder, value, onChangeText, keyboardType }) {
   const [focused, setFocused] = useState(false);
@@ -29,7 +35,7 @@ function AnimatedInput({ icon, label, placeholder, value, onChangeText, keyboard
 
   return (
     <View style={styles.inputGroup}>
-      <Text style={styles.inputLabel}>{label}</Text>
+      {label ? <Text style={styles.inputLabel}>{label}</Text> : null}
       <Animated.View style={[styles.inputWrap, { borderColor }]}>
         <Text style={[styles.inputIcon, { opacity: focused ? 1 : 0.5 }]}>{icon}</Text>
         <TextInput
@@ -41,13 +47,14 @@ function AnimatedInput({ icon, label, placeholder, value, onChangeText, keyboard
           onFocus={onFocus}
           onBlur={onBlur}
           keyboardType={keyboardType ?? "default"}
+          autoCapitalize="none"
         />
       </Animated.View>
     </View>
   );
 }
 
-// ── Selector Card (like activity/goal) ───────────────────────────────────────
+// ── Selector Card ─────────────────────────────────────────────────────────────
 function SelectorCard({ option, selected, color, onPress }) {
   const scale = useRef(new Animated.Value(1)).current;
   const onIn  = () => Animated.spring(scale, { toValue: 0.95, useNativeDriver: true }).start();
@@ -69,7 +76,7 @@ function SelectorCard({ option, selected, color, onPress }) {
   );
 }
 
-// ── Chip (gender / diet) ──────────────────────────────────────────────────────
+// ── Chip ──────────────────────────────────────────────────────────────────────
 function Chip({ option, selected, color, onPress }) {
   return (
     <Pressable onPress={onPress}>
@@ -118,15 +125,15 @@ const GENDER_OPTIONS = [
 ];
 
 const ACTIVITY_OPTIONS = [
-  { key: "sedentary", label: "Sedentary", emoji: "🛋️", desc: "Little movement",   color: "#94A3B8" },
-  { key: "moderate",  label: "Moderate",  emoji: "🚶", desc: "Light exercise",     color: "#F59E0B" },
-  { key: "active",    label: "Active",    emoji: "🏃", desc: "Regular training",   color: "#22C55E" },
+  { key: "sedentary", label: "Sedentary", emoji: "🛋️", desc: "Little movement",  color: "#94A3B8" },
+  { key: "moderate",  label: "Moderate",  emoji: "🚶", desc: "Light exercise",    color: "#F59E0B" },
+  { key: "active",    label: "Active",    emoji: "🏃", desc: "Regular training",  color: "#22C55E" },
 ];
 
 const GOAL_OPTIONS = [
-  { key: "lose",     label: "Lose",     emoji: "🔥", desc: "Cut fat",       color: "#EF4444" },
-  { key: "maintain", label: "Maintain", emoji: "⚖️", desc: "Stay healthy",  color: "#6366F1" },
-  { key: "gain",     label: "Gain",     emoji: "💪", desc: "Build mass",    color: "#F59E0B" },
+  { key: "lose",     label: "Lose",     emoji: "🔥", desc: "Cut fat",      color: "#EF4444" },
+  { key: "maintain", label: "Maintain", emoji: "⚖️", desc: "Stay healthy", color: "#6366F1" },
+  { key: "gain",     label: "Gain",     emoji: "💪", desc: "Build mass",   color: "#F59E0B" },
 ];
 
 const DIET_OPTIONS = [
@@ -142,13 +149,13 @@ export default function EditHealthProfileScreen({ navigation }) {
   const [form, setForm] = useState({
     age: "", gender: "male", height: "", weight: "",
     activityLevel: "moderate", goal: "maintain", dietType: "non-veg",
+    diseases: "", allergies: "",
   });
-  const [loading, setLoading]       = useState(true);
-  const [saving, setSaving]         = useState(false);
-  const [saved, setSaved]           = useState(false);
+  const [loading, setLoading]           = useState(true);
+  const [saving, setSaving]             = useState(false);
+  const [saved, setSaved]               = useState(false);
   const [regenerating, setRegenerating] = useState(false);
 
-  // Header fade
   const headerOpacity = useRef(new Animated.Value(0)).current;
   const headerY       = useRef(new Animated.Value(-10)).current;
 
@@ -172,6 +179,8 @@ export default function EditHealthProfileScreen({ navigation }) {
         activityLevel: d.activityLevel ?? "moderate",
         goal:          d.goal          ?? "maintain",
         dietType:      d.dietType      ?? "non-veg",
+        diseases:      listToString(d.diseases),
+        allergies:     listToString(d.allergies),
       });
     } catch (err) {
       console.log("Fetch health profile error:", err.message);
@@ -182,63 +191,65 @@ export default function EditHealthProfileScreen({ navigation }) {
 
   const handleChange = (key, val) => setForm((prev) => ({ ...prev, [key]: val }));
 
-const saveProfile = async () => {
-  if (!form.age || !form.height || !form.weight) {
-    Alert.alert("Missing Fields", "Please fill in Age, Height, and Weight.");
-    return;
-  }
-  try {
-    setSaving(true);
-    await API.put("/health", {
-      age:           Number(form.age),
-      gender:        form.gender,
-      height:        Number(form.height),
-      weight:        Number(form.weight),
-      activityLevel: form.activityLevel,
-      goal:          form.goal,
-      dietType:      form.dietType,
-    });
-    const GOAL_TO_USER = { lose: "lean", maintain: "fit", gain: "bulk" };
-    await API.put("/user/goal", { goal: GOAL_TO_USER[form.goal] ?? "fit" });
-    await fetchUserGoal();
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
-  } catch (err) {
-    Alert.alert("Error", err.response?.data?.message || "Failed to save profile.");
-    return;
-  } finally {
-    setSaving(false);
-  }
+  const saveProfile = async () => {
+    if (!form.age || !form.height || !form.weight) {
+      Alert.alert("Missing Fields", "Please fill in Age, Height, and Weight.");
+      return;
+    }
+    try {
+      setSaving(true);
+      await API.put("/health", {
+        age:           Number(form.age),
+        gender:        form.gender,
+        height:        Number(form.height),
+        weight:        Number(form.weight),
+        activityLevel: form.activityLevel,
+        goal:          form.goal,
+        dietType:      form.dietType,
+        diseases:      parseList(form.diseases),
+        allergies:     parseList(form.allergies),
+      });
+      const GOAL_TO_USER = { lose: "lean", maintain: "fit", gain: "bulk" };
+      await API.put("/user/goal", { goal: GOAL_TO_USER[form.goal] ?? "fit" });
+      await fetchUserGoal();
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch (err) {
+      Alert.alert("Error", err.response?.data?.message || "Failed to save profile.");
+      return;
+    } finally {
+      setSaving(false);
+    }
 
-  // save succeeded — now regenerate
-  try {
-    setRegenerating(true);
-    await API.post("/nutrition/generate");
-    Alert.alert("✅ Done!", "Diet plan updated with your new profile.", [
-      { text: "View Plan", onPress: () => navigation?.navigate("NutritionDashboard") },
-      { text: "OK" },
-    ]);
-  } catch {
-    Alert.alert("⚠️ Saved", "Profile saved but plan regeneration failed. Try again later.");
-  } finally {
-    setRegenerating(false);
-  }
-};
+    // save succeeded — now regenerate
+    try {
+      setRegenerating(true);
+      await API.post("/nutrition/generate");
+      Alert.alert("✅ Done!", "Diet plan updated with your new profile.", [
+        { text: "View Plan", onPress: () => navigation?.navigate("NutritionDashboard") },
+        { text: "OK" },
+      ]);
+    } catch {
+      Alert.alert("⚠️ Saved", "Profile saved but plan regeneration failed. Try again later.");
+    } finally {
+      setRegenerating(false);
+    }
+  };
 
-const regeneratePlan = async () => {
-  try {
-    setRegenerating(true);
-    await API.post("/nutrition/generate");
-    Alert.alert("✅ Done!", "Diet plan updated with your new profile.", [
-      { text: "View Plan", onPress: () => navigation?.navigate("NutritionDashboard") },
-      { text: "OK" },
-    ]);
-  } catch {
-    Alert.alert("Error", "Could not regenerate plan. Try again.");
-  } finally {
-    setRegenerating(false);
-  }
-};
+  const regeneratePlan = async () => {
+    try {
+      setRegenerating(true);
+      await API.post("/nutrition/generate");
+      Alert.alert("✅ Done!", "Diet plan updated with your new profile.", [
+        { text: "View Plan", onPress: () => navigation?.navigate("NutritionDashboard") },
+        { text: "OK" },
+      ]);
+    } catch {
+      Alert.alert("Error", "Could not regenerate plan. Try again.");
+    } finally {
+      setRegenerating(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -354,10 +365,28 @@ const regeneratePlan = async () => {
             </View>
           </Section>
 
+          {/* ── HEALTH CONDITIONS ── */}
+          <Section icon="🏥" title="Health Conditions" delay={340}>
+            <AnimatedInput
+              icon="💊"
+              label="Diseases / Conditions (comma separated)"
+              placeholder="e.g. diabetes, hypertension"
+              value={form.diseases}
+              onChangeText={(v) => handleChange("diseases", v)}
+            />
+            <AnimatedInput
+              icon="⚠️"
+              label="Allergies (comma separated)"
+              placeholder="e.g. peanuts, gluten, dairy"
+              value={form.allergies}
+              onChangeText={(v) => handleChange("allergies", v)}
+            />
+          </Section>
+
           {/* ── SAVE BUTTON ── */}
           <Pressable
             onPress={saveProfile}
-            disabled={saving}
+            disabled={saving || regenerating}
             style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1, marginTop: 8 }]}
           >
             <LinearGradient
@@ -365,7 +394,7 @@ const regeneratePlan = async () => {
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
               style={styles.saveBtn}
             >
-              {saving
+              {(saving || regenerating)
                 ? <ActivityIndicator color="#fff" size="small" />
                 : <Text style={styles.saveBtnText}>
                     {saved ? "✓  Saved!" : "Save Changes"}
@@ -388,7 +417,6 @@ const styles = StyleSheet.create({
   center:      { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#F8FAFC" },
   loadingText: { marginTop: 12, color: "#94A3B8", fontSize: 14, fontWeight: "500" },
 
-  // Header
   headerRow: {
     flexDirection: "row", alignItems: "center",
     justifyContent: "space-between", marginBottom: 20,
@@ -403,22 +431,6 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 18, fontWeight: "800", color: "#0F172A", letterSpacing: -0.3, textAlign: "center" },
   headerSub:   { fontSize: 12, color: "#94A3B8", fontWeight: "500", textAlign: "center", marginTop: 2 },
 
-  // Regen banner
-  regenBanner: {
-    flexDirection: "row", alignItems: "center",
-    backgroundColor: "#0F172A", borderRadius: 18,
-    padding: 16, marginBottom: 18, gap: 12,
-  },
-  regenBannerTitle: { fontSize: 14, fontWeight: "800", color: "#fff" },
-  regenBannerSub:   { fontSize: 12, color: "#94A3B8", marginTop: 2 },
-  regenBannerBtn: {
-    backgroundColor: "#6366F1", borderRadius: 12,
-    paddingHorizontal: 14, paddingVertical: 10,
-    minWidth: 100, alignItems: "center",
-  },
-  regenBannerBtnText: { color: "#fff", fontWeight: "800", fontSize: 13 },
-
-  // Section
   section: {
     backgroundColor: "#fff", borderRadius: 22,
     padding: 18, marginBottom: 14,
@@ -434,7 +446,6 @@ const styles = StyleSheet.create({
   sectionIcon:  { fontSize: 16 },
   sectionTitle: { fontSize: 15, fontWeight: "800", color: "#0F172A" },
 
-  // Input
   row:        { flexDirection: "row", marginBottom: 0 },
   inputGroup: { marginBottom: 12 },
   inputLabel: { fontSize: 11, fontWeight: "700", color: "#64748B", marginBottom: 6, letterSpacing: 0.3, textTransform: "uppercase" },
@@ -449,7 +460,6 @@ const styles = StyleSheet.create({
     fontSize: 15, color: "#0F172A", fontWeight: "600",
   },
 
-  // Chips
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   chip: {
     flexDirection: "row", alignItems: "center",
@@ -460,7 +470,6 @@ const styles = StyleSheet.create({
   chipEmoji: { fontSize: 16 },
   chipText:  { fontSize: 13, color: "#64748B", fontWeight: "600" },
 
-  // Selector cards
   selectorRow: { flexDirection: "row", gap: 8 },
   selectorCard: {
     flex: 1, backgroundColor: "#F8FAFC",
@@ -476,7 +485,6 @@ const styles = StyleSheet.create({
   selLabel: { fontSize: 12, fontWeight: "800", color: "#0F172A", marginBottom: 2 },
   selDesc:  { fontSize: 10, color: "#94A3B8", textAlign: "center", fontWeight: "500" },
 
-  // Save button
   saveBtn: {
     borderRadius: 18, paddingVertical: 17,
     alignItems: "center", justifyContent: "center",
