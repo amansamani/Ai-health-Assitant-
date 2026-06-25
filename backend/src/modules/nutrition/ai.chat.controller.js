@@ -5,7 +5,7 @@ const DietPlan      = require("./dietPlan.model");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
 // ─── In-memory session store (per user, resets on server restart) ─────────────
 // Shape: { [userId]: [{ role: "user"|"model", parts: [{ text }] }] }

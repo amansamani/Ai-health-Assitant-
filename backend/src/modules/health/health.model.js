@@ -10,7 +10,7 @@ const healthProfileSchema = new mongoose.Schema(
       index: true
     },
 
-    age: { type: Number, required: true, min: 10, max: 100 },
+    age:    { type: Number, required: true, min: 10, max: 100 },
     gender: { type: String, enum: ["male", "female"], required: true },
 
     height: { type: Number, required: true }, // cm
@@ -34,24 +34,16 @@ const healthProfileSchema = new mongoose.Schema(
       required: true
     },
 
-    diseases: {
-      type: [String],
-      default: []
-    },
-    allergies: {
-       type: [String], 
-       default: [] 
-      },  
-
+    diseases:  { type: [String], default: [] },
+    allergies: { type: [String], default: [] },
 
     // Calculated values (engine output)
-    bmr: Number,
+    bmr:                Number,
     maintenanceCalories: Number,
-    targetCalories: Number,
-    proteinTarget: Number,
-    carbTarget: Number,
-    fatTarget: Number
-
+    targetCalories:     Number,
+    proteinTarget:      Number,
+    carbTarget:         Number,
+    fatTarget:          Number,
   },
   { timestamps: true }
 );
