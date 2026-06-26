@@ -14,6 +14,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { AuthContext } from "../context/AuthContext";
 import { SafeAreaView } from "react-native-safe-area-context";
 import CircularProgressRing from "../components/CircularProgressRing";
+import WeeklyInsightCard from "../components/WeeklyInsightCard";
 
 const { width } = Dimensions.get("window");
 
@@ -292,6 +293,9 @@ export default function HomeScreen({ navigation, route }) {
           </View>
         </FadeSlideIn>
 
+      <WeeklyInsightCard />
+
+
         {/* ── QUICK ACTIONS ── */}
         <FadeSlideIn delay={240}>
           <Text style={[styles.sectionTitle, { marginBottom: 14 }]}>Quick Actions</Text>
@@ -323,6 +327,13 @@ export default function HomeScreen({ navigation, route }) {
           {/* 2-col grid */}
           <View style={styles.actionGrid}>
             <ActionCard
+                icon="💧"
+                title="Water Intake"
+                sub="Track daily hydration"
+                accent="#3B82F6"
+                onPress={() => navigation.navigate("WaterTracking")}
+            />
+            <ActionCard
               icon="🏋️" title="Workouts" sub="Training plan"
               accent="#F59E0B" onPress={() => navigation.navigate("Workout")}
             />
@@ -338,6 +349,7 @@ export default function HomeScreen({ navigation, route }) {
               icon="💪" title="Challenges" sub="Stay consistent"
               accent="#EC4899" onPress={() => navigation.navigate("Challenges")}
             />
+
           </View>
         </FadeSlideIn>
 

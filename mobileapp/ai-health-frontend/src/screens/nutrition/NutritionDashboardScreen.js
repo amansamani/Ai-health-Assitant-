@@ -6,6 +6,7 @@ import {
 } from "react-native";
 import API from "../../services/api";
 import { AuthContext } from "../../context/AuthContext";
+import MealCompletionCard from "../../components/MealCompletionCard";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -566,6 +567,10 @@ export default function NutritionDashboardScreen({ navigation }) {
             </View>
           )}
         </View>
+        
+        <MealCompletionCard plan={plan} />
+
+
 
         {/* ── Meal Cards ── */}
         {MEAL_ORDER.map((mealType) => (

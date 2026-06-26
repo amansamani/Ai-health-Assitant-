@@ -60,23 +60,36 @@ USER PROFILE:
 - Medical conditions: ${diseasesStr}
 - Allergies: ${allergiesStr}
 
-DAILY TARGETS:
-- Total calories: ${targetCalories} kcal
+DAILY TARGETS (HARD LIMITS — must match exactly):
+- Total calories: ${targetCalories} kcal  ← sum of all 4 meals MUST equal this ±30 kcal
 - Protein: ${macros.proteinG}g, Carbs: ${macros.carbsG}g, Fats: ${macros.fatsG}g
-- Breakdown: Breakfast ${CALORIE_SPLIT.breakfast} kcal | Lunch ${CALORIE_SPLIT.lunch} kcal | Dinner ${CALORIE_SPLIT.dinner} kcal | Snack ${CALORIE_SPLIT.snack} kcal
+- Meal budgets: Breakfast ${CALORIE_SPLIT.breakfast} kcal | Lunch ${CALORIE_SPLIT.lunch} kcal | Dinner ${CALORIE_SPLIT.dinner} kcal | Snack ${CALORIE_SPLIT.snack} kcal
+  Each meal's "calories" field MUST match its budget ±30 kcal. DO NOT exceed.
 
 STRICT RULES:
-1. Use ONLY Indian foods (dal, roti, rice, sabzi, paneer, curd, eggs, chicken, fruits etc.)
+1. Use ONLY real, commonly eaten Indian foods (dal, roti, rice, sabzi, paneer, curd, eggs, chicken, fruits, etc.)
 2. NEVER include foods the user is allergic to: ${allergiesStr}
 3. Adapt meals for medical conditions: ${diseasesStr}
-   - diabetes → low GI, avoid sugar/maida/white rice, prefer brown rice/oats/millets
-   - hypertension → low sodium, avoid pickles/papad/processed foods
-   - thyroid → avoid raw cruciferous veg (broccoli/cabbage/cauliflower) in large amounts
-   - pcod/pcos → low carb, high protein, anti-inflammatory foods
-   - cholesterol → low saturated fat, high fiber, avoid fried foods
+   - diabetes → low GI, no sugar/maida/white rice, use brown rice/oats/millets
+   - hypertension → low sodium, no pickles/papad/processed foods
+   - thyroid → avoid large amounts of raw cruciferous veg
+   - pcod/pcos → low carb, high protein, anti-inflammatory
+   - cholesterol → low saturated fat, high fiber, no fried foods
 4. ${dietType === "veg" || dietType === "vegan" ? "NO meat, chicken, fish, or eggs." : "Can include eggs, chicken, fish."}
-5. Each meal must be realistic, simple to prepare, and portion sizes must be specific (e.g. 2 rotis, 1 cup dal)
-6. Hit the calorie targets as closely as possible (±50 kcal per meal)
+5. Portions MUST be realistic and specific — use standard Indian serving sizes:
+   - Roti: 1 roti = ~70 kcal (30g). Never say "3 rotis" for a 200 kcal meal.
+   - Cooked rice: 1 cup (150g) ≈ 200 kcal
+   - Dal (cooked): 1 cup ≈ 120 kcal
+   - Chicken breast (cooked): 100g ≈ 165 kcal
+   - Paneer: 50g ≈ 135 kcal
+   - Curd/yogurt: 100g ≈ 60 kcal
+   Use these references to set item amounts. Do NOT invent arbitrary amounts.
+6. The "calories" number for each meal must reflect the ACTUAL calories of the listed items at the given amounts. Verify your math before responding.
+7. Meals must be practical — things an Indian person would eat daily, not exotic or restaurant food.
+
+VERIFICATION STEP (do internally before output):
+- Add up all item calories in each meal. Make sure meal total ≈ its budget.
+- Add up all 4 meal calories. Make sure total ≈ ${targetCalories} kcal.
 
 Respond ONLY with a valid JSON object — no markdown, no preamble, no explanation outside JSON:
 {
@@ -124,6 +137,34 @@ async function generateAiMealPlan(profile, targetCalories, macros) {
 
   // Validate shape with Zod — throws ZodError with field-level detail if wrong
   const validated = AiMealPlanSchema.parse(parsed);
+
+  // FIX: Even after prompting, LLMs sometimes overshoot. Clamp each meal's
+  // calories to its budget so the daily total never exceeds targetCalories.
+  const CALORIE_SPLIT_RATIOS = {
+    breakfast: 0.28,
+    lunch:     0.37,
+    dinner:    0.28,
+    snack:     0.07,
+  };
+  for (const mealType of ["breakfast", "lunch", "dinner", "snack"]) {
+    const budget = targetCalories * CALORIE_SPLIT_RATIOS[mealType];
+    for (const meal of validated[mealType] || []) {
+      if (meal.calories > budget * 1.12) {
+        const ratio   = budget / meal.calories;
+        meal.calories = Math.round(budget);
+        meal.protein  = Math.round(meal.protein * ratio);
+        meal.carbs    = Math.round(meal.carbs   * ratio);
+        meal.fats     = Math.round(meal.fats    * ratio);
+        meal.fiber    = Math.round(meal.fiber   * ratio);
+        // Scale item amounts so portions remain consistent with calories
+        meal.items = meal.items.map((item) => ({
+          ...item,
+          amount: parseFloat((item.amount * ratio).toFixed(1)),
+        }));
+      }
+    }
+  }
+
   return validated;
 }
 

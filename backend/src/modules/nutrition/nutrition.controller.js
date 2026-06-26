@@ -144,7 +144,9 @@ const getSwapOptions = async (req, res, next) => {
 // POST /nutrition/swap
 // Body: { mealType: "lunch", newMealId: "ln_pro_007" }
 // ─────────────────────────────────────────────────────────────────────────────
-const CALORIE_SPLIT = { breakfast: 0.25, lunch: 0.35, dinner: 0.30, snack: 0.10 };
+// FIX: Must match CALORIE_SPLIT in nutrition.service.js exactly.
+// Old values (0.25/0.35/0.30/0.10) caused swapped meals to have wrong calorie budgets.
+const CALORIE_SPLIT = { breakfast: 0.28, lunch: 0.37, dinner: 0.28, snack: 0.07 };
 
 const swapFood = async (req, res, next) => {
   try {
@@ -195,6 +197,20 @@ const swapFood = async (req, res, next) => {
       fats:     lerp(newCombo.macroRange.fats),
       fiber:    lerp(newCombo.macroRange.fiber),
     };
+
+    // FIX: Hard-clamp calories to budget (same logic as generateTemplateMeals)
+    if (scaled.calories > calBudget * 1.08) {
+      const ratio     = calBudget / scaled.calories;
+      scaled.calories = Math.round(calBudget);
+      scaled.protein  = Math.round(scaled.protein * ratio);
+      scaled.carbs    = Math.round(scaled.carbs   * ratio);
+      scaled.fats     = Math.round(scaled.fats    * ratio);
+      scaled.fiber    = Math.round(scaled.fiber   * ratio);
+      scaled.items    = scaled.items.map((item) => ({
+        ...item,
+        amount: Math.round(item.amount * ratio),
+      }));
+    }
 
     // Replace only this meal slot
     plan.meals[mealType] = [scaled];

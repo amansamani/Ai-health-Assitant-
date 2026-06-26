@@ -133,11 +133,22 @@ function scoreMeal(meal, goal, targetMealCals) {
   const s = meal.mealScore;
   const [minCal, maxCal] = meal.macroRange.calories;
 
-  const calorieFit = targetMealCals >= minCal && targetMealCals <= maxCal
-    ? 1.5
-    : targetMealCals > maxCal
-    ? maxCal / targetMealCals
-    : minCal / targetMealCals;
+  // FIX: Reward templates that can actually hit the target calorie budget.
+  // Old code gave 1.5 bonus if target was in-range, but penalised by ratio
+  // which was not symmetric — templates too large got only a tiny penalty.
+  // New: full 1.5 if in-range; penalise by how far outside the range the
+  // target falls (clamped to 0.2 floor so truly mismatched meals still appear
+  // as candidates but rank last).
+  let calorieFit;
+  if (targetMealCals >= minCal && targetMealCals <= maxCal) {
+    calorieFit = 1.5;
+  } else if (targetMealCals < minCal) {
+    // Target is below minimum — penalise proportionally
+    calorieFit = Math.max(0.2, targetMealCals / minCal);
+  } else {
+    // Target is above maximum — penalise proportionally
+    calorieFit = Math.max(0.2, maxCal / targetMealCals);
+  }
 
   let score =
     s.realism        * 1.0 +
@@ -170,11 +181,15 @@ function pickMeal(allMeals, mealType, goal, dietType, usedMealIds, targetMealCal
 function scaleMealToCalories(templateMeal, targetMealCals) {
   const [minCals, maxCals] = templateMeal.macroRange.calories;
 
+  // FIX: allow full 0.0–1.0 range so low-calorie targets don't inflate meals.
+  // Old code clamped minimum to 0.85, causing 500–700 kcal overshoot for users
+  // whose target was below the template's midpoint.
   const rawScale = maxCals === minCals
-    ? 1.0
+    ? 0.5
     : (targetMealCals - minCals) / (maxCals - minCals);
 
-  const scale = Math.max(0.85, Math.min(1.0, rawScale));
+  // Clamp strictly between 0 and 1 — no artificial floor.
+  const scale = Math.max(0.0, Math.min(1.0, rawScale));
   const lerp = (range) => Math.round(range[0] + scale * (range[1] - range[0]));
 
   return {
@@ -211,13 +226,30 @@ async function generateTemplateMeals(profile, targetCalories) {
   const meals       = {};
 
   for (const mealType of ["breakfast", "lunch", "dinner", "snack"]) {
-    const calBudget    = targetCalories * CALORIE_SPLIT[mealType];
-    const chosenCombo  = pickMeal(allMeals, mealType, goal, dietType, usedMealIds, calBudget);
+    const calBudget   = targetCalories * CALORIE_SPLIT[mealType];
+    const chosenCombo = pickMeal(allMeals, mealType, goal, dietType, usedMealIds, calBudget);
 
     if (!chosenCombo) { meals[mealType] = []; continue; }
 
     usedMealIds.add(chosenCombo.id);
-    meals[mealType] = [scaleMealToCalories(chosenCombo, calBudget)];
+    const scaled = scaleMealToCalories(chosenCombo, calBudget);
+
+    // FIX: Hard-clamp reported calories to the meal budget so daily total
+    // never significantly exceeds targetCalories. Scale macros + portions too.
+    if (scaled.calories > calBudget * 1.08) {
+      const ratio     = calBudget / scaled.calories;
+      scaled.calories = Math.round(calBudget);
+      scaled.protein  = Math.round(scaled.protein * ratio);
+      scaled.carbs    = Math.round(scaled.carbs   * ratio);
+      scaled.fats     = Math.round(scaled.fats    * ratio);
+      scaled.fiber    = Math.round(scaled.fiber   * ratio);
+      scaled.items    = scaled.items.map((item) => ({
+        ...item,
+        amount: Math.round(item.amount * ratio),
+      }));
+    }
+
+    meals[mealType] = [scaled];
   }
 
   return { meals, aiAdvice: null, warnings: [], source: "template" };

@@ -12,6 +12,7 @@ import ProgressScreen          from "../screens/nutrition/ProgressScreen";
 import MealLoggerScreen        from "../screens/nutrition/MealLoggerScreen";
 import EditHealthProfileScreen from "../screens/EditHealthProfileScreen";
 import AiChatScreen            from "../screens/nutrition/AiChatScreen";
+import WaterTrackingScreen from "../screens/nutrition/WaterTrackingScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -23,6 +24,7 @@ export default function MainNavigator() {
       <Stack.Screen name="Workout"          component={WorkoutScreen} />
       <Stack.Screen name="Tracking"         component={TrackingScreen} />
       <Stack.Screen name="WeeklySummary"    component={WeeklySummaryScreen} />
+      <Stack.Screen name="WaterTracking" component={WaterTrackingScreen} />
       <Stack.Screen name="TrackDetail"      component={TrackDetailScreen} />
       <Stack.Screen
         name="WorkoutDetail"
