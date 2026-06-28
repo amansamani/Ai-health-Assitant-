@@ -68,7 +68,7 @@ async function runWeeklyAdjustments() {
 
       await profile.save();
 
-      const newMeals = await generateDietPlan(profile);
+      const { meals: newMeals } = await generateDietPlan(profile);
 
       await DietPlan.updateMany(
         { user: userId, isActive: true },

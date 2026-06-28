@@ -347,7 +347,7 @@ export default function HomeScreen({ navigation, route }) {
             />
             <ActionCard
               icon="💪" title="Challenges" sub="Stay consistent"
-              accent="#EC4899" onPress={() => navigation.navigate("Challenges")}
+              accent="#EC4899" onPress={() => Alert.alert("Coming Soon", "Challenges feature is coming soon! 💪")}
             />
 
           </View>
