@@ -20,7 +20,7 @@ const isValidToken = (token) =>
   token && token !== "undefined" && token !== "null";
 
 const API = axios.create({
-  baseURL: "http://192.168.1.18:5000/api",
+  baseURL: "http://192.168.1.12:5000/api",
   timeout: 15000,
 });
 
