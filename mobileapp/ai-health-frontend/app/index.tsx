@@ -1,11 +1,20 @@
 import { View, ActivityIndicator } from "react-native";
-import { useContext } from "react";
+import { useContext, useEffect } from "react";
+import * as SplashScreen from "expo-splash-screen";
 import { AuthProvider, AuthContext } from "../src/context/AuthContext";
 import AuthNavigator from "../src/navigation/AuthNavigator";
 import AppNavigator from "../src/navigation/AppNavigator";
 
+SplashScreen.preventAutoHideAsync();
+
 function RootNavigator() {
   const { userToken, loading } = useContext(AuthContext);
+
+  useEffect(() => {
+    if (!loading) {
+      SplashScreen.hideAsync();
+    }
+  }, [loading]);
 
   if (loading) {
     return (
