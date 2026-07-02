@@ -13,4 +13,9 @@ config.resolver = {
   sourceExts: [...config.resolver.sourceExts, "svg"],
 };
 
+config.resolver.blockList = [
+  /android\/.*\/build\/.*/,
+  /ios\/.*\/build\/.*/,
+];
+
 module.exports = config;

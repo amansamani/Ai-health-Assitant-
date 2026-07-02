@@ -1,4 +1,5 @@
 {
     "git.ignoreLimitWarning": true,
-    "chat.disableAIFeatures": false
+    "chat.disableAIFeatures": false,
+    "java.configuration.updateBuildConfiguration": "interactive"
 }
