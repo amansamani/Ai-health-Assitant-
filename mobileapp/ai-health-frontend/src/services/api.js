@@ -1,5 +1,6 @@
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 let logoutHandler = null;
 let cachedToken   = null;
@@ -19,8 +20,15 @@ export const clearTokenCache = () => {
 const isValidToken = (token) =>
   token && token !== "undefined" && token !== "null";
 
+if (!API_URL && __DEV__) {
+  console.warn(
+    "⚠️ EXPO_PUBLIC_API_URL is not set. Copy .env.example to .env and set it, " +
+    "then restart Expo (env vars are baked in at start, not hot-reloaded)."
+  );
+}
+
 const API = axios.create({
-  baseURL: "http://192.168.1.11:5000/api",
+  baseURL: API_URL || "http://localhost:5000/api",
   timeout: 15000,
 });
 
