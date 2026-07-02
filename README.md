@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🥗 AI Health Assistant
+# 🥗FITLIP - AI Health Assistant
 
 **Your AI-powered nutrition & fitness coach — built for Indian diets, personalized in real time.**
 
