@@ -1,27 +1,3 @@
-// ── PASTE THESE ADDITIONS INTO nutrition.routes.js ───────────────────────────
-//
-// 1. Require the new controllers at the top of the file (alongside existing ones)
-// 2. Add the route lines below into the router
-
-// ── ADD to top of nutrition.routes.js ─────────────────────────────────────────
-//
-//   const { getWaterLog, addWater, undoLastWater, setWaterGoal } = require("./waterLog.controller");
-//   const { logDailyDiet, getDailyDietLog } = require("./mealCompletion.controller");
-//
-// ── REPLACE existing /log routes and ADD water routes ─────────────────────────
-//
-//   // Diet Progress (meal completion — now wired to plan)
-//   router.post("/log",      auth, logDailyDiet);      // replaces old stub
-//   router.get("/log",       auth, getDailyDietLog);   // replaces old stub
-//
-//   // Water tracking
-//   router.get("/water",          auth, getWaterLog);
-//   router.post("/water",         auth, addWater);
-//   router.delete("/water/last",  auth, undoLastWater);
-//   router.put("/water/goal",     auth, setWaterGoal);
-//
-// ── Full updated nutrition.routes.js for reference ───────────────────────────
-
 const express    = require("express");
 const router     = express.Router();
 const auth       = require("../../middleware/authMiddleware");
@@ -42,10 +18,7 @@ router.post("/log", auth, logDailyDiet);
 router.get("/log",  auth, getDailyDietLog);
 
 // ── Swap ──────────────────────────────────────────────────────────────────────
-router.post("/swap", auth, (req, res, next) => {
-  console.log("✅ /swap route hit", req.body);
-  next();
-}, controller.swapFood);
+router.post("/swap", auth, controller.swapFood);
 router.get("/swap-options", auth, controller.getSwapOptions);
 
 // ── Meal Logging ──────────────────────────────────────────────────────────────

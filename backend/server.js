@@ -81,7 +81,7 @@ app.use("/api/workouts", workoutRoutes);
 app.use("/api/track", trackingRoutes);
 app.use("/api/health", require("./src/modules/health/health.routes"));
 app.use("/api/nutrition", require("./src/modules/nutrition/nutrition.routes"));
-
+app.use("/api/admin", require("./src/routes/admin"));   // ← add this line
 /*
 ────────────────────────────────────────
  ROOT ROUTE

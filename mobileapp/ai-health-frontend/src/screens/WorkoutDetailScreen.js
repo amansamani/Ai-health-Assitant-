@@ -8,7 +8,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { EXERCISE_IMAGES } from "../constants/exerciseImages";
-
+import API from "../services/api";
 const { width } = Dimensions.get("window");
 
 const shadow = (elevation = 4, color = "#0F172A") =>
@@ -173,6 +173,18 @@ export default function WorkoutDetailScreen({ route, navigation }) {
   const total   = exercises.length;
   const pct     = total > 0 ? completedCount / total : 0;
   const allDone = completedCount === total && total > 0;
+
+  const hasLoggedCompletion = useRef(false);
+
+    useEffect(() => {
+        if (allDone && !hasLoggedCompletion.current && workout?._id) {
+        hasLoggedCompletion.current = true;
+        API.post("/workouts/complete", { workoutPlanId: workout._id }).catch((err) => {
+          console.warn("Failed to sync workout completion:", err?.message);
+          hasLoggedCompletion.current = false;
+        });
+      }
+    }, [allDone, workout]);
 
   const renderItem = useCallback(({ item, index }) => (
     <ExerciseCard

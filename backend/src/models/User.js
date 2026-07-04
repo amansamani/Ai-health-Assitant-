@@ -15,10 +15,10 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: false, // 👈 changed from true (Google users have no password)
+      required: false, // Google users have no password
     },
-    googleId:  { type: String },         // 👈 new
-    picture:   { type: String },         // 👈 new
+    googleId:  { type: String },
+    picture:   { type: String },
     otpCode:        { type: String },
     otpExpires:     { type: Date },
     otpVerified:    { type: Boolean, default: false },
@@ -31,6 +31,11 @@ const userSchema = new mongoose.Schema(
       default: "fit",
     },
     pushToken: { type: String }, // Expo push token, set via /user/push-token
+    role: {
+      type: String,
+      enum: ["user", "admin"],
+      default: "user",
+    },
   },
   { timestamps: true }
 );

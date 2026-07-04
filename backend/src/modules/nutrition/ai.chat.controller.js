@@ -3,17 +3,27 @@
 const HealthProfile = require("../health/health.model");
 const DietPlan      = require("./dietPlan.model");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const redis = require("../../config/redis");
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-// ─── In-memory session store (per user, resets on server restart) ─────────────
-// Shape: { [userId]: [{ role: "user"|"model", parts: [{ text }] }] }
-const sessions = {};
+const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7; // abandoned chats clean themselves up after 7 days
+const MAX_HISTORY = 20;
 
-const MAX_HISTORY = 20; // keep last 20 turns to stay within context limits
+const sessionKey = (userId) => `chat:session:${userId}`;
 
-// ─── Build system context from user profile + plan ───────────────────────────
+async function getHistory(userId) {
+  const raw = await redis.get(sessionKey(userId));
+  return raw ? JSON.parse(raw) : [];
+}
+
+async function saveHistory(userId, history) {
+  const trimmed = history.length > MAX_HISTORY * 2
+    ? history.slice(-MAX_HISTORY * 2)
+    : history;
+  await redis.set(sessionKey(userId), JSON.stringify(trimmed), "EX", SESSION_TTL_SECONDS);
+}
 
 async function buildSystemContext(userId) {
   const [profile, plan] = await Promise.all([
@@ -52,8 +62,6 @@ RULES:
 7. Never diagnose medical conditions`;
 }
 
-// ─── Controller ───────────────────────────────────────────────────────────────
-
 const aiChat = async (req, res, next) => {
   try {
     const userId  = req.user.id;
@@ -63,18 +71,11 @@ const aiChat = async (req, res, next) => {
       return res.status(400).json({ message: "message is required" });
     }
 
-    // Build or retrieve session history
-    if (!sessions[userId]) sessions[userId] = [];
-
-    const history = sessions[userId];
-
-    // Build system context (fresh each call so profile changes reflect immediately)
+    const history = await getHistory(userId);
     const systemContext = await buildSystemContext(userId);
 
-    // Start Gemini chat with history
     const chat = model.startChat({
       history: [
-        // Inject system context as first turn
         {
           role:  "user",
           parts: [{ text: `[SYSTEM INSTRUCTIONS — follow these throughout the conversation]\n${systemContext}` }],
@@ -83,7 +84,6 @@ const aiChat = async (req, res, next) => {
           role:  "model",
           parts: [{ text: "Understood. I'm ready to help with personalized nutrition advice based on this user's profile." }],
         },
-        // Then inject conversation history
         ...history,
       ],
       generationConfig: { maxOutputTokens: 512, temperature: 0.7 },
@@ -92,14 +92,10 @@ const aiChat = async (req, res, next) => {
     const result = await chat.sendMessage(message.trim());
     const reply  = result.response.text().trim();
 
-    // Save this turn to history
     history.push({ role: "user",  parts: [{ text: message.trim() }] });
     history.push({ role: "model", parts: [{ text: reply }] });
 
-    // Trim history to avoid context explosion
-    if (history.length > MAX_HISTORY * 2) {
-      sessions[userId] = history.slice(-MAX_HISTORY * 2);
-    }
+    await saveHistory(userId, history);
 
     res.json({ reply });
   } catch (err) {
@@ -108,10 +104,8 @@ const aiChat = async (req, res, next) => {
   }
 };
 
-// ─── Clear session (optional — call on logout) ────────────────────────────────
-
-const clearChatSession = (req, res) => {
-  delete sessions[req.user.id];
+const clearChatSession = async (req, res) => {
+  await redis.del(sessionKey(req.user.id));
   res.json({ cleared: true });
 };
 
