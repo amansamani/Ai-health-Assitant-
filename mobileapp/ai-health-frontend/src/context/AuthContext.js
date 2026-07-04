@@ -26,9 +26,8 @@ export function AuthProvider({ children }) {
       const res = await API.get("/user/profile");
       const data = res.data ?? {};
       setUserGoal(data.goal ?? "fit");
-      setUser(data); // ← save entire profile object
+      setUser(data);
     } catch (err) {
-      // not critical
     }
   }, []);
 
@@ -36,6 +35,7 @@ export function AuthProvider({ children }) {
     await AsyncStorage.setItem("token", token);
     setTokenCache(token);
     setUserToken(token);
+    await fetchUserGoal(); 
     console.log("✅ login() — token cached and state updated");
   };
 

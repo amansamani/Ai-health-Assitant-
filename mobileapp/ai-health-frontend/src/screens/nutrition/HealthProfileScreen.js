@@ -6,6 +6,7 @@ import {
 import { AuthContext } from "../../context/AuthContext";
 import { LinearGradient } from "expo-linear-gradient";
 import API from "../../services/api";
+import { WORKOUT_TO_DIET_GOAL } from "../../constants/goalMap";
 
 const { width } = Dimensions.get("window");
 
@@ -120,7 +121,7 @@ const DIET_OPTIONS = [
 
 export default function HealthProfileScreen({ navigation, route }) {
   const { login } = useContext(AuthContext);
-  const { name, email, password, token} = route.params ?? {};
+  const { name, email, password, token, workoutGoal} = route.params ?? {};
 
   useEffect(() => {
     if (!name || !email || !password) {
@@ -132,6 +133,7 @@ export default function HealthProfileScreen({ navigation, route }) {
   const [form, setForm] = useState({
     age: "", gender: "male", height: "", weight: "",
     activityLevel: "moderate", goal: "lose", dietType: "non-veg",
+    goal: WORKOUT_TO_DIET_GOAL[workoutGoal] ?? "lose",
     diseases: "", allergies: "",
   });
   const [submitting, setSubmitting] = useState(false);

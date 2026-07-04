@@ -20,6 +20,7 @@ const userSchema = new mongoose.Schema(
     googleId:  { type: String },
     picture:   { type: String },
     otpCode:        { type: String },
+    otpAttempts: { type: Number, default: 0 },
     otpExpires:     { type: Date },
     otpVerified:    { type: Boolean, default: false },
     age: Number,

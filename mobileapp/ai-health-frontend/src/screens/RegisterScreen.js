@@ -18,6 +18,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import GoogleSignInButton from '../components/GoogleSignInButton';
 import { AuthContext } from "../context/AuthContext";
 import API from "../services/api";
+import { WORKOUT_TO_DIET_GOAL } from "../constants/goalMap";
 
 const { width } = Dimensions.get("window");
 
@@ -160,15 +161,14 @@ export default function RegisterScreen({ navigation }) {
       setLoading(true);
       setError("");
 
-      const { data } = await API.post("/auth/register", { name, email, password });
+      const { data } = await API.post("/auth/register", { name, email, password, goal });
 
       const goalMap = { bulk: "gain", lean: "lose", fit: "maintain" };
 
       navigation.navigate("HealthProfile", {
-        name,
-        email,
-        password,
+        name, email, password,
         token: data.token,
+        workoutGoal: goal,
 });
     } catch (err) {
       setError(err.response?.data?.message || err.message);

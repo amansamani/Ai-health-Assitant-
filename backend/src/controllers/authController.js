@@ -9,7 +9,7 @@ const googleClient = new OAuth2Client(process.env.GOOGLE_WEB_CLIENT_ID);
 // ─────────────────────────────────────────
 const registerUser = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, goal } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({ message: "All fields are required" });
@@ -31,10 +31,12 @@ const registerUser = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    const validGoals = ["bulk", "lean", "fit"];
     const user = await User.create({
       name,
       email,
       password: hashedPassword,
+      goal: validGoals.includes(goal) ? goal : "fit",
     });
 
     const token = jwt.sign(
@@ -117,9 +119,10 @@ const forgotPassword = async (req, res) => {
     }
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    user.otpCode = otp;
+    user.otpCode = await bcrypt.hash(otp, 10); // never store the raw code
     user.otpExpires = Date.now() + 10 * 60 * 1000;
     user.otpVerified = false;
+    user.otpAttempts = 0; // fresh OTP = fresh attempt budget
     await user.save();
 
     // ✅ Respond IMMEDIATELY, don't await email
@@ -139,6 +142,8 @@ const forgotPassword = async (req, res) => {
 // ─────────────────────────────────────────
 // VERIFY OTP
 // ─────────────────────────────────────────
+const MAX_OTP_ATTEMPTS = 5;
+
 const verifyOtp = async (req, res) => {
   const { email, otp } = req.body;
 
@@ -149,15 +154,31 @@ const verifyOtp = async (req, res) => {
       return res.status(404).json({ message: "User not found." });
     }
 
-    if (user.otpCode !== otp) {
-      return res.status(400).json({ message: "Invalid OTP." });
-    }
-
-    if (user.otpExpires < Date.now()) {
+    if (!user.otpCode || user.otpExpires < Date.now()) {
       return res.status(400).json({ message: "OTP expired." });
     }
 
+    if (user.otpAttempts >= MAX_OTP_ATTEMPTS) {
+      return res.status(429).json({
+        message: "Too many incorrect attempts. Please request a new OTP.",
+      });
+    }
+
+    const isMatch = await bcrypt.compare(otp, user.otpCode);
+
+    if (!isMatch) {
+      user.otpAttempts += 1;
+      await user.save();
+      const remaining = MAX_OTP_ATTEMPTS - user.otpAttempts;
+      return res.status(400).json({
+        message: remaining > 0
+          ? `Invalid OTP. ${remaining} attempt${remaining === 1 ? "" : "s"} remaining.`
+          : "Invalid OTP. Please request a new OTP.",
+      });
+    }
+
     user.otpVerified = true;
+    user.otpAttempts = 0;
     await user.save();
 
     res.status(200).json({
@@ -199,6 +220,7 @@ const resetPassword = async (req, res) => {
     user.otpCode = undefined;
     user.otpExpires = undefined;
     user.otpVerified = false;
+    user.otpAttempts = 0;
 
     await user.save();
 
@@ -248,8 +270,6 @@ const googleLogin = async (req, res) => {
     res.status(401).json({ error: "Invalid Google token" });
   }
 };
-
-
 module.exports = {
   registerUser,
   loginUser,
