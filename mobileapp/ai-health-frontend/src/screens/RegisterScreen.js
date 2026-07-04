@@ -17,6 +17,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import GoogleSignInButton from '../components/GoogleSignInButton';
 import { AuthContext } from "../context/AuthContext";
+import API from "../services/api";
 
 const { width } = Dimensions.get("window");
 
@@ -159,25 +160,7 @@ export default function RegisterScreen({ navigation }) {
       setLoading(true);
       setError("");
 
-     const response = await fetch("https://ai-health-assitant-production.up.railway.app/api/auth/register",
-  {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      name,
-      email,
-      password,
-    }),
-  }
-);
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message);
-      }
+      const { data } = await API.post("/auth/register", { name, email, password });
 
       const goalMap = { bulk: "gain", lean: "lose", fit: "maintain" };
 
@@ -188,7 +171,7 @@ export default function RegisterScreen({ navigation }) {
         token: data.token,
 });
     } catch (err) {
-      setError(err.message);
+      setError(err.response?.data?.message || err.message);
     } finally {
       setLoading(false);
     }

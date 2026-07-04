@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { TouchableOpacity, Text, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as AuthSession from 'expo-auth-session';
+import API from '../services/api';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -36,20 +37,13 @@ export default function GoogleSignInButton({ onSuccess }) {
   // Fetch user info directly from Google using access token
   const sendToBackend = async (idToken) => {
   try {
-    const res = await fetch('https://ai-health-assitant-production.up.railway.app/auth/google', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ idToken }),
-    });
-
-    const data = await res.json();
-
+    const { data } = await API.post('/auth/google', { idToken });
     if (data.token) {
       await AsyncStorage.setItem('token', data.token);
       onSuccess(data);
     }
   } catch (err) {
-    console.error('Error:', err);
+    console.error('Google sign-in error:', err.response?.data?.message || err.message);
   }
 };
 
