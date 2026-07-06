@@ -1,11 +1,12 @@
 const connectDB = require('../config/db');
+const logger = require('../config/logger');
 
 connectDB()
   .then(() => {
-    require('./weeklyAdjustment.worker'); // start worker after DB ready
-    console.log('👷 Worker service started');
+    require('./weeklyAdjustment.worker');
+    logger.info('Worker service started');
   })
   .catch((err) => {
-    console.error('❌ Worker failed to connect to DB:', err.message);
+    logger.error({ err }, 'Worker failed to connect to DB');
     process.exit(1);
   });

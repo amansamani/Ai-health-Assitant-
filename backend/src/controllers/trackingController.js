@@ -1,3 +1,4 @@
+const logger = require("../config/logger");
 const DailyLog = require("../models/DailyLog");
 
 const getTodayRange = () => {
@@ -17,7 +18,7 @@ exports.getTodayTracking = async (req, res) => {
     });
     res.status(200).json(todayLog);
   } catch (err) {
-    console.error("Get today error:", err);
+    logger.error({ err }, "Get today error");
     res.status(500).json({ message: "Failed to fetch today tracking" });
   }
 };
@@ -54,7 +55,7 @@ exports.saveTodayTracking = async (req, res) => {
 
     res.status(200).json(track);
   } catch (err) {
-    console.error("Save today error:", err);
+    logger.error({ err }, "Save today error");
     res.status(500).json({ message: "Failed to save today tracking" });
   }
 };
@@ -73,7 +74,7 @@ exports.getRecentLogs = async (req, res) => {
 
     res.status(200).json(logs);
   } catch (err) {
-    console.error("Recent logs error:", err);
+    logger.error({ err }, "Recent logs error");
     res.status(500).json({ message: "Failed to fetch recent logs" });
   }
 };
@@ -110,7 +111,7 @@ exports.getWeeklySummary = async (req, res) => {
       daysTracked: logs.length,
     });
   } catch (err) {
-    console.error("Weekly summary error:", err);
+    logger.error({ err }, "Weekly summary error");
     res.status(500).json({ message: "Weekly summary failed" });
   }
 };

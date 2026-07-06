@@ -4,22 +4,15 @@ const { generateDietPlan } = require("../modules/nutrition/nutrition.service");
 const DailyLog = require("../models/DailyLog");
 const MealLog = require("../modules/nutrition/mealLog.model");
 const WorkoutLog = require("../models/WorkoutLog");
+const logger = require("../config/logger");
 
-// A user only gets their calories adjusted if they were actually
-// using the app that week. Otherwise someone who vanishes for two
-// weeks and comes back would get hit with two weeks of blind cuts
-// they never earned.
-const MIN_ACTIVE_DAYS = 5;   // out of the trailing week
+const MIN_ACTIVE_DAYS = 5;
 const LOOKBACK_DAYS = 7;
 
 function toDateKey(d) {
-  return new Date(d).toISOString().split("T")[0]; // "YYYY-MM-DD"
+  return new Date(d).toISOString().split("T")[0];
 }
 
-// "Active day" = user tracked steps, logged a meal, AND completed their
-// workout that day — all three, matching "properly follow everything."
-// This is intentionally strict. If real usage shows almost no one clears
-// this bar, relax it to "2 of 3" rather than dropping the check entirely.
 async function countActiveDays(userId) {
   const since = new Date();
   since.setDate(since.getDate() - LOOKBACK_DAYS);
@@ -41,12 +34,11 @@ async function countActiveDays(userId) {
   return activeDays;
 }
 
-// 🔹 Macro recalculation logic
 function recalculateMacros(profile) {
   const { targetCalories, weight, goal } = profile;
 
   if (!weight || weight <= 0) {
-    console.warn(`⚠️ Missing weight for user ${profile.user}`);
+    logger.warn({ userId: profile.user }, "Missing weight for user, skipping macro recalculation");
     return;
   }
 
@@ -79,7 +71,7 @@ function recalculateMacros(profile) {
 }
 
 async function runWeeklyAdjustments() {
-  console.log("🚀 Running weekly adjustment...");
+  logger.info("Running weekly adjustment...");
 
   const profiles = await HealthProfile.find();
 
@@ -87,23 +79,19 @@ async function runWeeklyAdjustments() {
     try {
       const userId = profile.user;
 
-      // Skip if no weight
       if (!profile.weight) continue;
 
-      // Skip if user hasn't actually been using the app enough this week.
-      // Prevents blind calorie cuts/adds for someone who's been inactive.
       const activeDays = await countActiveDays(userId);
       if (activeDays < MIN_ACTIVE_DAYS) {
-        console.log(
-          `⏸️  Skipped user ${userId} — only ${activeDays}/${LOOKBACK_DAYS} active days ` +
-          `(needs ${MIN_ACTIVE_DAYS}). Calories unchanged, plan unchanged.`
+        logger.info(
+          { userId, activeDays, lookbackDays: LOOKBACK_DAYS, minRequired: MIN_ACTIVE_DAYS },
+          "Skipped user — not enough active days, calories/plan unchanged"
         );
         continue;
       }
 
       let adjustment = 0;
 
-      // Minimal safe logic (can improve later)
       if (profile.goal === "lose") adjustment = -100;
       if (profile.goal === "gain") adjustment = +150;
 
@@ -143,14 +131,14 @@ async function runWeeklyAdjustments() {
         isActive: true
       });
 
-      console.log(`✅ Adjusted plan for user ${userId}`);
+      logger.info({ userId }, "Adjusted plan for user");
 
     } catch (err) {
-      console.error(`❌ Failed for user ${profile.user}:`, err.message);
+      logger.error({ err, userId: profile.user }, "Weekly adjustment failed for user");
     }
   }
 
-  console.log("🎉 Weekly adjustment completed.");
+  logger.info("Weekly adjustment completed.");
 }
 
 module.exports = runWeeklyAdjustments;

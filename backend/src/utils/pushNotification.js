@@ -1,23 +1,15 @@
 "use strict";
 
 const { Expo } = require("expo-server-sdk");
+const logger = require("../config/logger");
 
 const expo = new Expo();
 
-/**
- * Send a push notification to a single user.
- * Silent-fails (logs only) — push delivery must never break the weekly job.
- *
- * @param {string} pushToken  Expo push token, e.g. "ExponentPushToken[xxxx]"
- * @param {string} title
- * @param {string} body
- * @param {object} data        extra payload for client-side deep-linking
- */
 async function sendPushNotification(pushToken, title, body, data = {}) {
   if (!pushToken) return { sent: false, reason: "No push token on file" };
 
   if (!Expo.isExpoPushToken(pushToken)) {
-    console.warn(`[push] Invalid Expo push token: ${pushToken}`);
+    logger.warn("Invalid Expo push token — skipping notification");
     return { sent: false, reason: "Invalid Expo push token" };
   }
 
@@ -33,13 +25,13 @@ async function sendPushNotification(pushToken, title, body, data = {}) {
     const [ticket] = await expo.sendPushNotificationsAsync([message]);
 
     if (ticket.status === "error") {
-      console.error(`[push] Expo ticket error: ${ticket.message}`);
+      logger.error({ ticketMessage: ticket.message }, "Expo push ticket error");
       return { sent: false, reason: ticket.message };
     }
 
     return { sent: true, ticket };
   } catch (err) {
-    console.error("[push] sendPushNotificationsAsync failed:", err.message);
+    logger.error({ err }, "sendPushNotificationsAsync failed");
     return { sent: false, reason: err.message };
   }
 }

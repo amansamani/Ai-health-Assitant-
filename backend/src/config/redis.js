@@ -1,18 +1,19 @@
 const { Redis } = require('ioredis');
+const logger = require('./logger');
 
 const redisConnection = new Redis(process.env.REDIS_URL, {
-  maxRetriesPerRequest: null,   // required for BullMQ
+  maxRetriesPerRequest: null,
   enableReadyCheck: false,
   retryStrategy: (times) => {
     if (times > 5) {
-      console.error("❌ Redis: too many retries, giving up");
-      return null; // stop retrying
+      logger.error("Redis: too many retries, giving up");
+      return null;
     }
     return Math.min(times * 500, 3000);
   },
 });
 
-redisConnection.on('connect', () => console.log('✅ Redis connected'));
-redisConnection.on('error', (err) => console.error('❌ Redis error:', err.message));
+redisConnection.on('connect', () => logger.info('Redis connected'));
+redisConnection.on('error', (err) => logger.error({ err }, 'Redis error'));
 
 module.exports = redisConnection;

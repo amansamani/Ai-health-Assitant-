@@ -1,3 +1,4 @@
+const logger = require("../config/logger");
 const WorkoutPlan = require("../models/WorkoutPlan");
 const WorkoutLog = require("../models/WorkoutLog");
 
@@ -20,13 +21,11 @@ exports.getWorkouts = async (req, res) => {
 
     res.status(200).json(workouts);
   } catch (err) {
-    console.error("Get workouts error:", err);
+    logger.error({ err }, "Get workouts error");
     res.status(500).json({ message: "Failed to fetch workouts" });
   }
 };
 
-// POST /api/workouts/complete
-// body: { workoutPlanId, date? } — date optional, defaults to today
 exports.markWorkoutComplete = async (req, res) => {
   try {
     const { workoutPlanId, date } = req.body;
@@ -41,7 +40,7 @@ exports.markWorkoutComplete = async (req, res) => {
     }
 
     const logDate = date ? new Date(date) : new Date();
-    logDate.setHours(0, 0, 0, 0); // normalize to start of day — one record per calendar day
+    logDate.setHours(0, 0, 0, 0);
 
     const log = await WorkoutLog.findOneAndUpdate(
       { user: req.user.id, date: logDate },
@@ -51,13 +50,11 @@ exports.markWorkoutComplete = async (req, res) => {
 
     res.status(200).json({ message: "Workout marked complete", log });
   } catch (err) {
-    console.error("Mark workout complete error:", err);
+    logger.error({ err }, "Mark workout complete error");
     res.status(500).json({ message: "Failed to mark workout complete" });
   }
 };
 
-// GET /api/workouts/completed?days=7 — recent completion history, for a
-// frontend "did I train today" checkmark or streak display
 exports.getRecentCompletions = async (req, res) => {
   try {
     const days = parseInt(req.query.days, 10) || 7;
@@ -71,7 +68,7 @@ exports.getRecentCompletions = async (req, res) => {
 
     res.status(200).json(logs);
   } catch (err) {
-    console.error("Get recent completions error:", err);
+    logger.error({ err }, "Get recent completions error");
     res.status(500).json({ message: "Failed to fetch completion history" });
   }
 };

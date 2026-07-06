@@ -6,7 +6,7 @@ import { useEffect, useState, useContext, useRef } from "react";
 import API from "../services/api";
 import { AuthContext } from "../context/AuthContext";
 import { SafeAreaView } from "react-native-safe-area-context";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getToken } from "../utils/secureToken";
 import { LinearGradient } from "expo-linear-gradient";
 
 const { width } = Dimensions.get("window");
@@ -89,11 +89,11 @@ export default function ProfileScreen({ navigation }) {
 
   const fetchProfile = async () => {
     try {
-      let storedToken = await AsyncStorage.getItem("token");
+      let storedToken = await getToken();
       let retries = 0;
       while (!storedToken && retries < 5) {
         await new Promise((r) => setTimeout(r, 300));
-        storedToken = await AsyncStorage.getItem("token");
+        storedToken = await getToken();
         retries++;
       }
       if (!storedToken) { setLoading(false); return; }

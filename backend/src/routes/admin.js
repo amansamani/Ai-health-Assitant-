@@ -2,6 +2,7 @@ const router = require('express').Router();
 const protect = require('../middleware/authMiddleware');
 const isAdmin = require('../middleware/isAdmin');
 const weeklyAdjustmentQueue = require('../queues/weeklyAdjustment.queue');
+const logger = require('../config/logger');
 
 router.post('/trigger-weekly', protect, isAdmin, async (req, res) => {
   try {
@@ -11,7 +12,7 @@ router.post('/trigger-weekly', protect, isAdmin, async (req, res) => {
     });
     res.json({ message: 'Job queued', jobId: job.id });
   } catch (err) {
-    console.error('Trigger weekly job error:', err);
+    logger.error({ err }, 'Trigger weekly job error');
     res.status(500).json({ message: 'Failed to queue job' });
   }
 });

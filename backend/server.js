@@ -5,6 +5,7 @@ const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 
 const connectDB = require("./src/config/db");
+const logger = require("./src/config/logger");
 
 const authRoutes = require("./src/routes/authRoutes");
 const userRoutes = require("./src/routes/userRoutes");
@@ -15,41 +16,30 @@ dotenv.config();
 
 const app = express();
 
-/*
-────────────────────────────────────────
- TRUST PROXY (Required for Railway / Cloud)
-────────────────────────────────────────
-*/
 app.set("trust proxy", 1);
 
-/*
-────────────────────────────────────────
- SECURITY MIDDLEWARE
-────────────────────────────────────────
-*/
 app.use(helmet());
 
+const allowedOrigins = (process.env.CORS_ORIGIN || "http://localhost:19006,http://localhost:8081")
+  .split(",")
+  .map((o) => o.trim());
+
 app.use(cors({
-  origin: "*",
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error("Not allowed by CORS"));
+  },
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
-/*
-────────────────────────────────────────
- BODY PARSER
-────────────────────────────────────────
-*/
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
-/*
-────────────────────────────────────────
- RATE LIMITER
-────────────────────────────────────────
-*/
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs: 15 * 60 * 1000,
   max: 200,
   standardHeaders: true,
   legacyHeaders: false,
@@ -57,11 +47,6 @@ const limiter = rateLimit({
 
 app.use("/api", limiter);
 
-/*
-────────────────────────────────────────
- HEALTH CHECK (Railway uses this)
-────────────────────────────────────────
-*/
 app.get("/health", (req, res) => {
   res.status(200).json({
     status: "OK",
@@ -70,32 +55,18 @@ app.get("/health", (req, res) => {
   });
 });
 
-/*
-────────────────────────────────────────
- API ROUTES
-────────────────────────────────────────
-*/
 app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/workouts", workoutRoutes);
 app.use("/api/track", trackingRoutes);
 app.use("/api/health", require("./src/modules/health/health.routes"));
 app.use("/api/nutrition", require("./src/modules/nutrition/nutrition.routes"));
-app.use("/api/admin", require("./src/routes/admin"));   // ← add this line
-/*
-────────────────────────────────────────
- ROOT ROUTE
-────────────────────────────────────────
-*/
+app.use("/api/admin", require("./src/routes/admin"));
+
 app.get("/", (req, res) => {
   res.send("🚀 FitLip API running");
 });
 
-/*
-────────────────────────────────────────
- 404 HANDLER
-────────────────────────────────────────
-*/
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -103,13 +74,8 @@ app.use((req, res) => {
   });
 });
 
-/*
-────────────────────────────────────────
- GLOBAL ERROR HANDLER
-────────────────────────────────────────
-*/
 app.use((err, req, res, next) => {
-  console.error("❌ API Error:", err);
+  logger.error({ err }, "API Error");
 
   res.status(err.status || 500).json({
     success: false,
@@ -117,11 +83,6 @@ app.use((err, req, res, next) => {
   });
 });
 
-/*
-────────────────────────────────────────
- SERVER START
-────────────────────────────────────────
-*/
 const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
@@ -129,31 +90,25 @@ const startServer = async () => {
 
     await connectDB();
 
-// start background jobs
 const scheduleWeeklyJob = require("./src/jobs/scheduleWeekly");
-scheduleWeeklyJob().catch(err => console.error("⚠️ Weekly job scheduling failed (non-fatal):", err.message));
+scheduleWeeklyJob().catch(err => logger.error({ err }, "Weekly job scheduling failed (non-fatal)"));
 
     app.listen(PORT, "0.0.0.0", () => {
-      console.log(`🚀 Server running on port ${PORT}`);
+      logger.info(`Server running on port ${PORT}`);
     });
 
   } catch (err) {
-    console.error("❌ Failed to start server:", err);
+    logger.error({ err }, "Failed to start server");
     process.exit(1);
   }
 };
 
 startServer();
 
-/*
-────────────────────────────────────────
- HANDLE UNCAUGHT ERRORS
-────────────────────────────────────────
-*/
 process.on("uncaughtException", (err) => {
-  console.error("UNCAUGHT EXCEPTION:", err);
+  logger.error({ err }, "UNCAUGHT EXCEPTION");
 });
 
 process.on("unhandledRejection", (err) => {
-  console.error("UNHANDLED PROMISE:", err);
+  logger.error({ err }, "UNHANDLED PROMISE REJECTION");
 });

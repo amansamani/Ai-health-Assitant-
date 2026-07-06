@@ -2,7 +2,6 @@ import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
 import { useEffect } from 'react';
 import { TouchableOpacity, Text, StyleSheet } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as AuthSession from 'expo-auth-session';
 import API from '../services/api';
 
@@ -24,9 +23,7 @@ export default function GoogleSignInButton({ onSuccess }) {
 
   useEffect(() => {
     if (response?.type === 'success') {
-      // Use access_token instead of id_token
       const { id_token } = response.params;
-
       sendToBackend(id_token);
     }
     if (response?.type === 'error') {
@@ -34,13 +31,12 @@ export default function GoogleSignInButton({ onSuccess }) {
     }
   }, [response]);
 
-  // Fetch user info directly from Google using access token
   const sendToBackend = async (idToken) => {
   try {
     const { data } = await API.post('/auth/google', { idToken });
+
     if (data.token) {
-      await AsyncStorage.setItem('token', data.token);
-      onSuccess(data);
+      onSuccess(data); // caller's onSuccess calls login(token) — that's what stores it
     }
   } catch (err) {
     console.error('Google sign-in error:', err.response?.data?.message || err.message);

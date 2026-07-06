@@ -8,6 +8,7 @@ const WeeklyInsight = require("./weeklyInsight.model");
 const User          = require("../../models/User");
 const { generateAiMealPlan } = require("../../services/ai.service");
 const { sendPushNotification } = require("../../utils/pushNotification");
+const logger = require("../../config/logger");
 
 const GOAL_MAP = {
   lean:     "lose",
@@ -40,7 +41,7 @@ async function getTemplate() {
   }
 
   _templateCache = docs;
-  console.log("[FoodTemplate] Cache warmed —", _templateCache.length, "meal combos loaded.");
+    logger.info({ count: _templateCache.length }, "Food template cache warmed");
   return _templateCache;
 }
 
@@ -260,8 +261,10 @@ async function generateTemplateMeals(profile, targetCalories) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function generateAiMeals(profile, targetCalories, macros) {
-  console.log("[AI] Generating personalized meal plan for user with conditions:", profile.diseases, "allergies:", profile.allergies);
-
+    logger.info(
+        { conditionCount: profile.diseases?.length ?? 0, allergyCount: profile.allergies?.length ?? 0 },
+        "Generating personalized meal plan"
+    );
   const aiResult = await generateAiMealPlan(profile, targetCalories, macros);
 
   // Shape AI meals to match DietPlan schema (mealItemSchema)
@@ -360,7 +363,7 @@ async function generateDietPlan(profile) {
       result = await generateAiMeals(profile, targetCalories, macros);
     } catch (err) {
       // AI failed — log and fall back to templates silently
-      console.error("[AI] Meal generation failed, falling back to templates:", err.message);
+      logger.error({ err }, "AI meal generation failed, falling back to templates");
       result = await generateTemplateMeals(profile, targetCalories);
       result.warnings = ["AI meal generation failed. Showing standard plan."];
     }

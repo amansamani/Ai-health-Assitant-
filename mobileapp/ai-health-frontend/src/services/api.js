@@ -1,6 +1,5 @@
 import axios from "axios";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
+import { getToken } from "../utils/secureToken";
 
 let logoutHandler = null;
 let cachedToken   = null;
@@ -20,6 +19,8 @@ export const clearTokenCache = () => {
 const isValidToken = (token) =>
   token && token !== "undefined" && token !== "null";
 
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
+
 if (!API_URL && __DEV__) {
   console.warn(
     "⚠️ EXPO_PUBLIC_API_URL is not set. Copy .env.example to .env and set it, " +
@@ -32,18 +33,17 @@ const API = axios.create({
   timeout: 15000,
 });
 
-// ── Request interceptor ───────────────────────────────────────────────────────
 API.interceptors.request.use(
   async (config) => {
     try {
       let token = cachedToken;
 
       if (!isValidToken(token)) {
-        token = await AsyncStorage.getItem("token");
+        token = await getToken();
         if (isValidToken(token)) {
           cachedToken = token;
         } else {
-          cachedToken = null; // clear bad cached value
+          cachedToken = null;
         }
       }
 
@@ -59,7 +59,6 @@ API.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// ── Response interceptor ──────────────────────────────────────────────────────
 API.interceptors.response.use(
   (response) => response,
   (error) => {

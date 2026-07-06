@@ -60,7 +60,8 @@
             "ndkVersion": "26.3.11579264"
           }
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true,

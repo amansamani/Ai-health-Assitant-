@@ -1,5 +1,6 @@
 "use strict";
 
+const logger = require("../../config/logger");
 const HealthProfile = require("../health/health.model");
 const DietPlan      = require("./dietPlan.model");
 const DietProgress  = require("./dietProgress.model");
@@ -18,10 +19,6 @@ const {
           
 } = require("./nutrition.service");
 
-// ─────────────────────────────────────────────────────────────────────────────
-// GOAL NORMALIZER
-// Maps frontend/profile strings → internal strings used in template + logic
-// ─────────────────────────────────────────────────────────────────────────────
 const GOAL_MAP = {
   lean:     "lose",
   cut:      "lose",
@@ -36,9 +33,6 @@ function normalizeGoal(goal) {
   return GOAL_MAP[goal?.toLowerCase()] || "maintain";
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// GENERATE PLAN
-// ─────────────────────────────────────────────────────────────────────────────
 const generatePlan = async (req, res, next) => {
   try {
     const userId = req.user.id;
@@ -46,7 +40,6 @@ const generatePlan = async (req, res, next) => {
     const profile = await HealthProfile.findOne({ user: userId });
     if (!profile) return res.status(400).json({ message: "Health profile not found" });
 
-    // Normalize goal before passing to service
     profile.goal = normalizeGoal(profile.goal);
     delete profile.targetCalories;
     const { meals, summary } = await generateDietPlan(profile);
@@ -68,14 +61,11 @@ const generatePlan = async (req, res, next) => {
 
     res.status(201).json(newPlan);
   } catch (err) {
-    console.error("generatePlan error:", err);
+    logger.error({ err }, "generatePlan error");
     next(err);
   }
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// GET CURRENT PLAN
-// ─────────────────────────────────────────────────────────────────────────────
 const getCurrentPlan = async (req, res, next) => {
   try {
     const plan = await DietPlan.findOne({ user: req.user.id, isActive: true });
@@ -85,9 +75,6 @@ const getCurrentPlan = async (req, res, next) => {
   }
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// LOG DAILY DIET
-// ─────────────────────────────────────────────────────────────────────────────
 const logDailyDiet = async (req, res, next) => {
   try {
     const { date, mealsCompleted, caloriesConsumed, weight } = req.body;
@@ -108,10 +95,6 @@ const logDailyDiet = async (req, res, next) => {
   }
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SWAP OPTIONS
-// GET /nutrition/swap-options?mealType=lunch&excludeId=ln_pro_003
-// ─────────────────────────────────────────────────────────────────────────────
 const getSwapOptions = async (req, res, next) => {
   try {
     const { mealType, excludeId } = req.query;
@@ -123,7 +106,6 @@ const getSwapOptions = async (req, res, next) => {
     const profile = await HealthProfile.findOne({ user: req.user.id });
     if (!profile) return res.status(400).json({ message: "Health profile not found" });
 
-    // Normalize goal
     const goal = normalizeGoal(profile.goal);
 
     const options = await getTemplateMealSwaps(
@@ -139,13 +121,6 @@ const getSwapOptions = async (req, res, next) => {
   }
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SWAP MEAL
-// POST /nutrition/swap
-// Body: { mealType: "lunch", newMealId: "ln_pro_007" }
-// ─────────────────────────────────────────────────────────────────────────────
-// FIX: Must match CALORIE_SPLIT in nutrition.service.js exactly.
-// Old values (0.25/0.35/0.30/0.10) caused swapped meals to have wrong calorie budgets.
 const CALORIE_SPLIT = { breakfast: 0.28, lunch: 0.37, dinner: 0.28, snack: 0.07 };
 
 const swapFood = async (req, res, next) => {
@@ -159,14 +134,12 @@ const swapFood = async (req, res, next) => {
     const plan = await DietPlan.findOne({ user: req.user.id, isActive: true });
     if (!plan) return res.status(404).json({ message: "No active plan found" });
 
-    // ✅ Use cached template — not raw DB call
     const allMeals = await getTemplate();
-    console.log("🍱 total templates:", allMeals.length); // ADD
+    logger.info({ count: allMeals.length }, "Total food templates loaded");
     const newCombo = allMeals.find((m) => m.id === newMealId);
-    console.log("🎯 newCombo found:", !!newCombo, "looking for id:", newMealId); // 
+    logger.info({ found: !!newCombo, newMealId }, "newCombo lookup");
     if (!newCombo) return res.status(404).json({ message: "Meal template not found" });
 
-    // Scale to calorie budget
     const calBudget = plan.targetCalories * (CALORIE_SPLIT[mealType] || 0.25);
 
     const [minCals, maxCals] = newCombo.macroRange.calories;
@@ -198,7 +171,6 @@ const swapFood = async (req, res, next) => {
       fiber:    lerp(newCombo.macroRange.fiber),
     };
 
-    // FIX: Hard-clamp calories to budget (same logic as generateTemplateMeals)
     if (scaled.calories > calBudget * 1.08) {
       const ratio     = calBudget / scaled.calories;
       scaled.calories = Math.round(calBudget);
@@ -212,10 +184,8 @@ const swapFood = async (req, res, next) => {
       }));
     }
 
-    // Replace only this meal slot
     plan.meals[mealType] = [scaled];
 
-    // Recalc summary totals
     let totalCals = 0, totalProtein = 0, totalCarbs = 0, totalFats = 0, totalFiber = 0;
     for (const mealArr of Object.values(plan.meals)) {
       for (const combo of mealArr) {
@@ -244,11 +214,11 @@ const swapFood = async (req, res, next) => {
     next(err);
   }
 };
+
 const getFoods = async (req, res, next) => {
   try {
-    // FIX: frontend sends "search" not "q"
     const { search, q, tags, dietType, limit = 20 } = req.query;
-    const searchTerm = search || q; // accept both
+    const searchTerm = search || q;
 
     const query = {};
 
@@ -265,7 +235,6 @@ const getFoods = async (req, res, next) => {
 
     const foods = await FoodItem.find(query).limit(Number(limit)).lean();
 
-    // FIX: return shape frontend expects
     res.json({ success: true, count: foods.length, data: foods });
   } catch (err) {
     next(err);
@@ -280,7 +249,6 @@ const logMeal = async (req, res, next) => {
       return res.status(400).json({ message: "mealType and food are required" });
     }
 
-    // normalize "snack" → "snacks" to match schema enum
     const normalizedMealType = mealType === "snack" ? "snacks" : mealType;
 
     const log = await MealLog.create({
@@ -319,13 +287,11 @@ const getTodayLog = async (req, res, next) => {
       loggedAt: { $gte: start, $lte: end },
     }).sort({ loggedAt: -1 }).lean();
 
-    // group by mealType
     const grouped = { breakfast: [], lunch: [], dinner: [], snacks: [] };
     for (const log of logs) {
       if (grouped[log.mealType]) grouped[log.mealType].push(log);
     }
 
-    // totals
     const totals = logs.reduce((acc, log) => ({
       calories: acc.calories + (log.food.calories || 0),
       protein:  acc.protein  + (log.food.protein  || 0),
@@ -338,9 +304,7 @@ const getTodayLog = async (req, res, next) => {
     next(err);
   }
 };
-// ─────────────────────────────────────────────────────────────────────────────
-// STUBS
-// ─────────────────────────────────────────────────────────────────────────────
+
 const getDailyDietLog = async (req, res) => res.status(501).json({ message: "Not implemented" });
 
 const deleteMeal      = async (req, res) => res.status(501).json({ message: "Not implemented" });
@@ -355,9 +319,6 @@ const runWeeklyAdjustment = async (req, res, next) => {
   }
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// WEEKLY INSIGHT (Phase 5 — "why calories adjusted" summary card)
-// ─────────────────────────────────────────────────────────────────────────────
 const getWeeklyInsight = async (req, res, next) => {
   try {
     const insight = await getLatestWeeklyInsight(req.user.id);
@@ -377,7 +338,6 @@ const getWeeklyInsightLog = async (req, res, next) => {
   }
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
 module.exports = {
   generatePlan,
   getCurrentPlan,

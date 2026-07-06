@@ -4,6 +4,7 @@ const HealthProfile = require("../health/health.model");
 const DietPlan      = require("./dietPlan.model");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const redis = require("../../config/redis");
+const logger = require("../../config/logger");
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
@@ -99,7 +100,7 @@ const aiChat = async (req, res, next) => {
 
     res.json({ reply });
   } catch (err) {
-    console.error("AI chat error:", err.message);
+    logger.error({ err }, "AI chat error");    
     next(err);
   }
 };

@@ -1,7 +1,7 @@
 import { createContext, useState, useEffect, useCallback } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { setLogoutHandler, setTokenCache, clearTokenCache } from "../services/api";
 import API from "../services/api";
+import { getToken, setToken, removeToken } from "../utils/secureToken";
 
 export const AuthContext = createContext();
 
@@ -13,7 +13,7 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(async () => {
     console.log("🚨 logout() triggered");
-    await AsyncStorage.removeItem("token");
+    await removeToken();
     clearTokenCache();
     setUserToken(null);
     setUserGoal(null);
@@ -26,23 +26,24 @@ export function AuthProvider({ children }) {
       const res = await API.get("/user/profile");
       const data = res.data ?? {};
       setUserGoal(data.goal ?? "fit");
-      setUser(data);
+      setUser(data); // ← save entire profile object
     } catch (err) {
+      // not critical
     }
   }, []);
 
   const login = async (token) => {
-    await AsyncStorage.setItem("token", token);
+    await setToken(token);
     setTokenCache(token);
     setUserToken(token);
-    await fetchUserGoal(); 
+    await fetchUserGoal();
     console.log("✅ login() — token cached and state updated");
   };
 
   useEffect(() => {
     const loadToken = async () => {
       try {
-        const token = await AsyncStorage.getItem("token");
+        const token = await getToken();
         if (token && token !== "undefined" && token !== "null") {
           setTokenCache(token);
           setUserToken(token);
