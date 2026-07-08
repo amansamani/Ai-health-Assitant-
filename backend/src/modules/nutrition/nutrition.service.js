@@ -576,8 +576,7 @@ async function runSmartWeeklyAdjustmentForAllUsers() {
       const r = await runSmartWeeklyAdjustment(profile.user);
       results.push({ user: profile.user, ...r });
     } catch (err) {
-      console.error(`Weekly adjustment failed for ${profile.user}:`, err.message);
-      results.push({ user: profile.user, adjusted: false, reason: err.message });
+      logger.error({ err, userId: profile.user }, "Weekly adjustment failed");      results.push({ user: profile.user, adjusted: false, reason: err.message });
     }
   }
   return results;

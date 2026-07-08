@@ -8,11 +8,6 @@
     "scheme": "aihealthfrontend",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/images/splash-fullscreen.png",
-      "resizeMode": "cover",
-      "backgroundColor": "#ffffff"
-    },
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
@@ -42,11 +37,17 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-fullscreen.png",
-          "resizeMode": "cover",
-          "backgroundColor": "#ffffff",
+          "backgroundColor": "#29195A",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
           "dark": {
             "backgroundColor": "#000000"
+          },
+          "ios": {
+            "image": "./assets/images/splash-fullscreen.png",
+            "resizeMode": "cover",
+            "backgroundColor": "#ffffff"
           }
         }
       ],
@@ -61,7 +62,8 @@
           }
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "@react-native-google-signin/google-signin"
     ],
     "experiments": {
       "typedRoutes": true,

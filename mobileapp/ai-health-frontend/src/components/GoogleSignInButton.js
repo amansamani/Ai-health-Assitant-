@@ -1,57 +1,80 @@
-import * as Google from 'expo-auth-session/providers/google';
-import * as WebBrowser from 'expo-web-browser';
-import { useEffect } from 'react';
-import { TouchableOpacity, Text, StyleSheet } from 'react-native';
-import * as AuthSession from 'expo-auth-session';
+import { useState } from 'react';
+import { TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import {
+  GoogleSignin,
+  isErrorWithCode,
+  statusCodes,
+} from '@react-native-google-signin/google-signin';
 import API from '../services/api';
 
-WebBrowser.maybeCompleteAuthSession();
+// Must be the WEB-type client ID from Google Cloud Console (not Android/iOS) —
+// this is what makes Google actually return an idToken your backend can verify.
+GoogleSignin.configure({
+  webClientId: '701044360865-o2san4uegg1j0tpjk8q51eihm6e0g10l.apps.googleusercontent.com',
+  offlineAccess: false,
+});
 
 export default function GoogleSignInButton({ onSuccess }) {
+  const [loading, setLoading] = useState(false);
 
-  const redirectUri = AuthSession.makeRedirectUri({
-  useProxy: true,
-});
+  const handlePress = async () => {
+    try {
+      setLoading(true);
+      await GoogleSignin.hasPlayServices();
+      const response = await GoogleSignin.signIn();
 
-  const [request, response, promptAsync] = Google.useAuthRequest({
-  expoClientId: '701044360865-o2san4uegg1j0tpjk8q51eihm6e0g10l.apps.googleusercontent.com',
-  androidClientId: '701044360865-2pq4gdpjjku6ptmo3ojnqapjvirk1lco.apps.googleusercontent.com',
-  webClientId: '701044360865-o2san4uegg1j0tpjk8q51eihm6e0g10l.apps.googleusercontent.com',
-  scopes: ['profile', 'email'],
-  redirectUri,
-});
-
-  useEffect(() => {
-    if (response?.type === 'success') {
-      const { id_token } = response.params;
-      sendToBackend(id_token);
+      const idToken = response?.data?.idToken;
+      if (idToken) {
+        await sendToBackend(idToken);
+      } else {
+        console.warn('Google sign-in succeeded but no idToken was returned — check webClientId configuration.');
+      }
+    } catch (err) {
+      if (isErrorWithCode(err)) {
+        switch (err.code) {
+          case statusCodes.SIGN_IN_CANCELLED:
+          case statusCodes.IN_PROGRESS:
+            break; // user cancelled or double-tapped — not a real error
+          case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
+            console.error('Google Play Services not available/outdated on this device.');
+            break;
+          default:
+            console.error('Google sign-in error:', err.code, err.message);
+        }
+      } else {
+        console.error('Google sign-in error:', err.message);
+      }
+    } finally {
+      setLoading(false);
     }
-    if (response?.type === 'error') {
-      console.error('Google auth error:', response.error);
-    }
-  }, [response]);
+  };
 
   const sendToBackend = async (idToken) => {
-  try {
-    const { data } = await API.post('/auth/google', { idToken });
-
-    if (data.token) {
-      onSuccess(data); // caller's onSuccess calls login(token) — that's what stores it
+    try {
+      const { data } = await API.post('/auth/google', { idToken });
+      if (data.token) {
+        onSuccess(data); // caller's onSuccess calls login(token)
+      }
+    } catch (err) {
+      console.error('Google backend auth error:', err.response?.data?.message || err.message);
     }
-  } catch (err) {
-    console.error('Google sign-in error:', err.response?.data?.message || err.message);
-  }
-};
+  };
 
   return (
     <TouchableOpacity
-      style={[styles.googleBtn, !request && { opacity: 0.6 }]}
-      disabled={!request}
-      onPress={() => promptAsync({ useProxy: true })}
+      style={[styles.googleBtn, loading && { opacity: 0.6 }]}
+      disabled={loading}
+      onPress={handlePress}
       activeOpacity={0.85}
     >
-      <Text style={styles.googleIcon}>G</Text>
-      <Text style={styles.googleText}>Continue with Google</Text>
+      {loading ? (
+        <ActivityIndicator color="#6366F1" />
+      ) : (
+        <>
+          <Text style={styles.googleIcon}>G</Text>
+          <Text style={styles.googleText}>Continue with Google</Text>
+        </>
+      )}
     </TouchableOpacity>
   );
 }
