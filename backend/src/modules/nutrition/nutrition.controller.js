@@ -6,6 +6,7 @@ const DietPlan      = require("./dietPlan.model");
 const DietProgress  = require("./dietProgress.model");
 const MealLog       = require("./mealLog.model");
 const FoodItem = require("./foodItem.model");
+const { analyzeMealPhoto } = require("./mealPhoto.service");
 
 const {
   generateDietPlan,
@@ -338,6 +339,17 @@ const getWeeklyInsightLog = async (req, res, next) => {
   }
 };
 
+const analyzeMealPhotoCtrl = async (req, res, next) => {
+  try {
+    const { imageBase64, mimeType } = req.body;
+    const result = await analyzeMealPhoto(imageBase64, mimeType);
+    res.json(result);
+  } catch (err) {
+    logger.error({ err }, "Meal photo analysis error");
+    res.status(500).json({ message: "Failed to analyze meal photo. Try a clearer photo or log manually." });
+  }
+};
+
 module.exports = {
   generatePlan,
   getCurrentPlan,
@@ -353,5 +365,6 @@ module.exports = {
   deleteMeal,
   getMealHistory,
   getFoods,
+  analyzeMealPhotoCtrl,
   
 };

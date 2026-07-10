@@ -1,6 +1,8 @@
 const express    = require("express");
 const router     = express.Router();
 const auth       = require("../../middleware/authMiddleware");
+const validate   = require("../../middleware/validate");
+const { mealPhotoSchema } = require("../../validation/schemas");
 const controller = require("./nutrition.controller");
 const { aiChat, clearChatSession } = require("./ai.chat.controller");
 const { getWaterLog, addWater, undoLastWater, setWaterGoal } = require("./waterLog.controller");
@@ -29,6 +31,9 @@ router.get("/history",        auth, controller.getMealHistory);
 
 // ── Food Search ───────────────────────────────────────────────────────────────
 router.get("/foods", auth, controller.getFoods);
+
+// ── Meal Photo Analysis ──────────────────────────────────────────────────────
+router.post("/analyze-meal-photo", auth, validate(mealPhotoSchema), controller.analyzeMealPhotoCtrl);
 
 // ── Water Tracking ────────────────────────────────────────────────────────────
 router.get("/water",         auth, getWaterLog);

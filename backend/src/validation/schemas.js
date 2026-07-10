@@ -20,4 +20,22 @@ const healthProfileSchema = z
   })
   .partial();
 
-module.exports = { trackingSchema, healthProfileSchema };
+const workoutProgressSchema = z
+  .object({
+    workoutPlanId: z.string().min(1, "workoutPlanId is required"),
+    exercisesTotal: z.coerce.number().int().min(0).max(100),
+    exercisesCompleted: z.coerce.number().int().min(0).max(100),
+    completedExerciseNames: z.array(z.string().max(200)).max(100).optional(),
+    date: z.string().optional(),
+  })
+  .refine((data) => data.exercisesCompleted <= data.exercisesTotal, {
+    message: "exercisesCompleted cannot exceed exercisesTotal",
+    path: ["exercisesCompleted"],
+  });
+
+const mealPhotoSchema = z.object({
+  imageBase64: z.string().min(100, "imageBase64 is required").max(14_000_000, "Image too large — compress before uploading"),
+  mimeType: z.enum(["image/jpeg", "image/png", "image/webp"]).optional().default("image/jpeg"),
+});
+
+module.exports = { trackingSchema, healthProfileSchema, workoutProgressSchema, mealPhotoSchema };

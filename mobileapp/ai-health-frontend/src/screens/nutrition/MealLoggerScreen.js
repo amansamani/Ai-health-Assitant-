@@ -15,7 +15,6 @@ const MEAL_META = {
   snacks:    { icon: "🍎", label: "Snacks",     color: "#8E24AA" },
 };
 
-// ── Calorie Ring ──────────────────────────────────────────────────────────────
 function CalorieRing({ consumed, goal }) {
   const pct       = goal > 0 ? Math.min(consumed / goal, 1) : 0;
   const remaining = Math.max(goal - consumed, 0);
@@ -56,7 +55,6 @@ function CalorieRing({ consumed, goal }) {
   );
 }
 
-// ── Macro Bar ─────────────────────────────────────────────────────────────────
 function MacroBar({ label, consumed, goal, color }) {
   const pct  = goal > 0 ? Math.min((consumed / goal) * 100, 100) : 0;
   const over = consumed > goal;
@@ -76,7 +74,6 @@ function MacroBar({ label, consumed, goal, color }) {
   );
 }
 
-// ── Main Screen ───────────────────────────────────────────────────────────────
 export default function MealLoggerScreen({ navigation }) {
   const [loading, setLoading]       = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -90,7 +87,6 @@ export default function MealLoggerScreen({ navigation }) {
     weekday: "long", day: "numeric", month: "long",
   });
 
-  // ── Empty fallback ────────────────────────────────────────────────────────
   const emptyLog = {
     grouped: { breakfast: [], lunch: [], dinner: [], snacks: [] },
     totals:  { calories: 0, protein: 0, carbs: 0, fats: 0 },
@@ -105,17 +101,14 @@ export default function MealLoggerScreen({ navigation }) {
         getCurrentPlan(),
       ]);
 
-      // ── FIX: Today's log — backend returns { data: grouped, totals, count }
       if (logRes.status === "fulfilled" && logRes.value) {
         const val = logRes.value;
         if (val?.totals && val?.data) {
-          // ✅ Correct shape: { data: {breakfast,lunch,...}, totals: {...} }
           setTodayLog({
             grouped: val.data,
             totals:  val.totals,
           });
         } else if (val?.grouped && val?.totals) {
-          // fallback if shape changes
           setTodayLog(val);
         } else {
           setTodayLog(emptyLog);
@@ -124,8 +117,6 @@ export default function MealLoggerScreen({ navigation }) {
         setTodayLog(emptyLog);
       }
 
-      // ── Past history ──────────────────────────────────────────────────────
-      // FIX: backend returns { data: [...meals] }
       if (histRes.status === "fulfilled" && histRes.value) {
         const meals = histRes.value?.data ?? histRes.value ?? [];
         if (Array.isArray(meals)) {
@@ -145,12 +136,10 @@ export default function MealLoggerScreen({ navigation }) {
         }
       }
 
-      // ── Goals: diet plan first, then health profile ───────────────────────
       let goalsSet = false;
 
       if (planRes.status === "fulfilled" && planRes.value) {
         const p = planRes.value?.data ?? planRes.value;
-        // FIX: macroSplit uses proteinG/carbsG/fatsG keys from backend
         if (p?.targetCalories) {
           setGoals({
             calories: p.targetCalories                                         || 2000,
@@ -236,13 +225,11 @@ export default function MealLoggerScreen({ navigation }) {
         <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={["#FF6F00"]} />
       }
     >
-      {/* Header */}
       <View style={s.header}>
         <Text style={s.title}>Log Meal 🍛</Text>
         <Text style={s.date}>{todayDate}</Text>
       </View>
 
-      {/* Calorie Ring */}
       <View style={s.card}>
         <Text style={s.cardLabel}>CALORIES</Text>
         <CalorieRing consumed={Math.round(totals.calories)} goal={goals.calories} />
@@ -266,7 +253,6 @@ export default function MealLoggerScreen({ navigation }) {
         </View>
       </View>
 
-      {/* Macro Bars */}
       <View style={s.card}>
         <Text style={s.cardLabel}>MACROS</Text>
         <View style={{ marginTop: 12 }}>
@@ -276,7 +262,19 @@ export default function MealLoggerScreen({ navigation }) {
         </View>
       </View>
 
-      {/* Meal Sections */}
+      <TouchableOpacity
+        style={s.photoEntryCard}
+        onPress={() => navigation.navigate("LogMealPhoto")}
+        activeOpacity={0.85}
+      >
+        <Text style={{ fontSize: 22 }}>📸</Text>
+        <View style={{ flex: 1, marginLeft: 12 }}>
+          <Text style={s.photoEntryTitle}>Snap a Photo</Text>
+          <Text style={s.photoEntrySub}>Let AI estimate your meal's calories</Text>
+        </View>
+        <Text style={s.photoEntryArrow}>→</Text>
+      </TouchableOpacity>
+
       <Text style={s.sectionTitle}>Today's Meals</Text>
       {Object.entries(MEAL_META).map(([key, meta]) => {
         const items   = grouped[key] || [];
@@ -341,7 +339,6 @@ export default function MealLoggerScreen({ navigation }) {
         );
       })}
 
-      {/* Past Days */}
       {history.length > 0 && (
         <>
           <Text style={s.sectionTitle}>Past Days</Text>
@@ -400,6 +397,16 @@ const s = StyleSheet.create({
   statDivider: { width: 1, backgroundColor: "#f0f0f0" },
 
   sectionTitle: { fontSize: 12, fontWeight: "700", color: "#888", textTransform: "uppercase", letterSpacing: 1, marginBottom: 10, marginTop: 4 },
+  photoEntryCard: {
+    flexDirection: "row", alignItems: "center",
+    backgroundColor: "#EEF2FF", borderRadius: 18,
+    borderWidth: 1.5, borderColor: "#C7D2FE",
+    paddingVertical: 14, paddingHorizontal: 16,
+    marginBottom: 20,
+  },
+  photoEntryTitle: { fontSize: 14, fontWeight: "800", color: "#0F172A" },
+  photoEntrySub: { fontSize: 12, color: "#64748B", marginTop: 1 },
+  photoEntryArrow: { fontSize: 18, color: "#6366F1", fontWeight: "700" },
 
   mealCard: {
     backgroundColor: "#fff", borderRadius: 16, padding: 14, marginBottom: 12,

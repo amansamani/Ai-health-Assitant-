@@ -8,6 +8,7 @@ import TrackDetailScreen       from "../screens/TrackDetailScreen";
 import WorkoutDetailScreen     from "../screens/WorkoutDetailScreen";
 import NutritionDashboardScreen from "../screens/nutrition/NutritionDashboardScreen";
 import LogMealScreen           from "../screens/nutrition/LogMealScreen";
+import LogMealPhotoScreen      from "../screens/nutrition/LogMealPhotoScreen";
 import ProgressScreen          from "../screens/nutrition/ProgressScreen";
 import MealLoggerScreen        from "../screens/nutrition/MealLoggerScreen";
 import EditHealthProfileScreen from "../screens/EditHealthProfileScreen";
@@ -51,6 +52,13 @@ export default function MainNavigator() {
         name="LogMeal"
         component={LogMealScreen}
         options={{ headerShown: true, title: "Add Food", headerBackTitle: "Log Meal" }}
+      />
+
+      {/* ── Add Food via Photo ── */}
+      <Stack.Screen
+        name="LogMealPhoto"
+        component={LogMealPhotoScreen}
+        options={{ headerShown: true, title: "Snap Your Meal", headerBackTitle: "Log Meal" }}
       />
 
       <Stack.Screen
