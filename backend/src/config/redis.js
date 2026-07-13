@@ -4,12 +4,17 @@ const logger = require('./logger');
 const redisConnection = new Redis(process.env.REDIS_URL, {
   maxRetriesPerRequest: null,
   enableReadyCheck: false,
+  // Previously returned `null` after 5 tries, which permanently kills
+  // reconnection for the life of the process — a single transient Redis
+  // blip meant every redis-dependent feature stayed dead until a manual
+  // restart. Keep retrying forever instead, capped at 10s between attempts,
+  // so the app self-heals once Redis is reachable again.
   retryStrategy: (times) => {
-    if (times > 5) {
-      logger.error("Redis: too many retries, giving up");
-      return null;
+    const delay = Math.min(times * 500, 10_000);
+    if (times % 10 === 0) {
+      logger.warn({ times }, "Redis: still retrying connection");
     }
-    return Math.min(times * 500, 3000);
+    return delay;
   },
 });
 

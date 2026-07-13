@@ -15,15 +15,26 @@ const MAX_HISTORY = 20;
 const sessionKey = (userId) => `chat:session:${userId}`;
 
 async function getHistory(userId) {
-  const raw = await redis.get(sessionKey(userId));
-  return raw ? JSON.parse(raw) : [];
+  try {
+    const raw = await redis.get(sessionKey(userId));
+    return raw ? JSON.parse(raw) : [];
+  } catch (err) {
+    logger.warn({ err }, "Redis unavailable, chat continuing without history");
+    return [];
+  }
 }
 
 async function saveHistory(userId, history) {
-  const trimmed = history.length > MAX_HISTORY * 2
-    ? history.slice(-MAX_HISTORY * 2)
-    : history;
-  await redis.set(sessionKey(userId), JSON.stringify(trimmed), "EX", SESSION_TTL_SECONDS);
+  try {
+    const trimmed = history.length > MAX_HISTORY * 2
+      ? history.slice(-MAX_HISTORY * 2)
+      : history;
+    await redis.set(sessionKey(userId), JSON.stringify(trimmed), "EX", SESSION_TTL_SECONDS);
+  } catch (err) {
+    // Non-fatal: this message's reply already went out, we just fail to
+    // remember it for next turn. Better than 500ing the whole chat.
+    logger.warn({ err }, "Redis unavailable, could not save chat history");
+  }
 }
 
 async function buildSystemContext(userId) {
@@ -106,7 +117,11 @@ const aiChat = async (req, res, next) => {
 };
 
 const clearChatSession = async (req, res) => {
-  await redis.del(sessionKey(req.user.id));
+  try {
+    await redis.del(sessionKey(req.user.id));
+  } catch (err) {
+    logger.warn({ err }, "Redis unavailable, could not clear chat session");
+  }
   res.json({ cleared: true });
 };
 

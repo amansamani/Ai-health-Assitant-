@@ -158,26 +158,27 @@ async function analyzeWithFallback(parts) {
 // find a confident name match in the DB, recompute calories/protein/carbs/
 // fats/fiber from the DB's per-100g values instead of the AI's guess.
 //
-// NOTE: `fooditems` is stored with `strict: false`, so its real field names
-// depend on how you seeded it. Adjust `extractPer100gFromDoc` below to match
-// your actual documents (log one with `db.fooditems.findOne()` to check).
+// NOTE: confirmed against a real `fooditems` document — nutrition lives in a
+// nested `per100g` object, e.g. { per100g: { calories, protein, carbs, fats, fiber } }.
 function extractPer100gFromDoc(doc) {
-  const pick = (...keys) => {
-    for (const k of keys) {
-      const v = doc[k];
-      if (typeof v === "number" && !Number.isNaN(v)) return v;
-    }
-    return undefined;
+  const n = doc.per100g;
+  if (!n || typeof n !== "object") return null;
+
+  const { calories, protein, carbs, fats } = n;
+  if ([calories, protein, carbs, fats].some((v) => typeof v !== "number" || Number.isNaN(v))) {
+    return null;
+  }
+
+  return {
+    calories,
+    protein,
+    carbs,
+    fats,
+    fiber: typeof n.fiber === "number" ? n.fiber : 0,
+    // Docs declare their own serving base (usually 100g, but don't assume) —
+    // fall back to 100 only if `serving.grams` is missing.
+    baseGrams: typeof doc.serving?.grams === "number" ? doc.serving.grams : 100,
   };
-
-  const calories = pick("caloriesPer100g", "calories_per_100g", "kcalPer100g", "energyKcal", "calories");
-  const protein  = pick("proteinPer100g", "protein_per_100g", "protein");
-  const carbs    = pick("carbsPer100g", "carbs_per_100g", "carbohydrates", "carbs");
-  const fats     = pick("fatsPer100g", "fat_per_100g", "fats", "fat");
-  const fiber    = pick("fiberPer100g", "fiber_per_100g", "fiber") ?? 0;
-
-  if ([calories, protein, carbs, fats].some((v) => typeof v !== "number")) return null;
-  return { calories, protein, carbs, fats, fiber };
 }
 
 function escapeRegex(str) {
@@ -203,7 +204,7 @@ async function groundItemWithDB(item) {
     const per100g = extractPer100gFromDoc(doc);
     if (!per100g) return item;
 
-    const ratio = item.weightGrams / 100;
+    const ratio = item.weightGrams / per100g.baseGrams;
     return {
       ...item,
       calories: Math.round(per100g.calories * ratio),
