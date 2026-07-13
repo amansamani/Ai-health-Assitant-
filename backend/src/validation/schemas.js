@@ -33,9 +33,21 @@ const workoutProgressSchema = z
     path: ["exercisesCompleted"],
   });
 
-const mealPhotoSchema = z.object({
-  imageBase64: z.string().min(100, "imageBase64 is required").max(14_000_000, "Image too large — compress before uploading"),
-  mimeType: z.enum(["image/jpeg", "image/png", "image/webp"]).optional().default("image/jpeg"),
-});
+const base64ImageField = z.string().min(100, "image is required").max(14_000_000, "Image too large — compress before uploading");
+
+// Accepts either the legacy single `imageBase64` field, or a new `images`
+// array (1-2 photos — a second angle meaningfully improves portion/depth
+// estimation). At least one of the two must be present.
+const mealPhotoSchema = z
+  .object({
+    imageBase64: base64ImageField.optional(),
+    images: z.array(base64ImageField).min(1).max(2).optional(),
+    mimeType: z.enum(["image/jpeg", "image/png", "image/webp"]).optional().default("image/jpeg"),
+    hasReferenceObject: z.coerce.boolean().optional().default(false),
+  })
+  .refine((data) => !!data.imageBase64 || (data.images && data.images.length > 0), {
+    message: "Provide either imageBase64 or images",
+    path: ["images"],
+  });
 
 module.exports = { trackingSchema, healthProfileSchema, workoutProgressSchema, mealPhotoSchema };

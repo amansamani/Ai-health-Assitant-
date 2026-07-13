@@ -1,168 +1,264 @@
 "use strict";
 
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+const { GoogleGenerativeAI, SchemaType } = require("@google/generative-ai");
 const { z } = require("zod");
 const logger = require("../../config/logger");
-const { groundAnalysis } = require("./foodGrounding.service");
+const FoodItem = require("./foodItem.model");
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// Gemini's structured-output mode (responseSchema) guarantees valid JSON
-// shaped exactly like this — no more markdown-fence stripping and hoping.
-// Field order matters: Gemini fills fields in the order they're declared,
-// so `visualReasoning` is declared *before* the numbers it justifies. That
-// forces a short chain-of-thought ("plate is ~27cm, roti covers a third of
-// it...") before the model commits to a gram figure, which measurably
-// improves portion estimates over asking for numbers cold.
-const responseSchema = {
-  type: "OBJECT",
+// ── Model strategy ───────────────────────────────────────────────────────────
+// gemini-2.5-pro reasons noticeably better about spatial/portion questions than
+// flash (it's a "thinking" model by default), so it's the primary model for
+// this task. Flash is kept as an automatic fallback so a photo still gets
+// analyzed if pro is rate-limited, over quota, or briefly unavailable.
+// Override via env if you want to point at a newer model without a code change.
+const PRIMARY_MODEL  = process.env.GEMINI_VISION_MODEL          || "gemini-2.5-pro";
+const FALLBACK_MODEL = process.env.GEMINI_VISION_FALLBACK_MODEL || "gemini-2.5-flash";
+const REQUEST_TIMEOUT_MS = Number(process.env.GEMINI_VISION_TIMEOUT_MS) || 25_000;
+
+// Best-effort grounding against your own verified food database. This never
+// throws and never blocks the response — if no match is found, or your
+// `fooditems` documents use different field names than assumed below, the
+// AI's own estimate is used untouched. See `extractPer100gFromDoc()` if you
+// need to adapt the field names to your actual schema.
+const ENABLE_DB_GROUNDING = process.env.MEAL_PHOTO_DB_GROUNDING !== "false";
+
+// ── Output contract ──────────────────────────────────────────────────────────
+// `weightGrams` is the single source of truth for "how much food is this" —
+// everything else (quantity/unit) exists purely for a friendly UI label.
+// Splitting "how much" (a vision/spatial question) from "how many calories
+// per gram" (a lookup question) is what lets DB grounding correct the AI's
+// nutrition numbers later without touching its portion estimate.
+const DetectedFoodSchema = z.object({
+  name:         z.string().min(1),
+  quantity:     z.number().positive(),
+  unit:         z.string().min(1),
+  weightGrams:  z.number().positive(),
+  calories:     z.number().nonnegative(),
+  protein:      z.number().nonnegative(),
+  carbs:        z.number().nonnegative(),
+  fats:         z.number().nonnegative(),
+  fiber:        z.number().nonnegative().default(0),
+  confidence:   z.enum(["high", "medium", "low"]).default("medium"),
+  portionBasis: z.string().optional().default(""),
+  source:       z.enum(["ai_estimate", "db_grounded"]).default("ai_estimate"),
+});
+
+const MealPhotoAnalysisSchema = z.object({
+  items: z.array(DetectedFoodSchema).max(15),
+  notes: z.string().optional().default(""),
+});
+
+// ── Gemini structured-output schema ──────────────────────────────────────────
+// Constraining the response shape at generation time (not just validating
+// after the fact) removes almost all of the "model wrapped JSON in prose /
+// used markdown fences / renamed a field" failures that regex-stripping used
+// to paper over.
+const GEMINI_RESPONSE_SCHEMA = {
+  type: SchemaType.OBJECT,
   properties: {
-    imageAssessment: {
-      type: "STRING",
-      enum: ["clear", "blurry", "too_dark", "too_far", "partially_cropped"],
-    },
-    scaleReference: {
-      type: "STRING",
-      description: "The real-world object used to judge scale (e.g. 'standard steel thali ~27cm'), or 'none visible'.",
-    },
     items: {
-      type: "ARRAY",
+      type: SchemaType.ARRAY,
+      maxItems: 15,
       items: {
-        type: "OBJECT",
+        type: SchemaType.OBJECT,
         properties: {
-          name:                 { type: "STRING" },
-          visualReasoning:      { type: "STRING" },
-          estimatedWeightGrams: { type: "NUMBER" },
-          quantity:             { type: "NUMBER" },
-          unit:                 { type: "STRING" },
-          calories:             { type: "NUMBER" },
-          protein:              { type: "NUMBER" },
-          carbs:                { type: "NUMBER" },
-          fats:                 { type: "NUMBER" },
-          fiber:                { type: "NUMBER" },
-          confidence:           { type: "STRING", enum: ["high", "medium", "low"] },
+          name:         { type: SchemaType.STRING, description: "Specific dish name, e.g. 'Dal Tadka' not 'lentils'" },
+          quantity:     { type: SchemaType.NUMBER, description: "Portion count in the given unit, e.g. 2" },
+          unit:         { type: SchemaType.STRING, description: "e.g. piece, katori, cup, bowl, g, ml" },
+          weightGrams:  { type: SchemaType.NUMBER, description: "Best estimate of the item's total edible weight in grams" },
+          calories:     { type: SchemaType.NUMBER },
+          protein:      { type: SchemaType.NUMBER, description: "grams" },
+          carbs:        { type: SchemaType.NUMBER, description: "grams" },
+          fats:         { type: SchemaType.NUMBER, description: "grams" },
+          fiber:        { type: SchemaType.NUMBER, description: "grams" },
+          confidence:   { type: SchemaType.STRING, format: "enum", enum: ["high", "medium", "low"] },
+          portionBasis: { type: SchemaType.STRING, description: "One short phrase on what you compared the portion to, e.g. 'fills ~1/3 of a 26cm plate' or 'matches a standard 150ml katori'" },
         },
-        required: [
-          "name", "visualReasoning", "estimatedWeightGrams", "quantity", "unit",
-          "calories", "protein", "carbs", "fats", "fiber", "confidence",
-        ],
+        required: ["name", "quantity", "unit", "weightGrams", "calories", "protein", "carbs", "fats", "fiber", "confidence"],
       },
     },
-    notes: { type: "STRING" },
+    notes: { type: SchemaType.STRING, description: "Caveats, low-light/angle warnings, or why no food was found" },
   },
   required: ["items", "notes"],
 };
 
-const model = genAI.getGenerativeModel({
-  model: "gemini-2.5-flash",
-  generationConfig: {
-    responseMimeType: "application/json",
-    responseSchema,
-  },
-});
+function buildPrompt({ hasReferenceObject, angleCount } = {}) {
+  const referenceLine = hasReferenceObject
+    ? "The user has confirmed a known reference object (their hand, a coin, or a standard utensil) is visible in frame — use it to calibrate scale before estimating weight."
+    : "No calibration object was confirmed in frame — fall back to the standard reference sizes below.";
 
-const DetectedFoodSchema = z.object({
-  name:                 z.string().min(1),
-  visualReasoning:      z.string().optional().default(""),
-  estimatedWeightGrams: z.number().nonnegative().default(0),
-  quantity:             z.number().positive(),
-  unit:                 z.string().min(1),
-  calories:             z.number().nonnegative(),
-  protein:              z.number().nonnegative(),
-  carbs:                z.number().nonnegative(),
-  fats:                 z.number().nonnegative(),
-  fiber:                z.number().nonnegative().default(0),
-  confidence:           z.enum(["high", "medium", "low"]).default("medium"),
-});
+  const angleLine = angleCount > 1
+    ? `You have been given ${angleCount} photos of the same plate from different angles — use the extra angle(s) to judge food height/depth, not just the top-down footprint, before estimating weight.`
+    : "You only have one angle of this plate. Note in \"notes\" if the angle makes height/depth hard to judge (this is the single biggest source of portion-size error, so flag it honestly rather than guessing confidently).";
 
-const MealPhotoAnalysisSchema = z.object({
-  imageAssessment: z.string().optional().default("clear"),
-  scaleReference:  z.string().optional().default(""),
-  items:           z.array(DetectedFoodSchema).max(15),
-  notes:           z.string().optional().default(""),
-});
+  return `You are a nutrition expert analyzing a photo of a meal, with strong expertise in Indian food and Indian home-cooking portions.
 
-const SIZE_ANCHORS = `Use whichever of these is visible as your ruler, and name it in "scaleReference":
-- Standard Indian steel thali / dinner plate: 26-28 cm diameter
-- Standard katori / small bowl: ~300 ml, ~10-12 cm diameter
-- Standard drinking glass: ~300 ml
-- Tablespoon: ~15 cm long · Teaspoon: ~12 cm long
-- An adult hand (palm, fingers excluded): ~8-9 cm wide
-- A smartphone, if visible: ~14-15 cm long
-- 1 roti/chapati ≈ 15 cm diameter · 1 idli ≈ 7 cm diameter
-If nothing reliable is visible, say "none visible" in "scaleReference" and lower your confidence — never silently guess scale.`;
+${referenceLine}
+${angleLine}
 
-function buildPrompt() {
-  return `You are a meticulous nutrition expert analyzing a photo of a meal, with deep expertise in Indian food and realistic portion sizing.
+STEP 1 — Identify every distinct food item visible. Be specific: "Roti" not "bread", "Dal Tadka" not "lentils", "Jeera Rice" not "rice".
 
-For EACH food item you see, follow this order:
-1. Identify it specifically (e.g. "Roti" not "bread", "Dal Tadka" not "lentils", "Chicken Curry" not "curry").
-2. In "visualReasoning", write one short sentence comparing its size to a visible reference object — this is what your gram estimate is based on.
-3. Convert that into estimatedWeightGrams: the actual weight of the visible/edible portion.
-4. Only then fill in quantity + unit (a human-friendly serving, e.g. "2" + "piece", "1" + "katori", "150" + "g") and calories/protein/carbs/fats/fiber for that weight.
+STEP 2 — Estimate the weight of each item in grams. Reason about scale using whichever of these is visible, in order of preference:
+1. A confirmed reference object (hand, coin, standard cutlery) if present.
+2. A standard Indian steel thali plate (~26–28cm diameter) or katori/bowl (~150ml capacity, ~120–150g when filled with dal/curry/sabzi).
+3. Common object comparisons: a medium roti ≈ 35–40g cooked; a cupped palm of rice/dal ≈ 100g; a standard drinking glass ≈ 250ml; a level tablespoon of oil/ghee ≈ 13.5g.
+4. Sanity-check the whole plate: the sum of every item's visible volume should roughly match how full the plate/bowl actually looks — don't let individual item estimates imply an impossibly overflowing or empty plate.
 
-${SIZE_ANCHORS}
+STEP 3 — From the estimated weight, compute calories, protein, carbs, fats, and fiber using standard nutrition density for that specific dish (e.g. 1 roti ≈ 70 kcal, 1 cup cooked rice (~150g) ≈ 200 kcal, 1 katori dal ≈ 120 kcal, accounting for visible oil/ghee/butter separately since it changes the calorie density a lot).
 
-Other rules:
-- If food is stacked, mixed, or partially hidden (rice under curry, roti under sabzi), say so in "notes" and use "medium" or "low" confidence rather than guessing precisely.
-- If the photo is blurry, too dark, too far away, or the plate is cropped out of frame, set "imageAssessment" accordingly and lower confidence to match — do not present a shaky guess as certain.
-- List every distinct item separately, up to 15. Do not merge different foods into one entry.
-- If the image contains no food at all, return an empty items array and explain why in "notes".`;
+STEP 4 — Set confidence honestly: "high" only if the item and its portion are both clearly visible and unambiguous; "medium" for a reasonable but partly-obscured guess; "low" if the item is partially hidden, out of focus, or the portion size is genuinely hard to judge from this angle.
+
+For each item also give a one-line "portionBasis" describing what you compared it to (this is shown to the user so they can correct you if you guessed wrong).
+
+If the image contains no food at all, return an empty items array and explain why in "notes". If lighting, angle, or occlusion meaningfully limits your confidence, say so plainly in "notes" rather than silently guessing.`;
 }
 
-const MAX_RETRIES = 2;
-const RETRY_BASE_DELAY_MS = 500;
-
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+async function callGemini(modelName, parts, { timeoutMs } = {}) {
+  const model = genAI.getGenerativeModel({ model: modelName });
+  const result = await model.generateContent(
+    {
+      contents: [{ role: "user", parts }],
+      generationConfig: {
+        temperature: 0.15, // low temperature: we want consistent, repeatable portion estimates, not creative variation
+        responseMimeType: "application/json",
+        responseSchema: GEMINI_RESPONSE_SCHEMA,
+      },
+    },
+    { timeout: timeoutMs }
+  );
+  return result.response.text();
 }
 
-function isRetryable(err) {
-  const status = err?.status || err?.response?.status;
-  // Retry on rate limiting / transient server errors / no status at all
-  // (network blip). Don't retry on 4xx like bad-request or safety blocks —
-  // those will fail identically every time.
-  return status === 429 || status === 500 || status === 503 || !status;
-}
-
-async function callGeminiWithRetry(parts) {
-  let lastErr;
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+/**
+ * Calls Gemini with automatic fallback: primary model first, then a single
+ * retry on the fallback model if the primary fails or times out. This keeps
+ * the feature usable even during a quota blip or transient outage on one model.
+ */
+async function analyzeWithFallback(parts) {
+  try {
+    return await callGemini(PRIMARY_MODEL, parts, { timeoutMs: REQUEST_TIMEOUT_MS });
+  } catch (err) {
+    logger.error({ err, model: PRIMARY_MODEL }, "Primary vision model failed, falling back");
     try {
-      const result = await model.generateContent(parts);
-      return result.response.text();
-    } catch (err) {
-      lastErr = err;
-      if (attempt === MAX_RETRIES || !isRetryable(err)) break;
-      const delay = RETRY_BASE_DELAY_MS * 2 ** attempt;
-      logger.warn({ attempt, delay, err: err.message }, "Gemini call failed, retrying");
-      await sleep(delay);
+      return await callGemini(FALLBACK_MODEL, parts, { timeoutMs: REQUEST_TIMEOUT_MS });
+    } catch (fallbackErr) {
+      logger.error({ err: fallbackErr, model: FALLBACK_MODEL }, "Fallback vision model also failed");
+      throw fallbackErr;
     }
   }
-  throw lastErr;
 }
 
-async function analyzeMealPhoto(base64Image, mimeType = "image/jpeg") {
-  if (!base64Image || base64Image.length < 100) {
-    throw new Error("No image data received");
-  }
+// ── Food-DB grounding ─────────────────────────────────────────────────────────
+// The vision model is good at "what is this and how big is the portion" but
+// only OK at recalling exact nutrition-per-gram for a dish. Your own FoodItem
+// collection is presumably a trusted source for that. So: keep the AI's
+// weightGrams estimate (that's the genuinely hard vision problem), but if we
+// find a confident name match in the DB, recompute calories/protein/carbs/
+// fats/fiber from the DB's per-100g values instead of the AI's guess.
+//
+// NOTE: `fooditems` is stored with `strict: false`, so its real field names
+// depend on how you seeded it. Adjust `extractPer100gFromDoc` below to match
+// your actual documents (log one with `db.fooditems.findOne()` to check).
+function extractPer100gFromDoc(doc) {
+  const pick = (...keys) => {
+    for (const k of keys) {
+      const v = doc[k];
+      if (typeof v === "number" && !Number.isNaN(v)) return v;
+    }
+    return undefined;
+  };
 
-  const prompt = buildPrompt();
+  const calories = pick("caloriesPer100g", "calories_per_100g", "kcalPer100g", "energyKcal", "calories");
+  const protein  = pick("proteinPer100g", "protein_per_100g", "protein");
+  const carbs    = pick("carbsPer100g", "carbs_per_100g", "carbohydrates", "carbs");
+  const fats     = pick("fatsPer100g", "fat_per_100g", "fats", "fat");
+  const fiber    = pick("fiberPer100g", "fiber_per_100g", "fiber") ?? 0;
+
+  if ([calories, protein, carbs, fats].some((v) => typeof v !== "number")) return null;
+  return { calories, protein, carbs, fats, fiber };
+}
+
+function escapeRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+async function findFoodDoc(name) {
+  const escaped = escapeRegex(name.trim());
+  if (!escaped) return null;
+
+  // Exact (case-insensitive) match first, then a looser partial match.
+  const exact = await FoodItem.findOne({ name: { $regex: `^${escaped}$`, $options: "i" } }).lean();
+  if (exact) return exact;
+
+  return FoodItem.findOne({ name: { $regex: escaped, $options: "i" } }).lean();
+}
+
+async function groundItemWithDB(item) {
+  try {
+    const doc = await findFoodDoc(item.name);
+    if (!doc) return item;
+
+    const per100g = extractPer100gFromDoc(doc);
+    if (!per100g) return item;
+
+    const ratio = item.weightGrams / 100;
+    return {
+      ...item,
+      calories: Math.round(per100g.calories * ratio),
+      protein:  Number((per100g.protein * ratio).toFixed(1)),
+      carbs:    Number((per100g.carbs * ratio).toFixed(1)),
+      fats:     Number((per100g.fats * ratio).toFixed(1)),
+      fiber:    Number((per100g.fiber * ratio).toFixed(1)),
+      source:   "db_grounded",
+    };
+  } catch (err) {
+    // Grounding is a best-effort enhancement — never let it break the analysis.
+    logger.warn({ err, item: item.name }, "Food DB grounding failed for item, keeping AI estimate");
+    return item;
+  }
+}
+
+async function groundWithDB(items) {
+  if (!ENABLE_DB_GROUNDING) return items;
+  return Promise.all(items.map(groundItemWithDB));
+}
+
+/**
+ * Analyzes one or more photos of the same meal (different angles help
+ * portion-depth accuracy) and returns identified items with weight, macro,
+ * and confidence estimates.
+ *
+ * @param {string[]|string} images - one or more base64-encoded image strings
+ * @param {string} mimeType
+ * @param {{ hasReferenceObject?: boolean }} [options]
+ */
+async function analyzeMealPhoto(images, mimeType = "image/jpeg", options = {}) {
+  const imageList = Array.isArray(images) ? images : [images];
+  if (imageList.length === 0) throw new Error("At least one image is required");
+
+  const prompt = buildPrompt({
+    hasReferenceObject: !!options.hasReferenceObject,
+    angleCount: imageList.length,
+  });
+
+  const parts = [
+    ...imageList.map((data) => ({ inlineData: { data, mimeType } })),
+    { text: prompt },
+  ];
 
   let raw;
   try {
-    raw = await callGeminiWithRetry([
-      { inlineData: { data: base64Image, mimeType } },
-      prompt,
-    ]);
+    raw = await analyzeWithFallback(parts);
   } catch (err) {
-    logger.error({ err }, "Gemini image analysis call failed");
+    logger.error({ err }, "Gemini image analysis call failed on both models");
     throw new Error(`Gemini image analysis failed: ${err.message}`);
   }
 
-  // responseSchema makes this reliably plain JSON, but we still strip
-  // stray markdown fences defensively — cheap insurance against a model
-  // update changing that behavior.
+  // responseSchema makes this a formality rather than a necessity, but we
+  // keep it as a defense-in-depth guard against malformed responses / SDK
+  // changes / a model that ignores the schema under load.
   const clean = raw.replace(/```json/gi, "").replace(/```/g, "").trim();
 
   let parsed;
@@ -177,15 +273,11 @@ async function analyzeMealPhoto(base64Image, mimeType = "image/jpeg") {
   try {
     validated = MealPhotoAnalysisSchema.parse(parsed);
   } catch (err) {
-    logger.error({ issues: err.errors, rawSnippet: clean.slice(0, 300) }, "AI response failed schema validation");
-    throw new Error("AI response didn't match the expected format");
+    logger.error({ err, parsed }, "AI response failed schema validation");
+    throw new Error("AI returned a response in an unexpected shape");
   }
 
-  // Ground each item against verified per100g nutrition data where a
-  // confident match exists; keep the AI's own estimate otherwise. Either
-  // way the item carries a `source` field so the client can be honest
-  // about which numbers are verified vs. estimated.
-  const groundedItems = await groundAnalysis(validated.items);
+  const groundedItems = await groundWithDB(validated.items);
 
   return { ...validated, items: groundedItems };
 }

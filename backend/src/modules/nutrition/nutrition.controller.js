@@ -341,8 +341,9 @@ const getWeeklyInsightLog = async (req, res, next) => {
 
 const analyzeMealPhotoCtrl = async (req, res, next) => {
   try {
-    const { imageBase64, mimeType } = req.body;
-    const result = await analyzeMealPhoto(imageBase64, mimeType);
+    const { imageBase64, images, mimeType, hasReferenceObject } = req.body;
+    const imageList = images && images.length ? images : [imageBase64];
+    const result = await analyzeMealPhoto(imageList, mimeType, { hasReferenceObject });
     res.json(result);
   } catch (err) {
     logger.error({ err }, "Meal photo analysis error");

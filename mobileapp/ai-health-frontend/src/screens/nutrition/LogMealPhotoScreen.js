@@ -28,6 +28,8 @@ const CONFIDENCE_META = {
   low:    { label: "Uncertain",  color: "#EF4444" },
 };
 
+const MAX_ANGLES = 2;
+
 async function prepareImageForUpload(uri) {
   const result = await ImageManipulator.manipulateAsync(
     uri,
@@ -37,18 +39,40 @@ async function prepareImageForUpload(uri) {
   return result;
 }
 
+// Scales every nutrition field on an item to a new gram amount, keeping the
+// item's per-gram nutrient density constant. This is what lets a user say
+// "actually that's more like 150g" and get correct calories back instantly,
+// instead of trusting a single AI guess with no way to correct it.
+function scaleItemToGrams(item, newGrams) {
+  const baseGrams = item.weightGrams || item.quantity || 1;
+  const ratio = newGrams / baseGrams;
+  return {
+    ...item,
+    weightGrams: newGrams,
+    calories: Math.round(item.calories * ratio),
+    protein:  Number((item.protein * ratio).toFixed(1)),
+    carbs:    Number((item.carbs * ratio).toFixed(1)),
+    fats:     Number((item.fats * ratio).toFixed(1)),
+    fiber:    Number((item.fiber * ratio).toFixed(1)),
+  };
+}
+
 export default function LogMealPhotoScreen({ navigation, route }) {
   const [mealType, setMealType] = useState(route?.params?.mealType || "breakfast");
-  const [photo, setPhoto] = useState(null);
+  const [photos, setPhotos] = useState([]); // up to MAX_ANGLES prepared photos
+  const [hasReferenceObject, setHasReferenceObject] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [results, setResults] = useState(null);
+  const [items, setItems] = useState([]); // editable copy of results.items
   const [selected, setSelected] = useState({});
   const [logging, setLogging] = useState(false);
 
   const resetPhoto = () => {
-    setPhoto(null);
+    setPhotos([]);
     setResults(null);
+    setItems([]);
     setSelected({});
+    setHasReferenceObject(false);
   };
 
   const pickFromCamera = async () => {
@@ -81,8 +105,9 @@ export default function LogMealPhotoScreen({ navigation, route }) {
   const handleImageSelected = async (uri) => {
     try {
       const prepared = await prepareImageForUpload(uri);
-      setPhoto(prepared);
+      setPhotos((prev) => [...prev, prepared].slice(0, MAX_ANGLES));
       setResults(null);
+      setItems([]);
       setSelected({});
     } catch (err) {
       Alert.alert("Couldn't process that photo", "Try a different photo.");
@@ -90,15 +115,19 @@ export default function LogMealPhotoScreen({ navigation, route }) {
     }
   };
 
+  const removePhoto = (i) => setPhotos((prev) => prev.filter((_, idx) => idx !== i));
+
   const analyzePhoto = async () => {
-    if (!photo?.base64) return;
+    if (photos.length === 0) return;
     setAnalyzing(true);
     try {
       const { data } = await API.post("/nutrition/analyze-meal-photo", {
-        imageBase64: photo.base64,
+        images: photos.map((p) => p.base64),
         mimeType: "image/jpeg",
+        hasReferenceObject,
       });
       setResults(data);
+      setItems(data.items || []);
       const initialSelection = {};
       (data.items || []).forEach((_, i) => { initialSelection[i] = true; });
       setSelected(initialSelection);
@@ -114,10 +143,21 @@ export default function LogMealPhotoScreen({ navigation, route }) {
 
   const toggleItem = (i) => setSelected((prev) => ({ ...prev, [i]: !prev[i] }));
 
+  const adjustGrams = (i, delta) => {
+    setItems((prev) => {
+      const next = [...prev];
+      const current = next[i];
+      const currentGrams = current.weightGrams || current.quantity || 0;
+      const newGrams = Math.max(5, Math.round(currentGrams + delta));
+      next[i] = scaleItemToGrams(current, newGrams);
+      return next;
+    });
+  };
+
   const selectedCount = Object.values(selected).filter(Boolean).length;
 
   const logSelectedItems = async () => {
-    const itemsToLog = (results?.items || []).filter((_, i) => selected[i]);
+    const itemsToLog = items.filter((_, i) => selected[i]);
     if (itemsToLog.length === 0) return;
 
     setLogging(true);
@@ -128,8 +168,12 @@ export default function LogMealPhotoScreen({ navigation, route }) {
           food: {
             name:     item.name,
             brand:    "",
-            quantity: item.quantity,
-            unit:     item.unit,
+            // MealLog stores `quantity` in grams throughout the app (see
+            // LogMealScreen's manual entry flow) — so we log weightGrams
+            // here, not the AI's display "quantity" (which is a count like
+            // "2 pieces" and would otherwise silently corrupt the history).
+            quantity: item.weightGrams,
+            unit:     "g",
             calories: item.calories,
             protein:  item.protein,
             carbs:    item.carbs,
@@ -172,7 +216,7 @@ export default function LogMealPhotoScreen({ navigation, route }) {
           ))}
         </View>
 
-        {!photo && (
+        {photos.length === 0 && (
           <View style={s.captureCard}>
             <Text style={s.captureEmoji}>📸</Text>
             <Text style={s.captureTitle}>Snap your meal</Text>
@@ -188,9 +232,18 @@ export default function LogMealPhotoScreen({ navigation, route }) {
           </View>
         )}
 
-        {photo && !results && (
+        {photos.length > 0 && !results && (
           <View style={s.previewCard}>
-            <Image source={{ uri: photo.uri }} style={s.previewImage} />
+            <View style={s.photoRow}>
+              {photos.map((p, i) => (
+                <View key={i} style={s.photoThumbWrap}>
+                  <Image source={{ uri: p.uri }} style={s.photoThumb} />
+                  <TouchableOpacity style={s.photoRemove} onPress={() => removePhoto(i)}>
+                    <Text style={s.photoRemoveText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
 
             {analyzing ? (
               <View style={s.analyzingRow}>
@@ -199,6 +252,23 @@ export default function LogMealPhotoScreen({ navigation, route }) {
               </View>
             ) : (
               <>
+                {photos.length < MAX_ANGLES && (
+                  <TouchableOpacity style={s.angleBtn} onPress={pickFromCamera} activeOpacity={0.85}>
+                    <Text style={s.angleBtnText}>➕ Add another angle (improves portion accuracy)</Text>
+                  </TouchableOpacity>
+                )}
+
+                <TouchableOpacity
+                  style={s.referenceRow}
+                  onPress={() => setHasReferenceObject((v) => !v)}
+                  activeOpacity={0.85}
+                >
+                  <View style={[s.checkbox, hasReferenceObject && s.checkboxChecked]}>
+                    {hasReferenceObject && <Text style={s.checkboxTick}>✓</Text>}
+                  </View>
+                  <Text style={s.referenceText}>My hand, a coin, or a fork/spoon is visible next to the food (helps scale)</Text>
+                </TouchableOpacity>
+
                 <TouchableOpacity style={s.primaryBtn} onPress={analyzePhoto} activeOpacity={0.85}>
                   <Text style={s.primaryBtnText}>✨  Analyze Photo</Text>
                 </TouchableOpacity>
@@ -212,7 +282,7 @@ export default function LogMealPhotoScreen({ navigation, route }) {
 
         {results && (
           <View>
-            {results.items.length === 0 ? (
+            {items.length === 0 ? (
               <View style={s.emptyCard}>
                 <Text style={s.emptyEmoji}>🤔</Text>
                 <Text style={s.emptyTitle}>Couldn't identify any food</Text>
@@ -223,37 +293,56 @@ export default function LogMealPhotoScreen({ navigation, route }) {
               </View>
             ) : (
               <>
-                <Text style={s.sectionTitle}>Detected Items — tap to include/exclude</Text>
+                <Text style={s.sectionTitle}>Detected Items — tap to include/exclude, adjust grams if needed</Text>
 
-                {results.items.map((item, i) => {
+                {items.map((item, i) => {
                   const isSelected = !!selected[i];
                   const conf = CONFIDENCE_META[item.confidence] || CONFIDENCE_META.medium;
+                  const grams = Math.round(item.weightGrams || item.quantity || 0);
                   return (
-                    <TouchableOpacity
-                      key={i}
-                      style={[s.itemCard, !isSelected && s.itemCardMuted]}
-                      onPress={() => toggleItem(i)}
-                      activeOpacity={0.8}
-                    >
-                      <View style={[s.checkbox, isSelected && s.checkboxChecked]}>
-                        {isSelected && <Text style={s.checkboxTick}>✓</Text>}
-                      </View>
-
-                      <View style={{ flex: 1 }}>
-                        <View style={s.itemHeaderRow}>
-                          <Text style={s.itemName} numberOfLines={1}>{item.name}</Text>
-                          <View style={[s.confBadge, { backgroundColor: conf.color + "18" }]}>
-                            <Text style={[s.confBadgeText, { color: conf.color }]}>{conf.label}</Text>
-                          </View>
+                    <View key={i} style={[s.itemCard, !isSelected && s.itemCardMuted]}>
+                      <TouchableOpacity
+                        style={s.itemTapRow}
+                        onPress={() => toggleItem(i)}
+                        activeOpacity={0.8}
+                      >
+                        <View style={[s.checkbox, isSelected && s.checkboxChecked]}>
+                          {isSelected && <Text style={s.checkboxTick}>✓</Text>}
                         </View>
-                        <Text style={s.itemMeta}>
-                          {item.quantity} {item.unit} · {Math.round(item.calories)} kcal
-                        </Text>
-                        <Text style={s.itemMacros}>
-                          P {item.protein.toFixed(1)}g · C {item.carbs.toFixed(1)}g · F {item.fats.toFixed(1)}g
-                        </Text>
+
+                        <View style={{ flex: 1 }}>
+                          <View style={s.itemHeaderRow}>
+                            <Text style={s.itemName} numberOfLines={1}>{item.name}</Text>
+                            <View style={[s.confBadge, { backgroundColor: conf.color + "18" }]}>
+                              <Text style={[s.confBadgeText, { color: conf.color }]}>{conf.label}</Text>
+                            </View>
+                          </View>
+                          <Text style={s.itemMeta}>
+                            {item.quantity} {item.unit} · {Math.round(item.calories)} kcal
+                          </Text>
+                          <Text style={s.itemMacros}>
+                            P {item.protein.toFixed(1)}g · C {item.carbs.toFixed(1)}g · F {item.fats.toFixed(1)}g
+                          </Text>
+                          {item.source === "db_grounded" && (
+                            <Text style={s.dbBadge}>✓ Nutrition verified against food database</Text>
+                          )}
+                          {!!item.portionBasis && (
+                            <Text style={s.portionBasisText}>📏 {item.portionBasis}</Text>
+                          )}
+                        </View>
+                      </TouchableOpacity>
+
+                      <View style={s.gramStepperRow}>
+                        <Text style={s.gramStepperLabel}>Amount:</Text>
+                        <TouchableOpacity style={s.gramBtn} onPress={() => adjustGrams(i, -10)}>
+                          <Text style={s.gramBtnText}>−</Text>
+                        </TouchableOpacity>
+                        <Text style={s.gramValue}>{grams}g</Text>
+                        <TouchableOpacity style={s.gramBtn} onPress={() => adjustGrams(i, 10)}>
+                          <Text style={s.gramBtnText}>+</Text>
+                        </TouchableOpacity>
                       </View>
-                    </TouchableOpacity>
+                    </View>
                   );
                 })}
 
@@ -313,7 +402,26 @@ const s = StyleSheet.create({
     backgroundColor: "#fff", borderRadius: 22, padding: 16,
     boxShadow: "0px 2px 12px rgba(15,23,42,0.06)",
   },
-  previewImage: { width: "100%", height: 260, borderRadius: 16, marginBottom: 16, backgroundColor: "#F1F5F9" },
+  photoRow: { flexDirection: "row", gap: 10, marginBottom: 16 },
+  photoThumbWrap: { position: "relative", flex: 1 },
+  photoThumb: { width: "100%", height: 180, borderRadius: 16, backgroundColor: "#F1F5F9" },
+  photoRemove: {
+    position: "absolute", top: 8, right: 8, width: 26, height: 26, borderRadius: 13,
+    backgroundColor: "rgba(15,23,42,0.65)", alignItems: "center", justifyContent: "center",
+  },
+  photoRemoveText: { color: "#fff", fontSize: 13, fontWeight: "800" },
+
+  angleBtn: {
+    backgroundColor: "#EEF2FF", borderRadius: 14, paddingVertical: 12,
+    alignItems: "center", marginBottom: 10,
+  },
+  angleBtnText: { color: "#6366F1", fontSize: 13, fontWeight: "700" },
+
+  referenceRow: {
+    flexDirection: "row", alignItems: "center", gap: 10,
+    marginBottom: 14, paddingHorizontal: 2,
+  },
+  referenceText: { flex: 1, fontSize: 12, color: "#475569", fontWeight: "600", lineHeight: 17 },
 
   analyzingRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, paddingVertical: 16 },
   analyzingText: { fontSize: 14, fontWeight: "600", color: "#6366F1" },
@@ -337,11 +445,11 @@ const s = StyleSheet.create({
   sectionTitle: { fontSize: 13, fontWeight: "800", color: "#64748B", marginBottom: 12, letterSpacing: 0.2 },
 
   itemCard: {
-    flexDirection: "row", alignItems: "flex-start", gap: 12,
     backgroundColor: "#fff", borderRadius: 16, padding: 14, marginBottom: 10,
     borderWidth: 1.5, borderColor: "#EEF2FF",
   },
   itemCardMuted: { opacity: 0.45, borderColor: "#E2E8F0" },
+  itemTapRow: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
 
   checkbox: {
     width: 22, height: 22, borderRadius: 7, borderWidth: 2, borderColor: "#CBD5E1",
@@ -356,6 +464,20 @@ const s = StyleSheet.create({
   confBadgeText: { fontSize: 10, fontWeight: "800" },
   itemMeta: { fontSize: 13, color: "#475569", fontWeight: "600", marginBottom: 2 },
   itemMacros: { fontSize: 11, color: "#94A3B8", fontWeight: "600" },
+  dbBadge: { fontSize: 10, color: "#22C55E", fontWeight: "700", marginTop: 4 },
+  portionBasisText: { fontSize: 11, color: "#94A3B8", fontStyle: "italic", marginTop: 3 },
+
+  gramStepperRow: {
+    flexDirection: "row", alignItems: "center", gap: 10,
+    marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: "#F1F5F9",
+  },
+  gramStepperLabel: { fontSize: 12, color: "#64748B", fontWeight: "700", marginRight: 2 },
+  gramBtn: {
+    width: 30, height: 30, borderRadius: 10, backgroundColor: "#F1F5F9",
+    alignItems: "center", justifyContent: "center",
+  },
+  gramBtnText: { fontSize: 17, fontWeight: "800", color: "#0F172A" },
+  gramValue: { fontSize: 14, fontWeight: "800", color: "#0F172A", minWidth: 48, textAlign: "center" },
 
   notesText: { fontSize: 12, color: "#94A3B8", fontStyle: "italic", marginBottom: 14, lineHeight: 17 },
 
