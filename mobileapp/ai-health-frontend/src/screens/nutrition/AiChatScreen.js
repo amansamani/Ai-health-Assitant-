@@ -1,5 +1,5 @@
 "use strict";
-import React, { useState, useRef, useContext, useCallback } from "react";
+import React, { useState, useRef, useContext, useCallback, useEffect } from "react";
 import {
   View, Text, TextInput, StyleSheet, FlatList,
   TouchableOpacity, KeyboardAvoidingView, Platform,
@@ -135,9 +135,39 @@ export default function AiChatScreen({ navigation }) {
       time:    formatTime(new Date()),
     },
   ]);
-  const [input, setInput]       = useState("");
-  const [loading, setLoading]   = useState(false);
-  const listRef                 = useRef(null);
+  const [input, setInput]           = useState("");
+  const [loading, setLoading]       = useState(false);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
+  const listRef                     = useRef(null);
+
+  // Chat history lives server-side for 7 days (Redis) — restore it on mount
+  // so leaving and returning to this screen doesn't wipe the conversation.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await API.get("/nutrition/ai-chat");
+        const stored = res.data?.messages || [];
+        if (!cancelled && stored.length > 0) {
+          setMessages((prev) => [
+            prev[0], // keep the welcome message at the top
+            ...stored.map((m) => ({
+              id:      m.id,
+              role:    m.role,
+              content: m.content,
+              time:    m.ts ? formatTime(new Date(m.ts)) : "",
+            })),
+          ]);
+        }
+      } catch (err) {
+        // Non-fatal — just start fresh with the welcome message if this fails.
+        console.warn("Could not load chat history:", err.message);
+      } finally {
+        if (!cancelled) setHistoryLoaded(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   function formatTime(date) {
     return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });

@@ -104,8 +104,8 @@ const aiChat = async (req, res, next) => {
     const result = await chat.sendMessage(message.trim());
     const reply  = result.response.text().trim();
 
-    history.push({ role: "user",  parts: [{ text: message.trim() }] });
-    history.push({ role: "model", parts: [{ text: reply }] });
+    history.push({ role: "user",  parts: [{ text: message.trim() }], ts: Date.now() });
+    history.push({ role: "model", parts: [{ text: reply }], ts: Date.now() });
 
     await saveHistory(userId, history);
 
@@ -125,4 +125,20 @@ const clearChatSession = async (req, res) => {
   res.json({ cleared: true });
 };
 
-module.exports = { aiChat, clearChatSession };
+// Lets the frontend restore the conversation after a remount (nav away/back,
+// app restart, etc.) instead of always starting from a blank welcome message.
+// Session already lives SESSION_TTL_SECONDS (7 days) in Redis — this just
+// exposes it. `ts` may be missing on entries saved before this field existed;
+// those fall back to `null` and the frontend can omit the time label.
+const getChatHistoryCtrl = async (req, res) => {
+  const history = await getHistory(req.user.id);
+  const messages = history.map((entry, i) => ({
+    id:      `${entry.ts || i}_${entry.role}`,
+    role:    entry.role === "model" ? "assistant" : "user",
+    content: entry.parts?.[0]?.text || "",
+    ts:      entry.ts || null,
+  }));
+  res.json({ messages });
+};
+
+module.exports = { aiChat, clearChatSession, getChatHistoryCtrl };

@@ -4,7 +4,7 @@ const auth       = require("../../middleware/authMiddleware");
 const validate   = require("../../middleware/validate");
 const { mealPhotoSchema } = require("../../validation/schemas");
 const controller = require("./nutrition.controller");
-const { aiChat, clearChatSession } = require("./ai.chat.controller");
+const { aiChat, clearChatSession, getChatHistoryCtrl } = require("./ai.chat.controller");
 const { getWaterLog, addWater, undoLastWater, setWaterGoal } = require("./waterLog.controller");
 const { logDailyDiet, getDailyDietLog } = require("./mealCompletion.controller");
 
@@ -42,6 +42,7 @@ router.delete("/water/last", auth, undoLastWater);
 router.put("/water/goal",    auth, setWaterGoal);
 
 // ── AI Chat ───────────────────────────────────────────────────────────────────
+router.get("/ai-chat",  auth, getChatHistoryCtrl);
 router.post("/ai-chat",  auth, aiChat);
 router.delete("/ai-chat", auth, clearChatSession);
 
