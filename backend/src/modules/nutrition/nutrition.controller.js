@@ -308,8 +308,33 @@ const getTodayLog = async (req, res, next) => {
 
 const getDailyDietLog = async (req, res) => res.status(501).json({ message: "Not implemented" });
 
-const deleteMeal      = async (req, res) => res.status(501).json({ message: "Not implemented" });
-const getMealHistory  = async (req, res) => res.status(501).json({ message: "Not implemented" });
+const deleteMeal = async (req, res, next) => {
+  try {
+    const log = await MealLog.findOneAndDelete({ _id: req.params.id, user: req.user.id });
+    if (!log) return res.status(404).json({ message: "Meal not found" });
+    res.json({ message: "Meal deleted", data: log });
+  } catch (err) {
+    if (err.name === "CastError") return res.status(400).json({ message: "Invalid meal id" });
+    next(err);
+  }
+};
+
+const getMealHistory = async (req, res, next) => {
+  try {
+    const days = Math.min(Math.max(parseInt(req.query.days, 10) || 7, 1), 90);
+    const since = new Date();
+    since.setDate(since.getDate() - days);
+    since.setHours(0, 0, 0, 0);
+
+    const logs = await MealLog.find({ user: req.user.id, loggedAt: { $gte: since } })
+      .sort({ loggedAt: -1 })
+      .lean();
+
+    res.json({ success: true, count: logs.length, data: logs });
+  } catch (err) {
+    next(err);
+  }
+};
 
 const runWeeklyAdjustment = async (req, res, next) => {
   try {
