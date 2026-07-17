@@ -1,15 +1,16 @@
 import {
   View, Text, Pressable, StyleSheet,
-  ActivityIndicator, Animated, ScrollView, Dimensions,
+  ActivityIndicator, Animated, ScrollView, Alert,
 } from "react-native";
 import { useEffect, useState, useContext, useRef } from "react";
+import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import API from "../services/api";
 import { AuthContext } from "../context/AuthContext";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { getToken } from "../utils/secureToken";
 import { LinearGradient } from "expo-linear-gradient";
-
-const { width } = Dimensions.get("window");
+import { COLORS } from "../constants/theme";
 
 // ── Fade + slide in animation wrapper ────────────────────────────────────────
 function FadeSlideIn({ delay = 0, children }) {
@@ -28,11 +29,11 @@ function FadeSlideIn({ delay = 0, children }) {
   );
 }
 
-// ── Goal Option Button ────────────────────────────────────────────────────────
+// ── Goal Option Card ──────────────────────────────────────────────────────────
 const GOALS = [
-  { key: "bulk",  label: "Bulk",  emoji: "💪", desc: "Build mass & strength",  color: "#F59E0B" },
-  { key: "lean",  label: "Lean",  emoji: "🔥", desc: "Cut fat, stay toned",    color: "#EF4444" },
-  { key: "fit",   label: "Fit",   emoji: "⚡", desc: "Overall fitness & health", color: "#22C55E" },
+  { key: "bulk", label: "Bulk", icon: "barbell-outline", desc: "Build mass & strength",    color: COLORS.warning },
+  { key: "lean", label: "Lean", icon: "flame-outline",   desc: "Cut fat, stay toned",       color: COLORS.error },
+  { key: "fit",  label: "Fit",  icon: "flash-outline",   desc: "Overall fitness & health",  color: COLORS.success },
 ];
 
 function GoalCard({ goal, selected, onPress }) {
@@ -41,16 +42,20 @@ function GoalCard({ goal, selected, onPress }) {
   const onOut = () => Animated.spring(scale, { toValue: 1,    useNativeDriver: true }).start();
 
   return (
-    <Pressable onPress={onPress} onPressIn={onIn} onPressOut={onOut} style={{ flex: 1 }}>
+    <Pressable
+      onPress={onPress} onPressIn={onIn} onPressOut={onOut}
+      style={{ flex: 1 }}
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
+      accessibilityLabel={`${goal.label}: ${goal.desc}`}
+    >
       <Animated.View style={[
         styles.goalCard,
-        selected && { borderColor: goal.color, borderWidth: 2 },
+        selected && { borderColor: goal.color, borderWidth: 2, backgroundColor: goal.color + "10" },
         { transform: [{ scale }] },
       ]}>
-        {selected && (
-          <View style={[styles.goalSelectedDot, { backgroundColor: goal.color }]} />
-        )}
-        <Text style={styles.goalEmoji}>{goal.emoji}</Text>
+        {selected && <View style={[styles.goalSelectedDot, { backgroundColor: goal.color }]} />}
+        <Ionicons name={goal.icon} size={22} color={selected ? goal.color : COLORS.textMuted} style={{ marginBottom: 6 }} />
         <Text style={[styles.goalLabel, selected && { color: goal.color }]}>{goal.label}</Text>
         <Text style={styles.goalDesc}>{goal.desc}</Text>
       </Animated.View>
@@ -63,7 +68,7 @@ function InfoRow({ icon, label, value }) {
   return (
     <View style={styles.infoRow}>
       <View style={styles.infoIconWrap}>
-        <Text style={styles.infoIcon}>{icon}</Text>
+        <Ionicons name={icon} size={18} color={COLORS.primary} />
       </View>
       <View style={styles.infoText}>
         <Text style={styles.infoLabel}>{label}</Text>
@@ -74,7 +79,8 @@ function InfoRow({ icon, label, value }) {
 }
 
 // ── Main Screen ───────────────────────────────────────────────────────────────
-export default function ProfileScreen({ navigation }) {
+export default function ProfileScreen() {
+  const router = useRouter();
   const { logout, token, setUserGoal } = useContext(AuthContext);
   const [profile, setProfile]           = useState(null);
   const [selectedGoal, setSelectedGoal] = useState("fit");
@@ -117,7 +123,7 @@ export default function ProfileScreen({ navigation }) {
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch {
-      alert("Failed to update goal");
+      Alert.alert("Error", "Failed to update goal. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -129,11 +135,12 @@ export default function ProfileScreen({ navigation }) {
     : "?";
 
   const activeGoal = GOALS.find((g) => g.key === selectedGoal) ?? GOALS[2];
+  const hasGoalChanged = selectedGoal !== (profile?.goal || "fit");
 
   if (loading || !profile) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#6366F1" />
+        <ActivityIndicator size="large" color={COLORS.primary} />
         <Text style={styles.loadingText}>Loading profile…</Text>
       </View>
     );
@@ -146,8 +153,13 @@ export default function ProfileScreen({ navigation }) {
         {/* ── HEADER ── */}
         <FadeSlideIn delay={0}>
           <View style={styles.headerRow}>
-            <Pressable onPress={() => navigation?.goBack()} style={styles.backBtn}>
-              <Text style={styles.backIcon}>←</Text>
+            <Pressable
+              onPress={() => router.back()}
+              style={styles.backBtn}
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+            >
+              <Ionicons name="chevron-back" size={20} color={COLORS.textDark} />
             </Pressable>
             <Text style={styles.headerTitle}>Profile</Text>
             <View style={{ width: 40 }} />
@@ -157,16 +169,15 @@ export default function ProfileScreen({ navigation }) {
         {/* ── AVATAR HERO ── */}
         <FadeSlideIn delay={80}>
           <View style={styles.avatarSection}>
-            <LinearGradient colors={["#6366F1", "#8B5CF6", "#A855F7"]} style={styles.avatarRing}>
+            <LinearGradient colors={[COLORS.primaryDark, COLORS.primary, COLORS.primaryLight]} style={styles.avatarRing}>
               <View style={styles.avatarInner}>
                 <Text style={styles.avatarInitials}>{initials}</Text>
               </View>
             </LinearGradient>
             <Text style={styles.profileName}>{profile?.name || "User"}</Text>
-            <View style={[styles.goalBadge, { backgroundColor: activeGoal.color + "20", borderColor: activeGoal.color + "40" }]}>
-              <Text style={[styles.goalBadgeText, { color: activeGoal.color }]}>
-                {activeGoal.emoji} {activeGoal.label} Mode
-              </Text>
+            <View style={[styles.goalBadge, { backgroundColor: activeGoal.color + "18", borderColor: activeGoal.color + "40" }]}>
+              <Ionicons name={activeGoal.icon} size={13} color={activeGoal.color} style={{ marginRight: 5 }} />
+              <Text style={[styles.goalBadgeText, { color: activeGoal.color }]}>{activeGoal.label} Mode</Text>
             </View>
           </View>
         </FadeSlideIn>
@@ -175,44 +186,69 @@ export default function ProfileScreen({ navigation }) {
         <FadeSlideIn delay={160}>
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Account Info</Text>
-            <InfoRow icon="👤" label="Full Name"     value={profile?.name}  />
+            <InfoRow icon="person-outline" label="Full Name"     value={profile?.name}  />
             <View style={styles.divider} />
-            <InfoRow icon="📧" label="Email Address" value={profile?.email} />
+            <InfoRow icon="mail-outline"   label="Email Address" value={profile?.email} />
           </View>
         </FadeSlideIn>
 
-          <FadeSlideIn delay={200}>
-            <Pressable onPress={() => navigation.navigate("EditHealthProfile")} style={styles.card}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                <View style={[styles.infoIconWrap, { backgroundColor: "#F1F5F9" }]}>
-                  <Text style={{ fontSize: 18 }}>🏋️</Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.cardTitle}>Health Profile</Text>
-                  <Text style={{ fontSize: 12, color: "#94A3B8", marginTop: 2 }}>
-                    Update weight, height, activity & more
-                  </Text>
-                </View>
-                <Text style={{ fontSize: 18, color: "#94A3B8" }}>→</Text>
+        {/* ── HEALTH PROFILE LINK ── */}
+        <FadeSlideIn delay={200}>
+          <Pressable
+            onPress={() => router.push("/(app)/edit-health-profile")}
+            style={({ pressed }) => [styles.card, { opacity: pressed ? 0.9 : 1 }]}
+            accessibilityRole="button"
+            accessibilityLabel="Edit health profile: update weight, height, activity and more"
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+              <View style={[styles.infoIconWrap, { backgroundColor: COLORS.surfaceMuted }]}>
+                <Ionicons name="body-outline" size={18} color={COLORS.primary} />
               </View>
-            </Pressable>
-          </FadeSlideIn>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.cardTitle}>Health Profile</Text>
+                <Text style={styles.cardSubtitle}>Update weight, height, activity & more</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
+            </View>
+          </Pressable>
+        </FadeSlideIn>
+
+        {/* ── FITNESS GOAL ── */}
+        <FadeSlideIn delay={260}>
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Fitness Goal</Text>
+            <Text style={styles.cardSubtitle}>Changing this updates your workout & diet plan</Text>
+            <View style={styles.goalRow}>
+              {GOALS.map((g) => (
+                <GoalCard key={g.key} goal={g} selected={selectedGoal === g.key} onPress={() => setSelectedGoal(g.key)} />
+              ))}
+            </View>
+          </View>
+        </FadeSlideIn>
 
         {/* ── SAVE BUTTON ── */}
         <FadeSlideIn delay={320}>
           <Pressable
             onPress={updateGoal}
-            disabled={saving}
+            disabled={saving || !hasGoalChanged}
             style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1 }]}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: saving || !hasGoalChanged }}
+            accessibilityLabel="Save changes"
           >
             <LinearGradient
-              colors={saved ? ["#22C55E", "#16A34A"] : ["#6366F1", "#8B5CF6"]}
+              colors={saved ? ["#22C55E", "#16A34A"] : (!hasGoalChanged && !saving) ? [COLORS.textLight, COLORS.textLight] : [COLORS.primaryDark, COLORS.primary]}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
               style={styles.saveBtn}
             >
               {saving
                 ? <ActivityIndicator color="#fff" size="small" />
-                : <Text style={styles.saveBtnText}>{saved ? "✓  Saved!" : "Save Changes"}</Text>
+                : (
+                  <View style={{ flexDirection: "row", alignItems: "center" }}>
+                    {saved && <Ionicons name="checkmark" size={18} color="#fff" style={{ marginRight: 6 }} />}
+                    <Text style={styles.saveBtnText}>{saved ? "Saved!" : "Save Changes"}</Text>
+                  </View>
+                )
               }
             </LinearGradient>
           </Pressable>
@@ -220,9 +256,14 @@ export default function ProfileScreen({ navigation }) {
 
         {/* ── LOGOUT ── */}
         <FadeSlideIn delay={380}>
-          <Pressable onPress={logout} style={styles.logoutBtn}>
+          <Pressable
+            onPress={logout}
+            style={styles.logoutBtn}
+            accessibilityRole="button"
+            accessibilityLabel="Log out"
+          >
             <View style={styles.logoutInner}>
-              <Text style={styles.logoutIcon}>🚪</Text>
+              <Ionicons name="log-out-outline" size={18} color={COLORS.error} />
               <Text style={styles.logoutText}>Log Out</Text>
             </View>
           </Pressable>
@@ -236,11 +277,11 @@ export default function ProfileScreen({ navigation }) {
 
 // ── STYLES ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F8FAFC" },
+  container: { flex: 1, backgroundColor: COLORS.background },
   scroll:    { padding: 20, paddingTop: 8 },
 
-  center: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#F8FAFC" },
-  loadingText: { marginTop: 12, color: "#94A3B8", fontSize: 14, fontWeight: "500" },
+  center: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: COLORS.background },
+  loadingText: { marginTop: 12, color: COLORS.textMuted, fontSize: 14, fontWeight: "500" },
 
   // Header
   headerRow: {
@@ -249,27 +290,27 @@ const styles = StyleSheet.create({
   },
   backBtn: {
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: "#fff", justifyContent: "center", alignItems: "center",
-    boxShadow: "0px 2px 8px rgba(15,23,42,0.08)",
+    backgroundColor: COLORS.surface, justifyContent: "center", alignItems: "center",
+    boxShadow: "0px 2px 8px rgba(23,15,54,0.08)",
   },
-  backIcon:    { fontSize: 20, color: "#0F172A", fontWeight: "700" },
-  headerTitle: { fontSize: 18, fontWeight: "800", color: "#0F172A", letterSpacing: -0.3 },
+  headerTitle: { fontSize: 18, fontWeight: "800", color: COLORS.textDark, letterSpacing: -0.3 },
 
   // Avatar
   avatarSection: { alignItems: "center", marginBottom: 28 },
   avatarRing: {
     width: 96, height: 96, borderRadius: 48,
     padding: 3, marginBottom: 14,
-    boxShadow: "0px 6px 20px rgba(99,102,241,0.35)",
+    boxShadow: "0px 6px 20px rgba(76,46,150,0.35)",
   },
   avatarInner: {
     flex: 1, borderRadius: 45,
-    backgroundColor: "#1E1B4B",
+    backgroundColor: COLORS.primaryDark,
     justifyContent: "center", alignItems: "center",
   },
   avatarInitials: { fontSize: 32, fontWeight: "900", color: "#fff", letterSpacing: -1 },
-  profileName:    { fontSize: 22, fontWeight: "800", color: "#0F172A", letterSpacing: -0.5, marginBottom: 10 },
+  profileName:    { fontSize: 22, fontWeight: "800", color: COLORS.textDark, letterSpacing: -0.5, marginBottom: 10 },
   goalBadge: {
+    flexDirection: "row", alignItems: "center",
     paddingHorizontal: 14, paddingVertical: 6,
     borderRadius: 20, borderWidth: 1,
   },
@@ -277,59 +318,56 @@ const styles = StyleSheet.create({
 
   // Card
   card: {
-    backgroundColor: "#fff",
+    backgroundColor: COLORS.surface,
     borderRadius: 22, padding: 20,
     marginBottom: 16,
-    boxShadow: "0px 2px 12px rgba(15,23,42,0.07)",
+    boxShadow: "0px 2px 12px rgba(23,15,54,0.07)",
   },
-  cardTitle:    { fontSize: 16, fontWeight: "800", color: "#0F172A", marginBottom: 4, letterSpacing: -0.2 },
-  cardSubtitle: { fontSize: 13, color: "#94A3B8", marginBottom: 16, fontWeight: "500" },
+  cardTitle:    { fontSize: 16, fontWeight: "800", color: COLORS.textDark, marginBottom: 4, letterSpacing: -0.2 },
+  cardSubtitle: { fontSize: 13, color: COLORS.textMuted, marginBottom: 16, fontWeight: "500" },
 
   // Info rows
   infoRow: { flexDirection: "row", alignItems: "center", paddingVertical: 10 },
   infoIconWrap: {
     width: 40, height: 40, borderRadius: 12,
-    backgroundColor: "#F1F5F9",
+    backgroundColor: COLORS.surfaceMuted,
     justifyContent: "center", alignItems: "center", marginRight: 14,
   },
-  infoIcon:  { fontSize: 18 },
   infoText:  { flex: 1 },
-  infoLabel: { fontSize: 11, color: "#94A3B8", fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.5 },
-  infoValue: { fontSize: 15, fontWeight: "700", color: "#0F172A", marginTop: 2 },
-  divider:   { height: 1, backgroundColor: "#F1F5F9", marginVertical: 2 },
+  infoLabel: { fontSize: 11, color: COLORS.textMuted, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.5 },
+  infoValue: { fontSize: 15, fontWeight: "700", color: COLORS.textDark, marginTop: 2 },
+  divider:   { height: 1, backgroundColor: COLORS.surfaceMuted, marginVertical: 2 },
 
   // Goal cards
   goalRow: { flexDirection: "row", gap: 10 },
   goalCard: {
-    flex: 1, backgroundColor: "#F8FAFC",
+    flex: 1, backgroundColor: COLORS.surfaceMuted,
     borderRadius: 16, padding: 14,
     alignItems: "center", borderWidth: 2,
-    borderColor: "#F1F5F9", position: "relative",
+    borderColor: "transparent", position: "relative",
   },
   goalSelectedDot: {
     position: "absolute", top: 8, right: 8,
     width: 8, height: 8, borderRadius: 4,
   },
-  goalEmoji: { fontSize: 24, marginBottom: 6 },
-  goalLabel: { fontSize: 14, fontWeight: "800", color: "#0F172A", marginBottom: 4 },
-  goalDesc:  { fontSize: 10, color: "#94A3B8", textAlign: "center", fontWeight: "500", lineHeight: 14 },
+  goalLabel: { fontSize: 14, fontWeight: "800", color: COLORS.textDark, marginBottom: 4 },
+  goalDesc:  { fontSize: 10, color: COLORS.textMuted, textAlign: "center", fontWeight: "500", lineHeight: 14 },
 
   // Save button
   saveBtn: {
     borderRadius: 18, paddingVertical: 17,
     alignItems: "center", justifyContent: "center",
     marginBottom: 14,
-    boxShadow: "0px 6px 16px rgba(99,102,241,0.35)",
+    boxShadow: "0px 6px 16px rgba(76,46,150,0.3)",
   },
   saveBtnText: { color: "#fff", fontSize: 16, fontWeight: "800", letterSpacing: 0.3 },
 
   // Logout
   logoutBtn: {
-    backgroundColor: "#fff",
+    backgroundColor: COLORS.surface,
     borderRadius: 18, padding: 16,
-    boxShadow: "0px 2px 8px rgba(15,23,42,0.06)",
+    boxShadow: "0px 2px 8px rgba(23,15,54,0.06)",
   },
   logoutInner: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
-  logoutIcon:  { fontSize: 18 },
-  logoutText:  { fontSize: 15, fontWeight: "700", color: "#EF4444" },
+  logoutText:  { fontSize: 15, fontWeight: "700", color: COLORS.error },
 });

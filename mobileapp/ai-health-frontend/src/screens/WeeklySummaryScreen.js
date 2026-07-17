@@ -2,10 +2,12 @@ import {
   View, Text, StyleSheet, ActivityIndicator,
   ScrollView, Animated,
 } from "react-native";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback, useContext } from "react";
+import { useFocusEffect } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import API from "../services/api";
-import { COLORS, SHADOW } from "../constants/theme";
-import { useContext } from "react";
+import { COLORS } from "../constants/theme";
 import { AuthContext } from "../context/AuthContext";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -62,7 +64,7 @@ function DaysRing({ days, total = 7 }) {
 
   return (
     <View style={{ width: SIZE, height: SIZE, justifyContent: "center", alignItems: "center" }}>
-      <View style={{ position: "absolute", width: SIZE, height: SIZE, borderRadius: SIZE / 2, borderWidth: BORDER, borderColor: "#ffffff30" }} />
+      <View style={{ position: "absolute", width: SIZE, height: SIZE, borderRadius: SIZE / 2, borderWidth: BORDER, borderColor: "rgba(255,255,255,0.15)" }} />
       {pct > 0 && (
         <View style={{
           position: "absolute", width: SIZE, height: SIZE,
@@ -76,7 +78,17 @@ function DaysRing({ days, total = 7 }) {
         }} />
       )}
       <Text style={{ fontSize: 22, fontWeight: "800", color }}>{days}</Text>
-      <Text style={{ fontSize: 10, color: "#aaa", fontWeight: "600" }}>/ 7 days</Text>
+      <Text style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", fontWeight: "600" }}>/ 7 days</Text>
+    </View>
+  );
+}
+
+// ── Small icon + label pair (replaces old "emoji + string" scores) ───────────
+function ScoreTag({ icon, color, text }) {
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+      <Ionicons name={icon} size={12} color={color} />
+      <Text style={[s.statScore, { color }]}>{text}</Text>
     </View>
   );
 }
@@ -90,12 +102,7 @@ export default function WeeklySummaryScreen() {
   const fadeAnim  = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
 
-  useEffect(() => {
-    if (!token) return;
-    fetchSummary();
-  }, [token]);
-
-  const fetchSummary = async () => {
+  const fetchSummary = useCallback(async () => {
     try {
       const res = await API.get("/track/weekly");
       setSummary(res.data);
@@ -108,12 +115,20 @@ export default function WeeklySummaryScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [fadeAnim, slideAnim]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!token) return;
+      setLoading(true);
+      fetchSummary();
+    }, [token, fetchSummary])
+  );
 
   if (loading) {
     return (
       <View style={s.center}>
-        <ActivityIndicator size="large" color="#22C55E" />
+        <ActivityIndicator size="large" color={COLORS.primary} />
         <Text style={s.loadingText}>Loading your week...</Text>
       </View>
     );
@@ -123,7 +138,7 @@ export default function WeeklySummaryScreen() {
     return (
       <SafeAreaView style={s.container}>
         <View style={s.center}>
-          <Text style={{ fontSize: 52 }}>📊</Text>
+          <Ionicons name="stats-chart-outline" size={48} color={COLORS.textMuted} />
           <Text style={s.emptyTitle}>No Data Yet</Text>
           <Text style={s.emptySub}>Start tracking your daily activity{"\n"}to see your weekly summary here.</Text>
         </View>
@@ -141,9 +156,23 @@ export default function WeeklySummaryScreen() {
     ? new Date(summary.bestDay).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" })
     : "—";
 
-  const stepsScore = avgSteps >= 10000 ? "🏆 Goal Met!" : avgSteps >= 7000 ? "💪 Almost!" : "📈 Keep Going";
-  const waterScore = avgWater >= 3 ? "🏆 Goal Met!" : avgWater >= 2 ? "💧 Good!" : "📈 Drink More";
-  const sleepScore = avgSleep >= 8 ? "🏆 Goal Met!" : avgSleep >= 6 ? "😴 Decent" : "📈 Sleep More";
+  const stepsScore = avgSteps >= 10000
+    ? { icon: "trophy", color: "#22C55E", text: "Goal Met!" }
+    : avgSteps >= 7000
+    ? { icon: "trending-up", color: "#F59E0B", text: "Almost!" }
+    : { icon: "trending-up-outline", color: COLORS.textMuted, text: "Keep Going" };
+
+  const waterScore = avgWater >= 3
+    ? { icon: "trophy", color: "#22C55E", text: "Goal Met!" }
+    : avgWater >= 2
+    ? { icon: "water", color: "#3B82F6", text: "Good!" }
+    : { icon: "trending-up-outline", color: COLORS.textMuted, text: "Drink More" };
+
+  const sleepScore = avgSleep >= 8
+    ? { icon: "trophy", color: "#22C55E", text: "Goal Met!" }
+    : avgSleep >= 6
+    ? { icon: "moon", color: COLORS.primary, text: "Decent" }
+    : { icon: "trending-up-outline", color: COLORS.textMuted, text: "Sleep More" };
 
   // Overall score
   const stepsP = Math.min(avgSteps / 10000, 1);
@@ -153,7 +182,14 @@ export default function WeeklySummaryScreen() {
   const score  = Math.round(((stepsP + waterP + sleepP + daysP) / 4) * 100);
   const grade  = score >= 80 ? "A" : score >= 60 ? "B" : score >= 40 ? "C" : "D";
   const gradeColor = score >= 80 ? "#22C55E" : score >= 60 ? "#F59E0B" : score >= 40 ? "#F97316" : "#EF4444";
-  const scoreMsg = score >= 80 ? "Outstanding week! 🏆" : score >= 60 ? "Solid effort! 💪" : score >= 40 ? "Good start! 📈" : "Let's pick it up! 🔥";
+  const scoreMsg = score >= 80 ? "Outstanding week!" : score >= 60 ? "Solid effort!" : score >= 40 ? "Good start!" : "Let's pick it up!";
+  const scoreIcon = score >= 80 ? "trophy" : score >= 60 ? "flame" : score >= 40 ? "trending-up-outline" : "flag-outline";
+
+  const consistency = daysTracked >= 5
+    ? { bg: "#dcfce7", color: "#15803d", icon: "flame", text: "Excellent week!" }
+    : daysTracked >= 3
+    ? { bg: "#fef9c3", color: "#a16207", icon: "thumbs-up-outline", text: "Good effort" }
+    : { bg: "#fee2e2", color: "#dc2626", icon: "trending-up-outline", text: "Room to grow" };
 
   return (
     <SafeAreaView style={s.container}>
@@ -168,22 +204,22 @@ export default function WeeklySummaryScreen() {
         </Animated.View>
 
         {/* Hero card */}
-        <Animated.View style={[s.heroCard, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-          <View style={s.heroLeft}>
-            <Text style={s.heroLabel}>CONSISTENCY</Text>
-            <Text style={s.heroTitle}>Days Tracked</Text>
-            <Text style={s.heroBestDay}>🏅 Best: {bestDayStr}</Text>
-            <View style={[s.consistencyBadge, {
-              backgroundColor: daysTracked >= 5 ? "#dcfce7" : daysTracked >= 3 ? "#fef9c3" : "#fee2e2"
-            }]}>
-              <Text style={[s.consistencyText, {
-                color: daysTracked >= 5 ? "#15803d" : daysTracked >= 3 ? "#a16207" : "#dc2626"
-              }]}>
-                {daysTracked >= 5 ? "🔥 Excellent week!" : daysTracked >= 3 ? "👍 Good effort" : "💪 Room to grow"}
-              </Text>
+        <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
+          <LinearGradient colors={["#170F36", "#29195A"]} style={s.heroCard}>
+            <View style={s.heroLeft}>
+              <Text style={s.heroLabel}>CONSISTENCY</Text>
+              <Text style={s.heroTitle}>Days Tracked</Text>
+              <View style={s.heroBestRow}>
+                <Ionicons name="medal-outline" size={12} color="#B8AFD6" />
+                <Text style={s.heroBestDay}>Best: {bestDayStr}</Text>
+              </View>
+              <View style={[s.consistencyBadge, { backgroundColor: consistency.bg }]}>
+                <Ionicons name={consistency.icon} size={12} color={consistency.color} />
+                <Text style={[s.consistencyText, { color: consistency.color }]}>{consistency.text}</Text>
+              </View>
             </View>
-          </View>
-          <DaysRing days={daysTracked} />
+            <DaysRing days={daysTracked} />
+          </LinearGradient>
         </Animated.View>
 
         <Text style={s.sectionTitle}>DAILY AVERAGES</Text>
@@ -192,11 +228,11 @@ export default function WeeklySummaryScreen() {
         <Animated.View style={[s.statCard, { opacity: fadeAnim }]}>
           <View style={s.statHeader}>
             <View style={[s.statIconBox, { backgroundColor: "#dcfce7" }]}>
-              <Text style={s.statIcon}>🚶</Text>
+              <Ionicons name="footsteps-outline" size={22} color="#22C55E" />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={s.statLabel}>Average Steps</Text>
-              <Text style={s.statScore}>{stepsScore}</Text>
+              <ScoreTag {...stepsScore} />
             </View>
             <View style={s.statNumBox}>
               <AnimatedNumber value={avgSteps} />
@@ -214,11 +250,11 @@ export default function WeeklySummaryScreen() {
         <Animated.View style={[s.statCard, { opacity: fadeAnim }]}>
           <View style={s.statHeader}>
             <View style={[s.statIconBox, { backgroundColor: "#dbeafe" }]}>
-              <Text style={s.statIcon}>💧</Text>
+              <Ionicons name="water-outline" size={22} color="#3B82F6" />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={s.statLabel}>Average Water</Text>
-              <Text style={s.statScore}>{waterScore}</Text>
+              <ScoreTag {...waterScore} />
             </View>
             <View style={s.statNumBox}>
               <AnimatedNumber value={avgWater} suffix="L" />
@@ -235,22 +271,22 @@ export default function WeeklySummaryScreen() {
         {/* Sleep card */}
         <Animated.View style={[s.statCard, { opacity: fadeAnim }]}>
           <View style={s.statHeader}>
-            <View style={[s.statIconBox, { backgroundColor: "#f3e8ff" }]}>
-              <Text style={s.statIcon}>😴</Text>
+            <View style={[s.statIconBox, { backgroundColor: COLORS.surfaceMuted }]}>
+              <Ionicons name="moon-outline" size={22} color={COLORS.primary} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={s.statLabel}>Average Sleep</Text>
-              <Text style={s.statScore}>{sleepScore}</Text>
+              <ScoreTag {...sleepScore} />
             </View>
             <View style={s.statNumBox}>
               <AnimatedNumber value={avgSleep} suffix="h" />
               <Text style={s.statUnit}>per night</Text>
             </View>
           </View>
-          <StatBar value={avgSleep} max={8} color="#A855F7" />
+          <StatBar value={avgSleep} max={8} color={COLORS.primary} />
           <View style={s.statFooter}>
             <Text style={s.statGoalText}>Goal: 8 hrs</Text>
-            <Text style={[s.statPct, { color: "#A855F7" }]}>{Math.round((avgSleep / 8) * 100)}%</Text>
+            <Text style={[s.statPct, { color: COLORS.primary }]}>{Math.round((avgSleep / 8) * 100)}%</Text>
           </View>
         </Animated.View>
 
@@ -265,7 +301,10 @@ export default function WeeklySummaryScreen() {
               <Text style={[s.scoreNum, { color: gradeColor }]}>
                 {score}<Text style={s.scoreOf}>/100</Text>
               </Text>
-              <Text style={s.scoreMsg}>{scoreMsg}</Text>
+              <View style={s.scoreMsgRow}>
+                <Ionicons name={scoreIcon} size={13} color={COLORS.textLight} />
+                <Text style={s.scoreMsg}>{scoreMsg}</Text>
+              </View>
             </View>
           </View>
         </View>
@@ -277,68 +316,66 @@ export default function WeeklySummaryScreen() {
 }
 
 const bar = StyleSheet.create({
-  track: { height: 8, backgroundColor: "#f0f0f0", borderRadius: 4, overflow: "hidden", marginTop: 12 },
+  track: { height: 8, backgroundColor: COLORS.surfaceMuted, borderRadius: 4, overflow: "hidden", marginTop: 12 },
   fill:  { height: "100%", borderRadius: 4 },
 });
 
 const num = StyleSheet.create({
-  text: { fontSize: 22, fontWeight: "800", color: "#1a1a1a" },
+  text: { fontSize: 22, fontWeight: "800", color: COLORS.textDark },
 });
 
 const s = StyleSheet.create({
-  container:   { flex: 1, backgroundColor: "#f9fafb" },
+  container:   { flex: 1, backgroundColor: COLORS.background },
   scroll:      { padding: 16 },
-  center:      { flex: 1, justifyContent: "center", alignItems: "center", padding: 24 },
-  loadingText: { marginTop: 12, color: "#888", fontSize: 14 },
-  emptyTitle:  { fontSize: 22, fontWeight: "800", color: "#1a1a1a", marginTop: 12 },
-  emptySub:    { fontSize: 14, color: "#aaa", textAlign: "center", marginTop: 8, lineHeight: 22 },
+  center:      { flex: 1, justifyContent: "center", alignItems: "center", padding: 24, gap: 6 },
+  loadingText: { marginTop: 12, color: COLORS.textMuted, fontSize: 14 },
+  emptyTitle:  { fontSize: 22, fontWeight: "800", color: COLORS.textDark, marginTop: 6 },
+  emptySub:    { fontSize: 14, color: COLORS.textMuted, textAlign: "center", marginTop: 4, lineHeight: 22 },
 
   header:      { marginBottom: 20 },
-  headerTitle: { fontSize: 26, fontWeight: "800", color: "#1a1a1a" },
-  headerSub:   { fontSize: 13, color: "#888", marginTop: 3 },
+  headerTitle: { fontSize: 26, fontWeight: "800", color: COLORS.textDark },
+  headerSub:   { fontSize: 13, color: COLORS.textMuted, marginTop: 3 },
 
   heroCard: {
-    backgroundColor: "#1a1a2e", borderRadius: 20, padding: 20,
+    borderRadius: 20, padding: 20,
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    marginBottom: 24, elevation: 4,
-    shadowColor: "#000", shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15, shadowRadius: 12,
+    marginBottom: 24,
+    boxShadow: "0px 6px 20px rgba(23,15,54,0.3)",
   },
   heroLeft:          { flex: 1, marginRight: 16 },
-  heroLabel:         { fontSize: 10, fontWeight: "700", color: "#888", letterSpacing: 1.5, marginBottom: 4 },
+  heroLabel:         { fontSize: 10, fontWeight: "700", color: "#B8AFD6", letterSpacing: 1.5, marginBottom: 4 },
   heroTitle:         { fontSize: 22, fontWeight: "800", color: "#fff", marginBottom: 4 },
-  heroBestDay:       { fontSize: 12, color: "#aaa", marginBottom: 12 },
-  consistencyBadge:  { alignSelf: "flex-start", paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20 },
+  heroBestRow:       { flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 12 },
+  heroBestDay:       { fontSize: 12, color: "#B8AFD6" },
+  consistencyBadge:  { flexDirection: "row", alignItems: "center", gap: 5, alignSelf: "flex-start", paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20 },
   consistencyText:   { fontSize: 12, fontWeight: "700" },
 
-  sectionTitle: { fontSize: 11, fontWeight: "700", color: "#aaa", letterSpacing: 1.5, marginBottom: 12, textTransform: "uppercase" },
+  sectionTitle: { fontSize: 11, fontWeight: "700", color: COLORS.textLight, letterSpacing: 1.5, marginBottom: 12, textTransform: "uppercase" },
 
   statCard: {
-    backgroundColor: "#fff", borderRadius: 16, padding: 16, marginBottom: 12,
-    elevation: 2, shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06, shadowRadius: 8,
+    backgroundColor: COLORS.surface, borderRadius: 16, padding: 16, marginBottom: 12,
+    boxShadow: "0px 2px 8px rgba(23,15,54,0.06)",
   },
   statHeader:  { flexDirection: "row", alignItems: "center", gap: 12 },
   statIconBox: { width: 44, height: 44, borderRadius: 12, justifyContent: "center", alignItems: "center" },
-  statIcon:    { fontSize: 22 },
-  statLabel:   { fontSize: 14, fontWeight: "700", color: "#1a1a1a" },
-  statScore:   { fontSize: 12, color: "#888", marginTop: 2 },
+  statLabel:   { fontSize: 14, fontWeight: "700", color: COLORS.textDark },
+  statScore:   { fontSize: 12, marginTop: 2, fontWeight: "600" },
   statNumBox:  { alignItems: "flex-end" },
-  statUnit:    { fontSize: 10, color: "#aaa", fontWeight: "500" },
+  statUnit:    { fontSize: 10, color: COLORS.textMuted, fontWeight: "500" },
   statFooter:  { flexDirection: "row", justifyContent: "space-between", marginTop: 8 },
-  statGoalText:{ fontSize: 11, color: "#aaa" },
+  statGoalText:{ fontSize: 11, color: COLORS.textMuted },
   statPct:     { fontSize: 12, fontWeight: "700" },
 
   scoreCard: {
-    backgroundColor: "#fff", borderRadius: 16, padding: 20, marginTop: 4,
-    elevation: 2, shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06, shadowRadius: 8,
+    backgroundColor: COLORS.surface, borderRadius: 16, padding: 20, marginTop: 4,
+    boxShadow: "0px 2px 8px rgba(23,15,54,0.06)",
   },
-  scoreLabel:  { fontSize: 11, fontWeight: "700", color: "#aaa", letterSpacing: 1.5, marginBottom: 16, textTransform: "uppercase" },
-  scoreInner:  { flexDirection: "row", alignItems: "center" },
-  gradeCircle: { width: 70, height: 70, borderRadius: 35, borderWidth: 3, justifyContent: "center", alignItems: "center" },
-  gradeText:   { fontSize: 28, fontWeight: "900" },
-  scoreNum:    { fontSize: 28, fontWeight: "800" },
-  scoreOf:     { fontSize: 14, color: "#aaa", fontWeight: "500" },
-  scoreMsg:    { fontSize: 14, color: "#555", marginTop: 4, fontWeight: "500" },
+  scoreLabel:   { fontSize: 11, fontWeight: "700", color: COLORS.textLight, letterSpacing: 1.5, marginBottom: 16, textTransform: "uppercase" },
+  scoreInner:   { flexDirection: "row", alignItems: "center" },
+  gradeCircle:  { width: 70, height: 70, borderRadius: 35, borderWidth: 3, justifyContent: "center", alignItems: "center" },
+  gradeText:    { fontSize: 28, fontWeight: "900" },
+  scoreNum:     { fontSize: 28, fontWeight: "800" },
+  scoreOf:      { fontSize: 14, color: COLORS.textMuted, fontWeight: "500" },
+  scoreMsgRow:  { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 4 },
+  scoreMsg:     { fontSize: 14, color: COLORS.textLight, fontWeight: "500" },
 });

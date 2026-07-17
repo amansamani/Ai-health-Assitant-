@@ -1,83 +1,75 @@
-import {
-  View, Text, TextInput, Pressable,
-  StyleSheet, Alert, ActivityIndicator
-} from "react-native";
 import { useState } from "react";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import API from "../services/api";
+import AuthShell from "../components/auth/AuthShell";
+import AuthHero from "../components/auth/AuthHero";
+import FormField from "../components/auth/FormField";
+import PrimaryButton from "../components/auth/PrimaryButton";
+import { Banner, BackLink } from "../components/auth/AuthBits";
 
-export default function ResetPassword({ navigation, route }) {
-  const { email }                         = route.params;
-  const [newPassword, setNewPassword]     = useState("");
-  const [confirmPass, setConfirmPass]     = useState("");
-  const [loading, setLoading]             = useState(false);
+export default function ResetPassword() {
+  const router = useRouter();
+  const { email } = useLocalSearchParams();
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPass, setConfirmPass] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleReset = async () => {
     if (!newPassword || !confirmPass) {
-      Alert.alert("Error", "Please fill in both fields");
+      setError("Please fill in both fields");
       return;
     }
     if (newPassword !== confirmPass) {
-      Alert.alert("Error", "Passwords do not match");
+      setError("Passwords do not match");
       return;
     }
     if (newPassword.length < 6) {
-      Alert.alert("Error", "Password must be at least 6 characters");
+      setError("Password must be at least 6 characters");
       return;
     }
-
+    setError("");
+    setLoading(true);
     try {
-      setLoading(true);
       await API.post("/auth/reset-password", { email, newPassword });
-      Alert.alert("Success", "Password reset successfully!");
-
-      // Go back to Login
-      navigation.navigate("Login");
-
+      router.replace({ pathname: "/(auth)/login", params: { justReset: "1" } });
     } catch (err) {
-      Alert.alert("Error", err?.response?.data?.message || "Something went wrong");
+      setError(err?.response?.data?.message || "Something went wrong");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <View style={styles.container}>
+    <AuthShell>
+      <BackLink onPress={() => router.back()} />
+      <AuthHero
+        icon="lock-closed-outline"
+        title="New password"
+        subtitle="Make it at least 6 characters"
+        size="compact"
+      />
 
-      <Text style={styles.title}>New Password 🔑</Text>
-      <Text style={styles.subtitle}>Your new password must be at least 6 characters</Text>
+      <Banner text={error} />
 
-      <TextInput
-        placeholder="New Password"
+      <FormField
+        label="New password"
+        icon="lock-closed-outline"
+        placeholder="Enter new password"
         value={newPassword}
         onChangeText={setNewPassword}
-        style={styles.input}
         secureTextEntry
       />
-
-      <TextInput
-        placeholder="Confirm New Password"
+      <FormField
+        label="Confirm password"
+        icon="lock-closed-outline"
+        placeholder="Re-enter new password"
         value={confirmPass}
         onChangeText={setConfirmPass}
-        style={styles.input}
         secureTextEntry
       />
 
-      <Pressable style={styles.btn} onPress={handleReset} disabled={loading}>
-        {loading
-          ? <ActivityIndicator color="#fff" />
-          : <Text style={styles.btnText}>Reset Password</Text>
-        }
-      </Pressable>
-
-    </View>
+      <PrimaryButton title="Reset password" onPress={handleReset} loading={loading} icon="checkmark" />
+    </AuthShell>
   );
 }
-
-const styles = StyleSheet.create({
-  container:  { flex: 1, justifyContent: "center", padding: 24, backgroundColor: "#fff" },
-  title:      { fontSize: 26, fontWeight: "bold", color: "#1e1e2e", marginBottom: 8 },
-  subtitle:   { fontSize: 14, color: "#888", marginBottom: 30 },
-  input:      { borderWidth: 1, borderColor: "#ddd", padding: 14, borderRadius: 12, marginBottom: 16, fontSize: 15 },
-  btn:        { backgroundColor: "#6366F1", padding: 15, borderRadius: 12, alignItems: "center" },
-  btnText:    { color: "#fff", fontWeight: "bold", fontSize: 16 },
-});

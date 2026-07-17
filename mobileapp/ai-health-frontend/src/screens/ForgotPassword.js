@@ -1,80 +1,59 @@
-import {
-  View, Text, TextInput, Pressable,
-  StyleSheet, Alert, ActivityIndicator
-} from "react-native";
 import { useState } from "react";
+import { useRouter } from "expo-router";
 import API from "../services/api";
+import AuthShell from "../components/auth/AuthShell";
+import AuthHero from "../components/auth/AuthHero";
+import FormField from "../components/auth/FormField";
+import PrimaryButton from "../components/auth/PrimaryButton";
+import { Banner, BackLink } from "../components/auth/AuthBits";
 
-export default function ForgotPassword({ navigation }) {
-  const [email, setEmail]       = useState("");
-  const [loading, setLoading]   = useState(false);
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export default function ForgotPassword() {
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleSendOtp = async () => {
-  if (!email) {
-    Alert.alert("Error", "Please enter your email");
-    return;
-  }
-
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    Alert.alert("Error", "Please enter a valid email");
-    return;
-  }
-
-  try {
+    if (!email) {
+      setError("Please enter your email");
+      return;
+    }
+    if (!EMAIL_RE.test(email)) {
+      setError("Please enter a valid email");
+      return;
+    }
+    setError("");
     setLoading(true);
-    
-    // Fire and don't wait — backend handles it async
+    // Fire and don't wait — backend handles delivery async.
     API.post("/auth/forgot-password", { email }).catch(() => {});
-
-    // Navigate immediately
-    navigation.navigate("VerifyOtp", { email });
-
-  } catch (err) {
-    Alert.alert("Error", "Something went wrong");
-  } finally {
+    router.push({ pathname: "/(auth)/verify-otp", params: { email } });
     setLoading(false);
-  }
-};
+  };
 
   return (
-    <View style={styles.container}>
-
-      <Text style={styles.title}>Forgot Password 🔐</Text>
-      <Text style={styles.subtitle}>
-        Enter your email and we'll send you a 6-digit OTP
-      </Text>
-
-      <TextInput
-        placeholder="Enter your email"
-        value={email}
-        onChangeText={setEmail}
-        style={styles.input}
-        keyboardType="email-address"
-        autoCapitalize="none"
+    <AuthShell>
+      <BackLink onPress={() => router.back()} />
+      <AuthHero
+        icon="key-outline"
+        title="Forgot password?"
+        subtitle="Enter your email and we'll send you a 6-digit code"
+        size="compact"
       />
 
-      <Pressable style={styles.btn} onPress={handleSendOtp} disabled={loading}>
-        {loading
-          ? <ActivityIndicator color="#fff" />
-          : <Text style={styles.btnText}>Send OTP</Text>
-        }
-      </Pressable>
+      <Banner text={error} />
 
-      <Pressable onPress={() => navigation.goBack()}>
-        <Text style={styles.backText}>← Back to Login</Text>
-      </Pressable>
+      <FormField
+        label="Email address"
+        icon="mail-outline"
+        placeholder="you@example.com"
+        value={email}
+        onChangeText={setEmail}
+        keyboardType="email-address"
+      />
 
-    </View>
+      <PrimaryButton title="Send code" onPress={handleSendOtp} loading={loading} icon="paper-plane-outline" />
+    </AuthShell>
   );
 }
-
-const styles = StyleSheet.create({
-  container:  { flex: 1, justifyContent: "center", padding: 24, backgroundColor: "#fff" },
-  title:      { fontSize: 26, fontWeight: "bold", color: "#1e1e2e", marginBottom: 8 },
-  subtitle:   { fontSize: 14, color: "#888", marginBottom: 30 },
-  input:      { borderWidth: 1, borderColor: "#ddd", padding: 14, borderRadius: 12, marginBottom: 16, fontSize: 15 },
-  btn:        { backgroundColor: "#6366F1", padding: 15, borderRadius: 12, alignItems: "center", marginBottom: 16 },
-  btnText:    { color: "#fff", fontWeight: "bold", fontSize: 16 },
-  backText:   { color: "#6366F1", textAlign: "center", marginTop: 8, fontWeight: "600" },
-});

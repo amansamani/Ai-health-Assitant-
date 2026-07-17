@@ -4,6 +4,7 @@ import {
   ScrollView, KeyboardAvoidingView, Platform,
   ActivityIndicator, Modal, StatusBar, Animated,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { logMeal, searchFoodsFromMongo, searchFoodsByFilter } from "../../services/nutritionService";
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
@@ -160,28 +161,28 @@ const searchAllFoods = async (query) => {
 // ─── Toast Config ──────────────────────────────────────────────────────────────
 const TOAST_CONFIGS = {
   success: {
-    icon: "✅",
+    icon: "checkmark-circle",
     accent: "#22C55E",
     bg: "#0D1F14",
     border: "rgba(34,197,94,0.35)",
     glow: "rgba(34,197,94,0.12)",
   },
   error: {
-    icon: "❌",
+    icon: "close-circle",
     accent: "#EF4444",
     bg: "#1F0D0D",
     border: "rgba(239,68,68,0.35)",
     glow: "rgba(239,68,68,0.12)",
   },
   notfound: {
-    icon: "🔍",
+    icon: "search",
     accent: "#F59E0B",
     bg: "#1F1A0D",
     border: "rgba(245,158,11,0.35)",
     glow: "rgba(245,158,11,0.12)",
   },
   warning: {
-    icon: "⚠️",
+    icon: "warning",
     accent: "#FF6F00",
     bg: "#1F1408",
     border: "rgba(255,111,0,0.35)",
@@ -237,14 +238,14 @@ function Toast({ toast, onDismiss }) {
       <View style={[ts.toastTopGlow, { backgroundColor: cfg.glow }]} />
       <View style={[ts.toastStripe, { backgroundColor: cfg.accent }]} />
       <View style={[ts.toastIconWrap, { backgroundColor: cfg.glow, borderColor: cfg.border }]}>
-        <Text style={ts.toastIconTxt}>{cfg.icon}</Text>
+        <Ionicons name={cfg.icon} size={18} color={cfg.accent} />
       </View>
       <View style={ts.toastBody}>
         <Text style={[ts.toastTitle, { color: cfg.accent }]}>{toast.title}</Text>
         <Text style={ts.toastMsg} numberOfLines={2}>{toast.message}</Text>
       </View>
-      <TouchableOpacity onPress={dismiss} style={ts.toastX} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-        <Text style={ts.toastXTxt}>✕</Text>
+      <TouchableOpacity onPress={dismiss} style={ts.toastX} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} accessibilityRole="button" accessibilityLabel="Dismiss">
+        <Ionicons name="close" size={14} color="rgba(255,255,255,0.6)" />
       </TouchableOpacity>
       <Animated.View style={[ts.toastBar, { width: barWidth, backgroundColor: cfg.accent }]} />
     </Animated.View>
@@ -620,8 +621,8 @@ export default function LogMealScreen({ route, navigation }) {
             <View style={s.heroBgCircle2} />
 
             <View style={s.topBar}>
-              <TouchableOpacity style={s.backBtn} onPress={() => navigation?.goBack?.()}>
-                <Text style={s.backArrow}>←</Text>
+              <TouchableOpacity style={s.backBtn} onPress={() => navigation?.goBack?.()} accessibilityRole="button" accessibilityLabel="Go back">
+                <Ionicons name="chevron-back" size={20} color="#fff" />
               </TouchableOpacity>
               <View style={s.mealBadge}>
                 <Text style={s.mealBadgeIcon}>{MEAL_ICONS[mealType]}</Text>
@@ -633,7 +634,7 @@ export default function LogMealScreen({ route, navigation }) {
             <Text style={s.heroSub}>Indian DB · USDA · Full nutrition data</Text>
 
             <View style={s.searchBox}>
-              <Text style={s.searchIconTxt}>🔍</Text>
+              <Ionicons name="search" size={16} color="#9A94AE" style={{ marginRight: 4 }} />
               <TextInput
                 style={s.searchInput}
                 placeholder='Search "paneer", "roti", "egg"…'
@@ -648,8 +649,10 @@ export default function LogMealScreen({ route, navigation }) {
                 style={[s.filterBtn, hasActiveFilters && s.filterBtnActive]}
                 onPress={() => setFilterVisible(true)}
                 activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel="Filters"
               >
-                <Text style={{ fontSize: 14 }}>⚙️</Text>
+                <Ionicons name="options-outline" size={16} color={hasActiveFilters ? "#CC5800" : "#4C2E96"} />
                 {hasActiveFilters && <View style={s.filterDot} />}
               </TouchableOpacity>
               <TouchableOpacity
@@ -702,8 +705,9 @@ export default function LogMealScreen({ route, navigation }) {
                   <Text style={s.activeChipTxt}>#{tag}</Text>
                 </View>
               ))}
-              <TouchableOpacity onPress={clearFilters} style={s.clearChip}>
-                <Text style={s.clearChipTxt}>✕ Clear</Text>
+              <TouchableOpacity onPress={clearFilters} style={s.clearChip} accessibilityRole="button" accessibilityLabel="Clear filters">
+                <Ionicons name="close" size={11} color="#E53935" />
+                <Text style={s.clearChipTxt}> Clear</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -786,8 +790,10 @@ export default function LogMealScreen({ route, navigation }) {
                 <TouchableOpacity
                   style={s.selClose}
                   onPress={() => { setSelectedFood(null); setSearchQuery(""); }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Clear selected food"
                 >
-                  <Text style={s.selCloseTxt}>✕</Text>
+                  <Ionicons name="close" size={14} color="rgba(255,255,255,0.6)" />
                 </TouchableOpacity>
               </View>
 
@@ -878,8 +884,10 @@ export default function LogMealScreen({ route, navigation }) {
                   <TouchableOpacity
                     onPress={() => setFilterVisible(false)}
                     style={s.filterCloseBtn}
+                    accessibilityRole="button"
+                    accessibilityLabel="Close filters"
                   >
-                    <Text style={s.filterCloseTxt}>✕</Text>
+                    <Ionicons name="close" size={14} color="#999" />
                   </TouchableOpacity>
                 </View>
 
@@ -1074,7 +1082,7 @@ const s = StyleSheet.create({
   },
   activeChip:    { backgroundColor: "#FFF3E0", borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
   activeChipTxt: { fontSize: 11, fontWeight: "700", color: ORANGE },
-  clearChip:     { backgroundColor: "#FCE4EC", borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
+  clearChip:     { flexDirection: "row", alignItems: "center", backgroundColor: "#FCE4EC", borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
   clearChipTxt:  { fontSize: 11, fontWeight: "700", color: "#E53935" },
 
   loadingRow: { alignItems: "center", flexDirection: "row", gap: 8, paddingHorizontal: 20, paddingTop: 16 },

@@ -2,9 +2,8 @@ import { View, ActivityIndicator, StyleSheet } from "react-native";
 import { useContext, useEffect, useState } from "react";
 import * as SplashScreen from "expo-splash-screen";
 import { useVideoPlayer, VideoView } from "expo-video";
-import { AuthProvider, AuthContext } from "../src/context/AuthContext";
-import AuthNavigator from "../src/navigation/AuthNavigator";
-import AppNavigator from "../src/navigation/AppNavigator";
+import { Redirect } from "expo-router";
+import { AuthContext } from "@/src/context/AuthContext";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -33,7 +32,10 @@ function VideoSplash({ onFinish }: { onFinish: () => void }) {
   );
 }
 
-function RootNavigator() {
+// "/" itself is just the boot sequence: play the splash video, wait for auth
+// state to resolve, then hand off to a real route. (auth)/(app) layouts also
+// guard themselves, so deep links land in the right place too.
+export default function Index() {
   const { userToken, loading } = useContext(AuthContext);
   const [videoDone, setVideoDone] = useState(false);
 
@@ -55,15 +57,7 @@ function RootNavigator() {
     );
   }
 
-  return userToken ? <AppNavigator /> : <AuthNavigator />;
-}
-
-export default function Page() {
-  return (
-    <AuthProvider>
-      <RootNavigator />
-    </AuthProvider>
-  );
+  return <Redirect href={userToken ? "/(app)/home" : "/(auth)/login"} />;
 }
 
 const styles = StyleSheet.create({

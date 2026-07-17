@@ -3,22 +3,19 @@
  * WeeklyInsightCard.js
  * Drop-in card for HomeScreen.js (or WeeklySummaryScreen.js)
  *
- * USAGE in HomeScreen.js:
- *   1. Import: import WeeklyInsightCard from "../components/WeeklyInsightCard";
- *   2. Add anywhere in the ScrollView (recommended: after StatSquares, before ActionCards):
- *        <WeeklyInsightCard />
- *
  * Shows the most recent weekly insight: calorie adjustment, adherence %, weight
  * change, and the AI's plain-English reason — so users understand WHY their
  * plan changed.
  */
 
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
-  View, Text, StyleSheet, TouchableOpacity,
-  Animated, ActivityIndicator,
+  View, Text, StyleSheet, Pressable,
+  Animated,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import API from "../services/api";
+import { COLORS } from "../constants/theme";
 
 // ── Mini stat chip ────────────────────────────────────────────────────────────
 function StatChip({ label, value, color, bg }) {
@@ -32,7 +29,7 @@ function StatChip({ label, value, color, bg }) {
 const chip = StyleSheet.create({
   wrap: { flex: 1, borderRadius: 12, paddingVertical: 10, alignItems: "center" },
   val:  { fontSize: 16, fontWeight: "900" },
-  lbl:  { fontSize: 10, color: "#64748B", fontWeight: "600", marginTop: 2 },
+  lbl:  { fontSize: 10, color: COLORS.textLight, fontWeight: "600", marginTop: 2 },
 });
 
 // ── Delta badge (calorie change) ──────────────────────────────────────────────
@@ -40,7 +37,8 @@ function DeltaBadge({ delta }) {
   if (delta == null || delta === 0) {
     return (
       <View style={[db.wrap, { backgroundColor: "#F0FDF4" }]}>
-        <Text style={[db.txt, { color: "#15803D" }]}>On track ✓</Text>
+        <Ionicons name="checkmark-circle" size={13} color="#15803D" />
+        <Text style={[db.txt, { color: "#15803D" }]}>On track</Text>
       </View>
     );
   }
@@ -49,14 +47,17 @@ function DeltaBadge({ delta }) {
   const bg    = up ? "#FEF3C7" : "#EFF6FF";
   return (
     <View style={[db.wrap, { backgroundColor: bg }]}>
-      <Text style={[db.txt, { color }]}>
-        {up ? "▲" : "▼"} {Math.abs(delta)} kcal/day
-      </Text>
+      <Ionicons name={up ? "arrow-up" : "arrow-down"} size={13} color={color} />
+      <Text style={[db.txt, { color }]}>{Math.abs(delta)} kcal/day</Text>
     </View>
   );
 }
 const db = StyleSheet.create({
-  wrap: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, alignSelf: "flex-start", marginBottom: 8 },
+  wrap: {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4,
+    alignSelf: "flex-start", marginBottom: 8,
+  },
   txt:  { fontSize: 12, fontWeight: "800" },
 });
 
@@ -122,7 +123,7 @@ export default function WeeklyInsightCard({ onPress }) {
                            "0.0 kg";
 
   const weightColor =
-    weightChange == null  ? "#64748B" :
+    weightChange == null  ? COLORS.textLight :
     Math.abs(weightChange) < 0.2 ? "#15803D" :
     weightChange > 0      ? "#D97706" : "#2563EB";
 
@@ -132,16 +133,22 @@ export default function WeeklyInsightCard({ onPress }) {
       <View style={s.headerRow}>
         <View style={s.headerLeft}>
           <View style={s.iconWrap}>
-            <Text style={{ fontSize: 18 }}>📊</Text>
+            <Ionicons name="stats-chart-outline" size={18} color={COLORS.primary} />
           </View>
           <View>
             <Text style={s.title}>Weekly Insight</Text>
             <Text style={s.sub}>Week ending {weekLabel}</Text>
           </View>
         </View>
-        <TouchableOpacity onPress={() => setExpanded((p) => !p)} style={s.expandBtn}>
-          <Text style={s.expandIcon}>{expanded ? "▲" : "▼"}</Text>
-        </TouchableOpacity>
+        <Pressable
+          onPress={() => setExpanded((p) => !p)}
+          style={s.expandBtn}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={expanded ? "Collapse weekly insight" : "Expand weekly insight"}
+        >
+          <Ionicons name={expanded ? "chevron-up" : "chevron-down"} size={14} color={COLORS.primary} />
+        </Pressable>
       </View>
 
       {/* Delta badge */}
@@ -152,9 +159,9 @@ export default function WeeklyInsightCard({ onPress }) {
         {reason || "Your plan is on track. Keep going!"}
       </Text>
       {!expanded && (
-        <TouchableOpacity onPress={() => setExpanded(true)}>
+        <Pressable onPress={() => setExpanded(true)} hitSlop={8} accessibilityRole="button" accessibilityLabel="Show more">
           <Text style={s.more}>Show more ›</Text>
-        </TouchableOpacity>
+        </Pressable>
       )}
 
       {/* Stats row */}
@@ -180,8 +187,8 @@ export default function WeeklyInsightCard({ onPress }) {
             <StatChip
               label="Avg kcal"
               value={Math.round(avgCalories)}
-              color="#6366F1"
-              bg="#EEF2FF"
+              color={COLORS.primary}
+              bg={COLORS.surfaceMuted}
             />
           )}
         </View>
@@ -204,35 +211,33 @@ export default function WeeklyInsightCard({ onPress }) {
 
 const s = StyleSheet.create({
   card: {
-    backgroundColor: "#fff",
+    backgroundColor: COLORS.surface,
     borderRadius: 18,
     padding: 16,
     marginBottom: 14,
     borderLeftWidth: 4,
-    borderLeftColor: "#6366F1",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 4,
+    borderLeftColor: COLORS.primary,
+    boxShadow: "0px 2px 8px rgba(23,15,54,0.08)",
   },
   headerRow:   { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
   headerLeft:  { flexDirection: "row", alignItems: "center", gap: 10 },
   iconWrap: {
     width: 38, height: 38, borderRadius: 10,
-    backgroundColor: "#EEF2FF", justifyContent: "center", alignItems: "center",
+    backgroundColor: COLORS.surfaceMuted, justifyContent: "center", alignItems: "center",
   },
-  title:       { fontSize: 15, fontWeight: "800", color: "#1E1B4B" },
-  sub:         { fontSize: 11, color: "#94A3B8", fontWeight: "500", marginTop: 1 },
-  expandBtn:   { width: 28, height: 28, borderRadius: 14, backgroundColor: "#EEF2FF", justifyContent: "center", alignItems: "center" },
-  expandIcon:  { fontSize: 10, color: "#6366F1", fontWeight: "800" },
-  reason:      { fontSize: 13, color: "#374151", lineHeight: 20, marginBottom: 4 },
-  more:        { fontSize: 12, color: "#6366F1", fontWeight: "700", marginBottom: 8 },
+  title:       { fontSize: 15, fontWeight: "800", color: COLORS.textDark },
+  sub:         { fontSize: 11, color: COLORS.textMuted, fontWeight: "500", marginTop: 1 },
+  expandBtn:   {
+    width: 28, height: 28, borderRadius: 14, backgroundColor: COLORS.surfaceMuted,
+    justifyContent: "center", alignItems: "center",
+  },
+  reason:      { fontSize: 13, color: COLORS.textDark, lineHeight: 20, marginBottom: 4 },
+  more:        { fontSize: 12, color: COLORS.primary, fontWeight: "700", marginBottom: 8 },
   statsRow:    { flexDirection: "row", gap: 8, marginTop: 12 },
-  calChange:   { marginTop: 12, backgroundColor: "#F8FAFC", borderRadius: 10, padding: 12 },
-  calChangeLbl:{ fontSize: 11, fontWeight: "700", color: "#94A3B8", marginBottom: 4 },
+  calChange:   { marginTop: 12, backgroundColor: COLORS.surfaceMuted, borderRadius: 10, padding: 12 },
+  calChangeLbl:{ fontSize: 11, fontWeight: "700", color: COLORS.textMuted, marginBottom: 4 },
   calChangeRow:{ flexDirection: "row", alignItems: "center" },
-  calOld:      { fontSize: 16, fontWeight: "700", color: "#94A3B8", textDecorationLine: "line-through" },
-  arrow:       { fontSize: 16, color: "#6366F1", fontWeight: "800" },
-  calNew:      { fontSize: 18, fontWeight: "900", color: "#4F46E5" },
+  calOld:      { fontSize: 16, fontWeight: "700", color: COLORS.textMuted, textDecorationLine: "line-through" },
+  arrow:       { fontSize: 16, color: COLORS.primary, fontWeight: "800" },
+  calNew:      { fontSize: 18, fontWeight: "900", color: COLORS.primaryDark },
 });

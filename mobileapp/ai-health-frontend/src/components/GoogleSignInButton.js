@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import {
   GoogleSignin,
   isErrorWithCode,
   statusCodes,
 } from '@react-native-google-signin/google-signin';
 import API from '../services/api';
+import { COLORS } from '../constants/theme';
 
 // Must be the WEB-type client ID from Google Cloud Console (not Android/iOS) —
 // this is what makes Google actually return an idToken your backend can verify.
@@ -66,12 +68,14 @@ export default function GoogleSignInButton({ onSuccess }) {
       disabled={loading}
       onPress={handlePress}
       activeOpacity={0.85}
+      accessibilityRole="button"
+      accessibilityLabel="Continue with Google"
     >
       {loading ? (
-        <ActivityIndicator color="#6366F1" />
+        <ActivityIndicator color={COLORS.primary} />
       ) : (
         <>
-          <Text style={styles.googleIcon}>G</Text>
+          <Ionicons name="logo-google" size={18} color={COLORS.primary} />
           <Text style={styles.googleText}>Continue with Google</Text>
         </>
       )}
@@ -84,22 +88,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.surface,
     borderRadius: 16,
     borderWidth: 1.5,
-    borderColor: '#E2E8F0',
+    borderColor: COLORS.border,
+    minHeight: 50,
     paddingVertical: 14,
-    marginTop: 12,
+    marginTop: 4,
     gap: 10,
-  },
-  googleIcon: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: '#6366F1',
   },
   googleText: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#0F172A',
+    color: COLORS.textDark,
   },
 });

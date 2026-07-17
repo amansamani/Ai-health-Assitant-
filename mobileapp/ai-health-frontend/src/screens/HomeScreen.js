@@ -6,13 +6,16 @@ import {
   ScrollView,
   Animated,
   Dimensions,
+  Alert,
 } from "react-native";
 import { useState, useCallback, useContext, useRef, useEffect } from "react";
+import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import API from "../services/api";
 import { LinearGradient } from "expo-linear-gradient";
-import { useFocusEffect } from "@react-navigation/native";
 import { AuthContext } from "../context/AuthContext";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { COLORS } from "../constants/theme";
 import CircularProgressRing from "../components/CircularProgressRing";
 import WeeklyInsightCard from "../components/WeeklyInsightCard";
 
@@ -44,13 +47,17 @@ function StatSquare({ icon, label, value, color, progress, onPress }) {
   const onPressOut = () => Animated.spring(scale, { toValue: 1,    useNativeDriver: true }).start();
 
   return (
-    <Pressable onPress={onPress} onPressIn={onPressIn} onPressOut={onPressOut}
-      style={{ width: (width - 56) / 3 }}>
+    <Pressable
+      onPress={onPress} onPressIn={onPressIn} onPressOut={onPressOut}
+      style={{ width: (width - 56) / 3 }}
+      accessibilityRole="button"
+      accessibilityLabel={`${label}: ${value}. View details`}
+    >
       <Animated.View style={[styles.statSquare, { transform: [{ scale }] }]}>
         <View style={styles.ringContainer}>
           <CircularProgressRing
             progress={Math.min(progress, 1)}
-            valueText={icon}
+            icon={icon}
             label=""
             color={color}
             size={72}
@@ -71,15 +78,21 @@ function ActionCard({ icon, title, sub, accent, onPress, wide }) {
   const onPressOut = () => Animated.spring(scale, { toValue: 1,    useNativeDriver: true }).start();
 
   return (
-    <Pressable onPress={onPress} onPressIn={onPressIn} onPressOut={onPressOut}
-      style={wide ? { width: "100%" } : { width: "48%" }}>
+    <Pressable
+      onPress={onPress} onPressIn={onPressIn} onPressOut={onPressOut}
+      style={wide ? { width: "100%" } : { width: "48%" }}
+      accessibilityRole="button"
+      accessibilityLabel={`${title}: ${sub}`}
+    >
       <Animated.View style={[styles.actionCard, wide && styles.actionCardWide, { transform: [{ scale }] }]}>
         <View style={[styles.actionAccentBar, { backgroundColor: accent }]} />
-        <Text style={styles.actionIcon}>{icon}</Text>
+        <View style={[styles.actionIconWrap, { backgroundColor: accent + "18" }]}>
+          <Ionicons name={icon} size={20} color={accent} />
+        </View>
         <Text style={styles.actionTitle}>{title}</Text>
         <Text style={styles.actionSub}>{sub}</Text>
         <View style={[styles.actionArrow, { backgroundColor: accent + "22" }]}>
-          <Text style={[styles.actionArrowText, { color: accent }]}>→</Text>
+          <Ionicons name="arrow-forward" size={14} color={accent} />
         </View>
       </Animated.View>
     </Pressable>
@@ -105,17 +118,21 @@ function AiChatButton({ onPress }) {
 
   const borderColor = glowAnim.interpolate({
     inputRange:  [0, 1],
-    outputRange: ["rgba(99,102,241,0.3)", "rgba(99,102,241,0.9)"],
+    outputRange: [`${COLORS.primary}4D`, `${COLORS.primary}E6`],
   });
 
   return (
-    <Pressable onPress={onPress} onPressIn={onPressIn} onPressOut={onPressOut}>
+    <Pressable
+      onPress={onPress} onPressIn={onPressIn} onPressOut={onPressOut}
+      accessibilityRole="button"
+      accessibilityLabel="Ask your AI nutrition coach"
+    >
       {/* Outer: JS-driver glow border only */}
       <Animated.View style={[styles.aiCard, { borderColor }]}>
       {/* Inner: native-driver scale only */}
       <Animated.View style={{ transform: [{ scale }] }}>
         <LinearGradient
-          colors={["#4F46E5", "#6366F1", "#818CF8"]}
+          colors={[COLORS.primaryDark, COLORS.primary, COLORS.primaryLight]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.aiGradient}
@@ -127,9 +144,10 @@ function AiChatButton({ onPress }) {
           {/* Left content */}
           <View style={styles.aiLeft}>
             <View style={styles.aiBadgeWrap}>
-              <Text style={styles.aiBadge}>✦  AI POWERED</Text>
+              <Ionicons name="sparkles" size={11} color="#E0E7FF" />
+              <Text style={styles.aiBadge}>AI POWERED</Text>
             </View>
-            <Text style={styles.aiTitle}>🤖  Ask Your Nutrition Coach</Text>
+            <Text style={styles.aiTitle}>Ask Your Nutrition Coach</Text>
             <Text style={styles.aiSub}>
               Get personalized advice based on{"\n"}your health profile & diet plan
             </Text>
@@ -138,7 +156,7 @@ function AiChatButton({ onPress }) {
           {/* Right button */}
           <View style={styles.aiRight}>
             <View style={styles.aiIconCircle}>
-              <Text style={styles.aiIconTxt}>💬</Text>
+              <Ionicons name="chatbubble-ellipses" size={24} color="#fff" />
             </View>
             <Text style={styles.aiCta}>Chat now</Text>
           </View>
@@ -150,7 +168,9 @@ function AiChatButton({ onPress }) {
 }
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
-export default function HomeScreen({ navigation, route }) {
+export default function HomeScreen() {
+  const router = useRouter();
+  const { updatedToday: updatedTodayParam } = useLocalSearchParams();
   const { token, user } = useContext(AuthContext);
   const firstName = user?.firstName ?? user?.first_name ?? user?.name?.split(" ")[0] ?? null;
   const [today, setToday]     = useState(null);
@@ -183,15 +203,21 @@ export default function HomeScreen({ navigation, route }) {
   useFocusEffect(
     useCallback(() => {
       if (!token) return;
-      if (route.params?.updatedToday) {
-        setToday(route.params.updatedToday);
+      if (updatedTodayParam) {
+        try {
+          setToday(JSON.parse(updatedTodayParam));
+        } catch {
+          // malformed param — fall through to a real refetch below
+        }
         setLoading(false);
-        navigation.setParams({ updatedToday: undefined });
+        // Native setParams (not the legacy-nav shim) so `undefined` actually
+        // clears the key instead of being silently dropped from the call.
+        router.setParams({ updatedToday: undefined });
       } else {
         setLoading(true);
         fetchToday();
       }
-    }, [route.params, token, fetchToday])
+    }, [updatedTodayParam, token, fetchToday])
   );
 
   const steps   = today?.steps ?? 0;
@@ -199,11 +225,11 @@ export default function HomeScreen({ navigation, route }) {
   const sleep   = today?.sleep ?? 0;
   const stepPct = Math.round(Math.min(steps / STEP_GOAL, 1) * 100);
 
-  const greetEmoji =
-    greeting === "Good Morning"   ? "🌤️"
-    : greeting === "Good Afternoon" ? "☀️"
-    : greeting === "Good Evening"   ? "🌇"
-    : "🌙";
+  const greetIcon =
+    greeting === "Good Morning"   ? "partly-sunny-outline"
+    : greeting === "Good Afternoon" ? "sunny-outline"
+    : greeting === "Good Evening"   ? "cloudy-night-outline"
+    : "moon-outline";
 
   return (
     <SafeAreaView style={styles.container}>
@@ -214,15 +240,22 @@ export default function HomeScreen({ navigation, route }) {
         {/* ── HEADER ── */}
         <FadeSlideIn delay={0}>
           <View style={styles.headerRow}>
-            <View>
-              <Text style={styles.greeting}>
-                {greetEmoji} {greeting}{firstName ? `, ${firstName}` : ""}!
-              </Text>
-              <Text style={styles.subtitle}>Let's crush today's goals</Text>
+            <View style={styles.greetingRow}>
+              <Ionicons name={greetIcon} size={20} color={COLORS.primary} style={{ marginRight: 6 }} />
+              <View>
+                <Text style={styles.greeting}>
+                  {greeting}{firstName ? `, ${firstName}` : ""}!
+                </Text>
+                <Text style={styles.subtitle}>Let's crush today's goals</Text>
+              </View>
             </View>
-            <Pressable onPress={() => navigation.navigate("Profile")}>
-              <LinearGradient colors={["#6366F1", "#8B5CF6"]} style={styles.avatar}>
-                <Text style={styles.avatarText}>A</Text>
+            <Pressable
+              onPress={() => router.push("/(app)/profile")}
+              accessibilityRole="button"
+              accessibilityLabel="Open profile"
+            >
+              <LinearGradient colors={[COLORS.primary, COLORS.primaryDark]} style={styles.avatar}>
+                <Text style={styles.avatarText}>{(firstName ?? "A")[0].toUpperCase()}</Text>
               </LinearGradient>
             </Pressable>
           </View>
@@ -231,7 +264,7 @@ export default function HomeScreen({ navigation, route }) {
         {/* ── HERO CARD ── */}
         <FadeSlideIn delay={80}>
           <LinearGradient
-            colors={["#0F172A", "#1E293B", "#0F172A"]}
+            colors={["#170F36", "#29195A", "#170F36"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.heroCard}
@@ -239,7 +272,8 @@ export default function HomeScreen({ navigation, route }) {
             <View style={styles.heroDecorRing} />
             <View style={styles.heroLeft}>
               <View style={styles.heroBadgeWrap}>
-                <Text style={styles.heroBadge}>🔥  TODAY'S GOAL</Text>
+                <Ionicons name="flame" size={11} color="#FACC15" />
+                <Text style={styles.heroBadge}>TODAY'S GOAL</Text>
               </View>
               <Text style={styles.heroTitle}>Step Count</Text>
               <Text style={styles.heroBig}>
@@ -250,7 +284,7 @@ export default function HomeScreen({ navigation, route }) {
                 <View style={[styles.heroBarFill, { width: `${stepPct}%` }]} />
               </View>
               <Text style={styles.heroBarLabel}>
-                {steps >= STEP_GOAL ? "🎉 Goal completed!" : `${stepPct}% complete — keep going!`}
+                {steps >= STEP_GOAL ? "Goal completed!" : `${stepPct}% complete — keep going!`}
               </Text>
             </View>
             <View style={styles.heroRight}>
@@ -266,35 +300,40 @@ export default function HomeScreen({ navigation, route }) {
         <FadeSlideIn delay={160}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Today's Stats</Text>
-            <Pressable onPress={() => navigation.navigate("Tracking")} style={styles.editBtn}>
-              <Text style={styles.editBtnText}>✏️  Edit</Text>
+            <Pressable
+              onPress={() => router.push("/(app)/tracking")}
+              style={styles.editBtn}
+              accessibilityRole="button"
+              accessibilityLabel="Edit today's stats"
+            >
+              <Ionicons name="create-outline" size={13} color={COLORS.primary} />
+              <Text style={styles.editBtnText}>Edit</Text>
             </Pressable>
           </View>
 
           <View style={styles.statRow}>
             <StatSquare
-              icon="👟" label="Steps"
+              icon="footsteps-outline" label="Steps"
               value={loading ? "—" : steps.toLocaleString()}
               color="#22C55E" progress={Math.min(steps / STEP_GOAL, 1)}
-              onPress={() => navigation.navigate("TrackDetail", { type: "steps" })}
+              onPress={() => router.push({ pathname: "/(app)/track-detail", params: { type: "steps" } })}
             />
             <StatSquare
-              icon="💧" label="Water"
+              icon="water-outline" label="Water"
               value={loading ? "—" : `${water} L`}
               color="#3B82F6" progress={Math.min(water / WATER_GOAL, 1)}
-              onPress={() => navigation.navigate("TrackDetail", { type: "water" })}
+              onPress={() => router.push({ pathname: "/(app)/track-detail", params: { type: "water" } })}
             />
             <StatSquare
-              icon="🌙" label="Sleep"
+              icon="moon-outline" label="Sleep"
               value={loading ? "—" : `${sleep}h`}
-              color="#A855F7" progress={Math.min(sleep / SLEEP_GOAL, 1)}
-              onPress={() => navigation.navigate("TrackDetail", { type: "sleep" })}
+              color={COLORS.primary} progress={Math.min(sleep / SLEEP_GOAL, 1)}
+              onPress={() => router.push({ pathname: "/(app)/track-detail", params: { type: "sleep" } })}
             />
           </View>
         </FadeSlideIn>
 
-      <WeeklyInsightCard />
-
+        <WeeklyInsightCard />
 
         {/* ── QUICK ACTIONS ── */}
         <FadeSlideIn delay={240}>
@@ -302,8 +341,10 @@ export default function HomeScreen({ navigation, route }) {
 
           {/* Meal Tracker — featured */}
           <Pressable
-            onPress={() => navigation.navigate("MealLogger")}
+            onPress={() => router.push("/(app)/nutrition/meal-logger")}
             style={({ pressed }) => [{ opacity: pressed ? 0.93 : 1 }]}
+            accessibilityRole="button"
+            accessibilityLabel="Log today's meal"
           >
             <LinearGradient
               colors={["#EA580C", "#F97316", "#FB923C"]}
@@ -312,44 +353,44 @@ export default function HomeScreen({ navigation, route }) {
             >
               <View style={styles.featuredLeft}>
                 <Text style={styles.featuredLabel}>MEAL TRACKER</Text>
-                <Text style={styles.featuredTitle}>🍛  Log Today's Meal</Text>
+                <Text style={styles.featuredTitle}>Log Today's Meal</Text>
                 <Text style={styles.featuredSub}>Track calories & nutrition intake</Text>
               </View>
               <View style={styles.featuredBadge}>
-                <Text style={styles.featuredBadgeText}>+ Add</Text>
+                <Ionicons name="add" size={16} color="#fff" />
+                <Text style={styles.featuredBadgeText}>Add</Text>
               </View>
             </LinearGradient>
           </Pressable>
 
           {/* ── AI CHAT BUTTON ── */}
-          <AiChatButton onPress={() => navigation.navigate("AiChat")} />
+          <AiChatButton onPress={() => router.push("/(app)/nutrition/ai-chat")} />
 
           {/* 2-col grid */}
           <View style={styles.actionGrid}>
             <ActionCard
-                icon="💧"
-                title="Water Intake"
-                sub="Track daily hydration"
-                accent="#3B82F6"
-                onPress={() => navigation.navigate("WaterTracking")}
+              icon="water-outline"
+              title="Water Intake"
+              sub="Track daily hydration"
+              accent="#3B82F6"
+              onPress={() => router.push("/(app)/water-tracking")}
             />
             <ActionCard
-              icon="🏋️" title="Workouts" sub="Training plan"
-              accent="#F59E0B" onPress={() => navigation.navigate("Workout")}
+              icon="barbell-outline" title="Workouts" sub="Training plan"
+              accent={COLORS.warning} onPress={() => router.push("/(app)/workout")}
             />
             <ActionCard
-              icon="📊" title="Summary" sub="7-day progress"
-              accent="#6366F1" onPress={() => navigation.navigate("WeeklySummary")}
+              icon="stats-chart-outline" title="Summary" sub="7-day progress"
+              accent={COLORS.primary} onPress={() => router.push("/(app)/weekly-summary")}
             />
             <ActionCard
-              icon="🥗" title="Diet Plan" sub="Today's meals"
-              accent="#10B981" onPress={() => navigation.navigate("NutritionDashboard")}
+              icon="nutrition-outline" title="Diet Plan" sub="Today's meals"
+              accent={COLORS.success} onPress={() => router.push("/(app)/nutrition")}
             />
             <ActionCard
-              icon="💪" title="Challenges" sub="Stay consistent"
-              accent="#EC4899" onPress={() => Alert.alert("Coming Soon", "Challenges feature is coming soon! 💪")}
+              icon="trophy-outline" title="Challenges" sub="Stay consistent"
+              accent="#EC4899" onPress={() => Alert.alert("Coming Soon", "Challenges feature is coming soon!")}
             />
-
           </View>
         </FadeSlideIn>
 
@@ -361,7 +402,7 @@ export default function HomeScreen({ navigation, route }) {
 
 // ─── STYLES ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container:     { flex: 1, backgroundColor: "#F8FAFC" },
+  container:     { flex: 1, backgroundColor: COLORS.background },
   scrollContent: { padding: 20, paddingTop: 8 },
 
   // Header
@@ -369,8 +410,9 @@ const styles = StyleSheet.create({
     flexDirection: "row", justifyContent: "space-between",
     alignItems: "center", marginBottom: 22,
   },
-  greeting:   { fontSize: 24, fontWeight: "800", color: "#0F172A", letterSpacing: -0.5 },
-  subtitle:   { fontSize: 14, color: "#64748B", marginTop: 3 },
+  greetingRow: { flexDirection: "row", alignItems: "center" },
+  greeting:   { fontSize: 22, fontWeight: "800", color: COLORS.textDark, letterSpacing: -0.5 },
+  subtitle:   { fontSize: 14, color: COLORS.textLight, marginTop: 3 },
   avatar: {
     width: 44, height: 44, borderRadius: 22,
     justifyContent: "center", alignItems: "center",
@@ -381,7 +423,7 @@ const styles = StyleSheet.create({
   heroCard: {
     borderRadius: 24, padding: 24, marginBottom: 22,
     flexDirection: "row", alignItems: "center", overflow: "hidden",
-    boxShadow: "0px 8px 20px rgba(15, 23, 42, 0.3)",
+    boxShadow: "0px 8px 20px rgba(23, 15, 54, 0.35)",
   },
   heroDecorRing: {
     position: "absolute", width: 220, height: 220, borderRadius: 110,
@@ -399,37 +441,42 @@ const styles = StyleSheet.create({
   heroPctNum:   { fontSize: 22, fontWeight: "900", color: "#fff", letterSpacing: -0.5 },
   heroPctLabel: { fontSize: 11, color: "#22C55E", fontWeight: "700", marginTop: 2 },
   heroBadgeWrap: {
+    flexDirection: "row", alignItems: "center", gap: 5,
     backgroundColor: "rgba(250,204,21,0.15)",
     borderWidth: 1, borderColor: "rgba(250,204,21,0.3)",
     borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4,
     alignSelf: "flex-start", marginBottom: 10,
   },
   heroBadge:    { color: "#FACC15", fontSize: 11, fontWeight: "800", letterSpacing: 0.5 },
-  heroTitle:    { fontSize: 14, color: "#94A3B8", fontWeight: "600", marginBottom: 4 },
+  heroTitle:    { fontSize: 14, color: "#B8AFD6", fontWeight: "600", marginBottom: 4 },
   heroBig:      { fontSize: 36, fontWeight: "900", color: "#fff", letterSpacing: -1 },
-  heroUnit:     { fontSize: 13, color: "#64748B", marginTop: 2, marginBottom: 14 },
+  heroUnit:     { fontSize: 13, color: "#9186B0", marginTop: 2, marginBottom: 14 },
   heroBarBg:    { height: 6, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.1)", marginBottom: 8, overflow: "hidden" },
   heroBarFill:  { height: "100%", borderRadius: 3, backgroundColor: "#22C55E", maxWidth: "100%" },
-  heroBarLabel: { fontSize: 12, color: "#94A3B8" },
+  heroBarLabel: { fontSize: 12, color: "#B8AFD6" },
 
   // Section
   sectionHeader: {
     flexDirection: "row", justifyContent: "space-between",
     alignItems: "center", marginBottom: 14,
   },
-  sectionTitle: { fontSize: 18, fontWeight: "800", color: "#0F172A", letterSpacing: -0.3 },
-  editBtn:      { backgroundColor: "#EEF2FF", borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6 },
-  editBtnText:  { fontSize: 13, fontWeight: "700", color: "#6366F1" },
+  sectionTitle: { fontSize: 18, fontWeight: "800", color: COLORS.textDark, letterSpacing: -0.3 },
+  editBtn:      {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    backgroundColor: COLORS.surfaceMuted, borderRadius: 20,
+    paddingHorizontal: 14, paddingVertical: 7, minHeight: 30,
+  },
+  editBtnText:  { fontSize: 13, fontWeight: "700", color: COLORS.primary },
 
   // Stat squares
   statRow:      { flexDirection: "row", justifyContent: "space-between", marginBottom: 22 },
   statSquare: {
-    backgroundColor: "#fff", borderRadius: 20,
+    backgroundColor: COLORS.surface, borderRadius: 20,
     paddingVertical: 16, paddingHorizontal: 8, alignItems: "center",
-    boxShadow: "0px 2px 10px rgba(15, 23, 42, 0.08)",
+    boxShadow: "0px 2px 10px rgba(23, 15, 54, 0.08)",
   },
   ringContainer: { marginBottom: 10 },
-  squareValue:   { fontSize: 14, fontWeight: "800", color: "#0F172A", letterSpacing: -0.3 },
+  squareValue:   { fontSize: 14, fontWeight: "800", color: COLORS.textDark, letterSpacing: -0.3 },
   squareLabel:   { fontSize: 11, marginTop: 2, fontWeight: "700" },
 
   // Featured card
@@ -443,7 +490,11 @@ const styles = StyleSheet.create({
   featuredLabel:     { fontSize: 10, fontWeight: "800", color: "rgba(255,255,255,0.65)", letterSpacing: 1, marginBottom: 4 },
   featuredTitle:     { fontSize: 18, fontWeight: "800", color: "#fff" },
   featuredSub:       { fontSize: 13, color: "rgba(255,255,255,0.75)", marginTop: 4 },
-  featuredBadge:     { backgroundColor: "rgba(255,255,255,0.25)", borderRadius: 22, paddingHorizontal: 16, paddingVertical: 10 },
+  featuredBadge:     {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    backgroundColor: "rgba(255,255,255,0.25)", borderRadius: 22,
+    paddingHorizontal: 16, paddingVertical: 10,
+  },
   featuredBadgeText: { color: "#fff", fontWeight: "900", fontSize: 14 },
 
   // ── AI Chat Card ──────────────────────────────────────────────────────────
@@ -451,7 +502,7 @@ const styles = StyleSheet.create({
     borderRadius: 22, marginBottom: 14,
     borderWidth: 1.5,
     overflow: "hidden",
-    boxShadow: "0px 8px 22px rgba(99, 102, 241, 0.35)",
+    boxShadow: "0px 8px 22px rgba(41, 25, 90, 0.35)",
   },
   aiGradient: {
     flexDirection: "row", alignItems: "center",
@@ -467,6 +518,7 @@ const styles = StyleSheet.create({
   },
   aiLeft:       { flex: 1, paddingRight: 12 },
   aiBadgeWrap: {
+    flexDirection: "row", alignItems: "center", gap: 5,
     backgroundColor: "rgba(255,255,255,0.15)",
     borderWidth: 1, borderColor: "rgba(255,255,255,0.25)",
     borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4,
@@ -482,7 +534,6 @@ const styles = StyleSheet.create({
     justifyContent: "center", alignItems: "center",
     borderWidth: 1, borderColor: "rgba(255,255,255,0.3)",
   },
-  aiIconTxt:    { fontSize: 26 },
   aiCta:        { fontSize: 11, color: "#C7D2FE", fontWeight: "800", letterSpacing: 0.3 },
 
   // Action grid
@@ -491,8 +542,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between", gap: 12,
   },
   actionCard: {
-    backgroundColor: "#fff", borderRadius: 20, padding: 18,
-    boxShadow: "0px 2px 10px rgba(15, 23, 42, 0.07)",
+    backgroundColor: COLORS.surface, borderRadius: 20, padding: 18,
+    boxShadow: "0px 2px 10px rgba(23, 15, 54, 0.07)",
     overflow: "hidden", position: "relative", minHeight: 120,
   },
   actionCardWide:  { width: "100%" },
@@ -500,13 +551,16 @@ const styles = StyleSheet.create({
     position: "absolute", top: 0, left: 0, right: 0, height: 3,
     borderTopLeftRadius: 20, borderTopRightRadius: 20,
   },
-  actionIcon:      { fontSize: 26, marginBottom: 8, marginTop: 4 },
-  actionTitle:     { fontSize: 16, fontWeight: "800", color: "#0F172A", letterSpacing: -0.2 },
-  actionSub:       { fontSize: 12, color: "#94A3B8", marginTop: 3, fontWeight: "500" },
+  actionIconWrap: {
+    width: 38, height: 38, borderRadius: 12,
+    justifyContent: "center", alignItems: "center",
+    marginBottom: 10, marginTop: 4,
+  },
+  actionTitle:     { fontSize: 16, fontWeight: "800", color: COLORS.textDark, letterSpacing: -0.2 },
+  actionSub:       { fontSize: 12, color: COLORS.textMuted, marginTop: 3, fontWeight: "500" },
   actionArrow: {
     position: "absolute", bottom: 14, right: 14,
     width: 30, height: 30, borderRadius: 15,
     justifyContent: "center", alignItems: "center",
   },
-  actionArrowText: { fontSize: 16, fontWeight: "800" },
 });

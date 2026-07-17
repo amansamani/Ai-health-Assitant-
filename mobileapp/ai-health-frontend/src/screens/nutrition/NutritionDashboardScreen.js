@@ -4,6 +4,7 @@ import {
   View, Text, ActivityIndicator, ScrollView, StyleSheet,
   TouchableOpacity, RefreshControl, Modal, FlatList, Alert, Animated,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import API from "../../services/api";
 import { AuthContext } from "../../context/AuthContext";
 import MealCompletionCard from "../../components/MealCompletionCard";
@@ -50,13 +51,13 @@ function AiAdviceBanner({ advice, warnings }) {
       {/* Header row */}
       <View style={ai.headerRow}>
         <View style={ai.iconWrap}>
-          <Text style={ai.icon}>🤖</Text>
+          <Ionicons name="sparkles" size={18} color="#4C2E96" />
         </View>
         <View style={{ flex: 1 }}>
           <View style={ai.titleRow}>
             <Text style={ai.title}>AI Personalised Plan</Text>
             <View style={ai.badge}>
-              <Text style={ai.badgeTxt}>✦ GEMINI</Text>
+              <Text style={ai.badgeTxt}>GEMINI</Text>
             </View>
           </View>
           <Text style={ai.sub}>Adapted for your health conditions</Text>
@@ -85,10 +86,9 @@ function AiAdviceBanner({ advice, warnings }) {
         <View style={ai.warningsWrap}>
           {warnings.map((w, i) => (
             <View key={i} style={ai.warningChip}>
-              <Text style={ai.warningIcon}>⚠️</Text>
+              <Ionicons name="warning" size={13} color="#D97706" style={{ marginRight: 4 }} />
               <Text style={ai.warningTxt}>{w}</Text>
-            </View>
-          ))}
+            </View>))}
         </View>
       )}
     </Animated.View>
@@ -108,11 +108,11 @@ function SourceBadge({ source }) {
 
 const sb = StyleSheet.create({
   wrap: {
-    backgroundColor: "#F1F5F9", borderRadius: 10,
+    backgroundColor: "#EDE9FE", borderRadius: 10,
     paddingHorizontal: 10, paddingVertical: 4, alignSelf: "flex-start",
     marginBottom: 14,
   },
-  txt: { fontSize: 11, fontWeight: "700", color: "#64748B" },
+  txt: { fontSize: 11, fontWeight: "700", color: "#6B667D" },
 });
 
 // ─── MacroBar ─────────────────────────────────────────────────────────────────
@@ -184,8 +184,8 @@ function SwapModal({ visible, mealType, combo, onClose, onSwapped }) {
               <Text style={sw.title}>Swap "{combo?.mealName}"</Text>
               <Text style={sw.sub}>{meta.label} alternatives</Text>
             </View>
-            <TouchableOpacity onPress={onClose} style={sw.closeBtn}>
-              <Text style={sw.closeX}>✕</Text>
+            <TouchableOpacity onPress={onClose} style={sw.closeBtn} accessibilityRole="button" accessibilityLabel="Close">
+              <Ionicons name="close" size={14} color="#777" />
             </TouchableOpacity>
           </View>
 
@@ -297,16 +297,20 @@ function MealCard({ mealType, combos, meta, onSwap, onRegenerate }) {
                   )}
                 </View>
                 <View style={s.macroPill}>
-                  <View style={[s.calChip, { backgroundColor: meta.bg }]}>
-                    <Text style={[s.calChipTxt, { color: meta.color }]}>🔥 {combo.calories} kcal</Text>
+                  <View style={[s.calChip, { backgroundColor: meta.bg, flexDirection: "row", alignItems: "center" }]}>
+                    <Ionicons name="flame" size={12} color={meta.color} style={{ marginRight: 3 }} />
+                    <Text style={[s.calChipTxt, { color: meta.color }]}>{combo.calories} kcal</Text>
                   </View>
                 </View>
                 <TouchableOpacity
-                  style={[s.swapChip, { borderColor: meta.color }]}
+                  style={[s.swapChip, { borderColor: meta.color, flexDirection: "row", alignItems: "center" }]}
                   onPress={() => onSwap(mealType, combo)}
                   activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel="Swap meal"
                 >
-                  <Text style={[s.swapChipTxt, { color: meta.color }]}>⇄ Swap</Text>
+                  <Ionicons name="swap-horizontal" size={13} color={meta.color} style={{ marginRight: 3 }} />
+                  <Text style={[s.swapChipTxt, { color: meta.color }]}>Swap</Text>
                 </TouchableOpacity>
               </View>
 
@@ -336,8 +340,9 @@ function MealCard({ mealType, combos, meta, onSwap, onRegenerate }) {
       ) : (
         <View style={s.emptyMeal}>
           <Text style={s.emptyMealTxt}>No foods planned for this meal</Text>
-          <TouchableOpacity style={[s.regenSmall, { borderColor: meta.color }]} onPress={onRegenerate}>
-            <Text style={[s.regenSmallTxt, { color: meta.color }]}>🔄 Regenerate Plan</Text>
+          <TouchableOpacity style={[s.regenSmall, { borderColor: meta.color, flexDirection: "row", alignItems: "center", justifyContent: "center" }]} onPress={onRegenerate} accessibilityRole="button" accessibilityLabel="Regenerate plan">
+            <Ionicons name="refresh" size={13} color={meta.color} style={{ marginRight: 4 }} />
+            <Text style={[s.regenSmallTxt, { color: meta.color }]}>Regenerate Plan</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -493,8 +498,8 @@ export default function NutritionDashboardScreen({ navigation }) {
               </Text>
             )}
           </View>
-          <TouchableOpacity style={s.regenBtn} onPress={handleRegenerate}>
-            <Text style={s.regenBtnTxt}>🔄</Text>
+          <TouchableOpacity style={s.regenBtn} onPress={handleRegenerate} accessibilityRole="button" accessibilityLabel="Regenerate plan">
+            <Ionicons name="refresh" size={16} color="#4C2E96" />
           </TouchableOpacity>
         </View>
 
@@ -508,7 +513,10 @@ export default function NutritionDashboardScreen({ navigation }) {
 
         {/* ── Calorie summary card ── */}
         <View style={s.card}>
-          <Text style={s.cardHeading}>🎯 CALORIE BUDGET</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 4 }}>
+            <Ionicons name="flag" size={13} color="#4C2E96" style={{ marginRight: 5 }} />
+            <Text style={s.cardHeading}>CALORIE BUDGET</Text>
+          </View>
           <View style={s.calRow}>
             <View style={s.calBlock}>
               <Text style={s.calBig}>{plannedCalories}</Text>
@@ -608,7 +616,7 @@ const ai = StyleSheet.create({
     padding: 16,
     marginBottom: 14,
     borderWidth: 1.5,
-    borderColor: "#C7D2FE",
+    borderColor: "#A78BFA",
   },
   headerRow:  { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 10 },
   iconWrap: {
@@ -619,16 +627,16 @@ const ai = StyleSheet.create({
   icon:       { fontSize: 20 },
   titleRow:   { flexDirection: "row", alignItems: "center", gap: 8 },
   title:      { fontSize: 14, fontWeight: "800", color: "#3730A3" },
-  sub:        { fontSize: 11, color: "#6366F1", fontWeight: "500", marginTop: 2 },
+  sub:        { fontSize: 11, color: "#4C2E96", fontWeight: "500", marginTop: 2 },
   badge: {
-    backgroundColor: "#6366F1", borderRadius: 8,
+    backgroundColor: "#4C2E96", borderRadius: 8,
     paddingHorizontal: 7, paddingVertical: 2,
   },
   badgeTxt:   { fontSize: 9, fontWeight: "900", color: "#fff", letterSpacing: 0.5 },
   expandBtn:  { width: 28, height: 28, borderRadius: 14, backgroundColor: "#E0E7FF", justifyContent: "center", alignItems: "center" },
-  expandIcon: { fontSize: 10, color: "#6366F1", fontWeight: "800" },
+  expandIcon: { fontSize: 10, color: "#4C2E96", fontWeight: "800" },
   adviceText: { fontSize: 13, color: "#1E1B4B", lineHeight: 20, fontWeight: "500" },
-  readMore:   { fontSize: 12, color: "#6366F1", fontWeight: "700", marginTop: 4 },
+  readMore:   { fontSize: 12, color: "#4C2E96", fontWeight: "700", marginTop: 4 },
   warningsWrap: { marginTop: 12, gap: 6 },
   warningChip: {
     flexDirection: "row", alignItems: "center", gap: 6,

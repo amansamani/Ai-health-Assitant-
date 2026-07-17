@@ -3,26 +3,28 @@ import {
   ActivityIndicator, Pressable, Animated, Dimensions, Platform,
 } from "react-native";
 import { useEffect, useState, useCallback, useRef, useContext } from "react";
+import { Ionicons } from "@expo/vector-icons";
 import API from "../services/api";
 import { AuthContext } from "../context/AuthContext";
-import { useNavigation } from "@react-navigation/native";
+import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
+import { COLORS } from "../constants/theme";
 
 const { width } = Dimensions.get("window");
 
 // ── Goal config ───────────────────────────────────────────────────────────────
 const GOAL_META = {
-  bulk:  { label: "Bulk",  emoji: "💪", color: "#F59E0B", bg: "#FEF3C7" },
-  lean:  { label: "Lean",  emoji: "🔥", color: "#EF4444", bg: "#FEE2E2" },
-  fit:   { label: "Fit",   emoji: "⚡", color: "#22C55E", bg: "#DCFCE7" },
+  bulk: { label: "Bulk", icon: "barbell-outline", color: COLORS.warning, bg: "#FEF3C7" },
+  lean: { label: "Lean", icon: "flame-outline", color: COLORS.error, bg: "#FEE2E2" },
+  fit:  { label: "Fit",  icon: "flash-outline", color: COLORS.success, bg: "#DCFCE7" },
 };
 
 // ── Cross-platform shadow helper ───────────────────────────────────────────────
 const shadow = (elevation = 4) =>
   Platform.select({
     ios: {
-      shadowColor: "#0F172A",
+      shadowColor: COLORS.textDark,
       shadowOffset: { width: 0, height: elevation / 2 },
       shadowOpacity: 0.12,
       shadowRadius: elevation,
@@ -49,23 +51,26 @@ function FadeSlideIn({ delay = 0, children }) {
 }
 
 // ── Workout Card ──────────────────────────────────────────────────────────────
-function WorkoutCard({ item, index, goalColor, onPress }) {
+const DAY_COLORS = [COLORS.primary, "#F59E0B", "#22C55E", "#EF4444", "#6339B8", "#3B82F6", "#EC4899"];
+
+function WorkoutCard({ item, index, onPress }) {
   const scale = useRef(new Animated.Value(1)).current;
   const onIn  = () => Animated.spring(scale, { toValue: 0.97, useNativeDriver: true }).start();
   const onOut = () => Animated.spring(scale, { toValue: 1,    useNativeDriver: true }).start();
 
-  const dayColors = ["#6366F1", "#F59E0B", "#22C55E", "#EF4444", "#8B5CF6", "#3B82F6", "#EC4899"];
-  const accentColor = dayColors[(item.day - 1) % dayColors.length];
+  const accentColor = DAY_COLORS[(item.day - 1) % DAY_COLORS.length];
 
   return (
     <FadeSlideIn delay={index * 60}>
-      <Pressable onPress={onPress} onPressIn={onIn} onPressOut={onOut}>
+      <Pressable
+        onPress={onPress} onPressIn={onIn} onPressOut={onOut}
+        accessibilityRole="button"
+        accessibilityLabel={`Day ${item.day}: ${item.title}, ${item.exercises.length} exercises`}
+      >
         <Animated.View style={[styles.card, shadow(4), { transform: [{ scale }] }]}>
-          {/* Accent bar */}
           <View style={[styles.cardAccent, { backgroundColor: accentColor }]} />
 
           <View style={styles.cardContent}>
-            {/* Left: day badge */}
             <View style={styles.cardLeft}>
               <View style={[styles.dayBadge, { backgroundColor: accentColor + "18" }]}>
                 <Text style={[styles.dayNum, { color: accentColor }]}>{item.day}</Text>
@@ -73,24 +78,24 @@ function WorkoutCard({ item, index, goalColor, onPress }) {
               </View>
             </View>
 
-            {/* Middle: title + meta */}
             <View style={styles.cardMid}>
               <Text style={styles.cardTitle} numberOfLines={1}>{item.title}</Text>
               <View style={styles.cardMeta}>
                 <View style={styles.metaPill}>
-                  <Text style={styles.metaText}>🏋️ {item.exercises.length} exercises</Text>
+                  <Ionicons name="barbell-outline" size={11} color={COLORS.textLight} />
+                  <Text style={styles.metaText}>{item.exercises.length} exercises</Text>
                 </View>
                 {item.duration ? (
                   <View style={[styles.metaPill, { marginLeft: 8 }]}>
-                    <Text style={styles.metaText}>⏱ {item.duration} min</Text>
+                    <Ionicons name="time-outline" size={11} color={COLORS.textLight} />
+                    <Text style={styles.metaText}>{item.duration} min</Text>
                   </View>
                 ) : null}
               </View>
             </View>
 
-            {/* Right: arrow */}
             <View style={[styles.cardArrow, { backgroundColor: accentColor + "15" }]}>
-              <Text style={[styles.cardArrowText, { color: accentColor }]}>→</Text>
+              <Ionicons name="arrow-forward" size={16} color={accentColor} />
             </View>
           </View>
         </Animated.View>
@@ -101,7 +106,7 @@ function WorkoutCard({ item, index, goalColor, onPress }) {
 
 // ── Main Screen ───────────────────────────────────────────────────────────────
 export default function WorkoutScreen() {
-  const navigation          = useNavigation();
+  const router               = useRouter();
   const { token, userGoal } = useContext(AuthContext);
   const [workouts, setWorkouts] = useState([]);
   const [loading, setLoading]   = useState(true);
@@ -110,7 +115,6 @@ export default function WorkoutScreen() {
 
   const goal = GOAL_META[userGoal] ?? GOAL_META.fit;
 
-  // ── FIX: useCallback so the fn reference is stable ─────────────────────────
   const fetchWorkouts = useCallback(async () => {
     try {
       setLoading(true);
@@ -126,7 +130,6 @@ export default function WorkoutScreen() {
 
   useEffect(() => {
     if (!token || !userGoal) {
-      // ── FIX: don't spin forever if userGoal is missing ────────────────────
       if (!userGoal) setLoading(false);
       return;
     }
@@ -137,7 +140,7 @@ export default function WorkoutScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#6366F1" />
+        <ActivityIndicator size="large" color={COLORS.primary} />
         <Text style={styles.loadingText}>Loading workouts…</Text>
       </View>
     );
@@ -147,7 +150,7 @@ export default function WorkoutScreen() {
   if (!userGoal) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorEmoji}>🎯</Text>
+        <Ionicons name="flag-outline" size={40} color={COLORS.textMuted} style={{ marginBottom: 12 }} />
         <Text style={styles.errorText}>No goal set. Please update your profile.</Text>
       </View>
     );
@@ -157,9 +160,14 @@ export default function WorkoutScreen() {
   if (error) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorEmoji}>😕</Text>
+        <Ionicons name="cloud-offline-outline" size={40} color={COLORS.textMuted} style={{ marginBottom: 12 }} />
         <Text style={styles.errorText}>{error}</Text>
-        <Pressable onPress={fetchWorkouts} style={styles.retryBtn}>
+        <Pressable
+          onPress={fetchWorkouts}
+          style={styles.retryBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Try loading workouts again"
+        >
           <Text style={styles.retryText}>Try Again</Text>
         </Pressable>
       </View>
@@ -170,11 +178,13 @@ export default function WorkoutScreen() {
   if (workouts.length === 0) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorEmoji}>🏖️</Text>
+        <Ionicons name="calendar-outline" size={40} color={COLORS.textMuted} style={{ marginBottom: 12 }} />
         <Text style={styles.errorText}>No workouts available.</Text>
       </View>
     );
   }
+
+  const equipmentModeOn = mode !== "bodyweight";
 
   return (
     <SafeAreaView style={styles.container}>
@@ -194,7 +204,7 @@ export default function WorkoutScreen() {
                   <Text style={styles.screenSub}>Your weekly training plan</Text>
                 </View>
                 <View style={[styles.goalChip, { backgroundColor: goal.bg, borderColor: goal.color + "40" }]}>
-                  <Text style={styles.goalChipEmoji}>{goal.emoji}</Text>
+                  <Ionicons name={goal.icon} size={14} color={goal.color} style={{ marginRight: 5 }} />
                   <Text style={[styles.goalChipText, { color: goal.color }]}>{goal.label}</Text>
                 </View>
               </View>
@@ -202,7 +212,7 @@ export default function WorkoutScreen() {
 
             {/* Stats bar */}
             <FadeSlideIn delay={80}>
-              <LinearGradient colors={["#0F172A", "#1E293B"]} style={[styles.statsBar, shadow(8)]}>
+              <LinearGradient colors={["#170F36", "#29195A"]} style={[styles.statsBar, shadow(8)]}>
                 <View style={styles.statItem}>
                   <Text style={styles.statNum}>{workouts.length}</Text>
                   <Text style={styles.statLabel}>Days</Text>
@@ -216,8 +226,12 @@ export default function WorkoutScreen() {
                 </View>
                 <View style={styles.statDivider} />
                 <View style={styles.statItem}>
-                  <Text style={styles.statNum}>{mode === "bodyweight" ? "0" : "🏋️"}</Text>
-                  <Text style={styles.statLabel}>{mode === "bodyweight" ? "Equipment" : "Equipped"}</Text>
+                  <Ionicons
+                    name={equipmentModeOn ? "checkmark-circle" : "close-circle-outline"}
+                    size={20}
+                    color={equipmentModeOn ? "#22C55E" : "#B8AFD6"}
+                  />
+                  <Text style={styles.statLabel}>Equipment</Text>
                 </View>
               </LinearGradient>
             </FadeSlideIn>
@@ -227,15 +241,18 @@ export default function WorkoutScreen() {
               <View style={styles.toggleWrap}>
                 <View style={[styles.toggleRow, shadow(2)]}>
                   {[
-                    { key: "bodyweight", label: "No Equipment", icon: "🤸" },
-                    { key: "equipment",  label: "With Equipment", icon: "🏋️" },
+                    { key: "bodyweight", label: "No Equipment", icon: "body-outline" },
+                    { key: "equipment",  label: "With Equipment", icon: "barbell-outline" },
                   ].map((opt) => (
                     <Pressable
                       key={opt.key}
                       style={[styles.toggleBtn, mode === opt.key && styles.toggleActive]}
                       onPress={() => setMode(opt.key)}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: mode === opt.key }}
+                      accessibilityLabel={opt.label}
                     >
-                      <Text style={styles.toggleIcon}>{opt.icon}</Text>
+                      <Ionicons name={opt.icon} size={15} color={mode === opt.key ? "#fff" : COLORS.textMuted} style={{ marginRight: 6 }} />
                       <Text style={[styles.toggleText, mode === opt.key && styles.toggleTextActive]}>
                         {opt.label}
                       </Text>
@@ -253,8 +270,12 @@ export default function WorkoutScreen() {
           <WorkoutCard
             item={item}
             index={index}
-            goalColor={goal.color}
-            onPress={() => navigation.navigate("WorkoutDetail", { workout: item })}
+            onPress={() =>
+              router.push({
+                pathname: "/(app)/workout-detail",
+                params: { workout: JSON.stringify(item) },
+              })
+            }
           />
         )}
       />
@@ -264,16 +285,15 @@ export default function WorkoutScreen() {
 
 // ── STYLES ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container:   { flex: 1, backgroundColor: "#F8FAFC" },
+  container:   { flex: 1, backgroundColor: COLORS.background },
   listContent: { padding: 20, paddingTop: 10, paddingBottom: 40 },
 
-  center: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#F8FAFC" },
-  loadingText: { marginTop: 12, color: "#94A3B8", fontSize: 14, fontWeight: "500" },
-  errorEmoji:  { fontSize: 40, marginBottom: 12 },
-  errorText:   { fontSize: 15, color: "#64748B", fontWeight: "600", marginBottom: 16 },
+  center: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: COLORS.background },
+  loadingText: { marginTop: 12, color: COLORS.textMuted, fontSize: 14, fontWeight: "500" },
+  errorText:   { fontSize: 15, color: COLORS.textLight, fontWeight: "600", marginBottom: 16, textAlign: "center", paddingHorizontal: 32 },
   retryBtn: {
-    backgroundColor: "#6366F1", borderRadius: 14,
-    paddingHorizontal: 24, paddingVertical: 12,
+    backgroundColor: COLORS.primary, borderRadius: 14,
+    paddingHorizontal: 24, paddingVertical: 12, minHeight: 44, justifyContent: "center",
   },
   retryText: { color: "#fff", fontWeight: "700", fontSize: 14 },
 
@@ -282,15 +302,14 @@ const styles = StyleSheet.create({
     flexDirection: "row", justifyContent: "space-between",
     alignItems: "center", marginBottom: 18,
   },
-  screenTitle: { fontSize: 26, fontWeight: "900", color: "#0F172A", letterSpacing: -0.6 },
-  screenSub:   { fontSize: 14, color: "#94A3B8", marginTop: 3, fontWeight: "500" },
+  screenTitle: { fontSize: 26, fontWeight: "900", color: COLORS.textDark, letterSpacing: -0.6 },
+  screenSub:   { fontSize: 14, color: COLORS.textMuted, marginTop: 3, fontWeight: "500" },
   goalChip: {
     flexDirection: "row", alignItems: "center",
     paddingHorizontal: 12, paddingVertical: 7,
     borderRadius: 20, borderWidth: 1,
   },
-  goalChipEmoji: { fontSize: 15, marginRight: 5 },
-  goalChipText:  { fontSize: 13, fontWeight: "800" },
+  goalChipText: { fontSize: 13, fontWeight: "800" },
 
   // Stats bar
   statsBar: {
@@ -300,13 +319,13 @@ const styles = StyleSheet.create({
   },
   statItem:   { alignItems: "center" },
   statNum:    { fontSize: 22, fontWeight: "900", color: "#fff", letterSpacing: -0.5 },
-  statLabel:  { fontSize: 11, color: "#64748B", marginTop: 3, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.4 },
+  statLabel:  { fontSize: 11, color: "#B8AFD6", marginTop: 3, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.4 },
   statDivider:{ width: 1, height: 32, backgroundColor: "rgba(255,255,255,0.08)" },
 
   // Toggle
   toggleWrap: { marginBottom: 20 },
   toggleRow: {
-    flexDirection: "row", backgroundColor: "#fff",
+    flexDirection: "row", backgroundColor: COLORS.surface,
     borderRadius: 16, padding: 5,
   },
   toggleBtn: {
@@ -314,20 +333,19 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: 11, borderRadius: 12,
   },
-  toggleActive:     { backgroundColor: "#0F172A" },
-  toggleIcon:       { fontSize: 15, marginRight: 6 },
-  toggleText:       { fontSize: 14, fontWeight: "700", color: "#94A3B8" },
+  toggleActive:     { backgroundColor: COLORS.primaryDark },
+  toggleText:       { fontSize: 14, fontWeight: "700", color: COLORS.textMuted },
   toggleTextActive: { color: "#fff" },
 
   // Section label
   sectionLabel: {
-    fontSize: 11, fontWeight: "800", color: "#CBD5E1",
+    fontSize: 11, fontWeight: "800", color: COLORS.textLight,
     letterSpacing: 1.2, marginBottom: 12, marginLeft: 4,
   },
 
   // Workout card
   card: {
-    backgroundColor: "#fff", borderRadius: 20,
+    backgroundColor: COLORS.surface, borderRadius: 20,
     marginBottom: 12, overflow: "hidden",
   },
   cardAccent:  { height: 3, width: "100%" },
@@ -344,17 +362,17 @@ const styles = StyleSheet.create({
   dayWord: { fontSize: 9,  fontWeight: "800", letterSpacing: 1 },
 
   cardMid:   { flex: 1, marginRight: 14 },
-  cardTitle: { fontSize: 16, fontWeight: "800", color: "#0F172A", marginBottom: 8, letterSpacing: -0.2 },
+  cardTitle: { fontSize: 16, fontWeight: "800", color: COLORS.textDark, marginBottom: 8, letterSpacing: -0.2 },
   cardMeta:  { flexDirection: "row", flexWrap: "wrap" },
   metaPill: {
-    backgroundColor: "#F1F5F9", borderRadius: 8,
+    flexDirection: "row", alignItems: "center", gap: 4,
+    backgroundColor: COLORS.surfaceMuted, borderRadius: 8,
     paddingHorizontal: 8, paddingVertical: 4,
   },
-  metaText: { fontSize: 11, color: "#64748B", fontWeight: "600" },
+  metaText: { fontSize: 11, color: COLORS.textLight, fontWeight: "600" },
 
   cardArrow: {
     width: 34, height: 34, borderRadius: 12,
     alignItems: "center", justifyContent: "center",
   },
-  cardArrowText: { fontSize: 16, fontWeight: "800" },
 });

@@ -10,6 +10,7 @@ import {
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
 import API from "../../services/api";
@@ -218,16 +219,18 @@ export default function LogMealPhotoScreen({ navigation, route }) {
 
         {photos.length === 0 && (
           <View style={s.captureCard}>
-            <Text style={s.captureEmoji}>📸</Text>
+            <Ionicons name="camera-outline" size={44} color="#4C2E96" style={{ marginBottom: 8 }} />
             <Text style={s.captureTitle}>Snap your meal</Text>
             <Text style={s.captureSub}>AI will estimate what's on your plate — you confirm before it's logged.</Text>
 
-            <TouchableOpacity style={s.primaryBtn} onPress={pickFromCamera} activeOpacity={0.85}>
-              <Text style={s.primaryBtnText}>📷  Take Photo</Text>
+            <TouchableOpacity style={s.primaryBtn} onPress={pickFromCamera} activeOpacity={0.85} accessibilityRole="button" accessibilityLabel="Take photo">
+              <Ionicons name="camera" size={16} color="#fff" style={{ marginRight: 8 }} />
+              <Text style={s.primaryBtnText}>Take Photo</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={s.secondaryBtn} onPress={pickFromGallery} activeOpacity={0.85}>
-              <Text style={s.secondaryBtnText}>🖼️  Choose from Gallery</Text>
+            <TouchableOpacity style={s.secondaryBtn} onPress={pickFromGallery} activeOpacity={0.85} accessibilityRole="button" accessibilityLabel="Choose from gallery">
+              <Ionicons name="images-outline" size={16} color="#4C2E96" style={{ marginRight: 8 }} />
+              <Text style={s.secondaryBtnText}>Choose from Gallery</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -238,8 +241,8 @@ export default function LogMealPhotoScreen({ navigation, route }) {
               {photos.map((p, i) => (
                 <View key={i} style={s.photoThumbWrap}>
                   <Image source={{ uri: p.uri }} style={s.photoThumb} />
-                  <TouchableOpacity style={s.photoRemove} onPress={() => removePhoto(i)}>
-                    <Text style={s.photoRemoveText}>✕</Text>
+                  <TouchableOpacity style={s.photoRemove} onPress={() => removePhoto(i)} accessibilityRole="button" accessibilityLabel="Remove photo">
+                    <Ionicons name="close" size={13} color="#fff" />
                   </TouchableOpacity>
                 </View>
               ))}
@@ -247,14 +250,17 @@ export default function LogMealPhotoScreen({ navigation, route }) {
 
             {analyzing ? (
               <View style={s.analyzingRow}>
-                <ActivityIndicator color="#6366F1" />
+                <ActivityIndicator color="#4C2E96" />
                 <Text style={s.analyzingText}>Analyzing your meal...</Text>
               </View>
             ) : (
               <>
                 {photos.length < MAX_ANGLES && (
-                  <TouchableOpacity style={s.angleBtn} onPress={pickFromCamera} activeOpacity={0.85}>
-                    <Text style={s.angleBtnText}>➕ Add another angle (improves portion accuracy)</Text>
+                  <TouchableOpacity style={s.angleBtn} onPress={pickFromCamera} activeOpacity={0.85} accessibilityRole="button" accessibilityLabel="Add another angle">
+                    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center" }}>
+                      <Ionicons name="add" size={15} color="#4C2E96" style={{ marginRight: 4 }} />
+                      <Text style={s.angleBtnText}>Add another angle (improves portion accuracy)</Text>
+                    </View>
                   </TouchableOpacity>
                 )}
 
@@ -269,8 +275,9 @@ export default function LogMealPhotoScreen({ navigation, route }) {
                   <Text style={s.referenceText}>My hand, a coin, or a fork/spoon is visible next to the food (helps scale)</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={s.primaryBtn} onPress={analyzePhoto} activeOpacity={0.85}>
-                  <Text style={s.primaryBtnText}>✨  Analyze Photo</Text>
+                <TouchableOpacity style={s.primaryBtn} onPress={analyzePhoto} activeOpacity={0.85} accessibilityRole="button" accessibilityLabel="Analyze photo">
+                  <Ionicons name="sparkles" size={16} color="#fff" style={{ marginRight: 8 }} />
+                  <Text style={s.primaryBtnText}>Analyze Photo</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={s.retakeBtn} onPress={resetPhoto} activeOpacity={0.85}>
                   <Text style={s.retakeBtnText}>Retake / Choose Different Photo</Text>
@@ -284,7 +291,7 @@ export default function LogMealPhotoScreen({ navigation, route }) {
           <View>
             {items.length === 0 ? (
               <View style={s.emptyCard}>
-                <Text style={s.emptyEmoji}>🤔</Text>
+                <Ionicons name="help-circle-outline" size={40} color="#9A94AE" style={{ marginBottom: 8 }} />
                 <Text style={s.emptyTitle}>Couldn't identify any food</Text>
                 <Text style={s.emptySub}>{results.notes || "Try a clearer, well-lit photo of your plate."}</Text>
                 <TouchableOpacity style={s.retakeBtn} onPress={resetPhoto} activeOpacity={0.85}>
@@ -379,24 +386,24 @@ export default function LogMealPhotoScreen({ navigation, route }) {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F8FAFC" },
+  container: { flex: 1, backgroundColor: "#F5F3FF" },
   scroll: { padding: 20, paddingBottom: 40 },
 
   tabRow: { flexDirection: "row", gap: 8, marginBottom: 20 },
   tab: {
     flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
     gap: 6, paddingVertical: 10, borderRadius: 14,
-    borderWidth: 1.5, borderColor: "#E2E8F0", backgroundColor: "#fff",
+    borderWidth: 1.5, borderColor: "#E4E0F0", backgroundColor: "#fff",
   },
-  tabTxt: { fontSize: 12, fontWeight: "600", color: "#64748B" },
+  tabTxt: { fontSize: 12, fontWeight: "600", color: "#6B667D" },
 
   captureCard: {
     backgroundColor: "#fff", borderRadius: 22, padding: 28,
     alignItems: "center", boxShadow: "0px 2px 12px rgba(15,23,42,0.06)",
   },
   captureEmoji: { fontSize: 44, marginBottom: 12 },
-  captureTitle: { fontSize: 20, fontWeight: "900", color: "#0F172A", marginBottom: 6 },
-  captureSub: { fontSize: 13, color: "#94A3B8", textAlign: "center", marginBottom: 24, lineHeight: 19 },
+  captureTitle: { fontSize: 20, fontWeight: "900", color: "#1B1730", marginBottom: 6 },
+  captureSub: { fontSize: 13, color: "#9A94AE", textAlign: "center", marginBottom: 24, lineHeight: 19 },
 
   previewCard: {
     backgroundColor: "#fff", borderRadius: 22, padding: 16,
@@ -404,7 +411,7 @@ const s = StyleSheet.create({
   },
   photoRow: { flexDirection: "row", gap: 10, marginBottom: 16 },
   photoThumbWrap: { position: "relative", flex: 1 },
-  photoThumb: { width: "100%", height: 180, borderRadius: 16, backgroundColor: "#F1F5F9" },
+  photoThumb: { width: "100%", height: 180, borderRadius: 16, backgroundColor: "#EDE9FE" },
   photoRemove: {
     position: "absolute", top: 8, right: 8, width: 26, height: 26, borderRadius: 13,
     backgroundColor: "rgba(15,23,42,0.65)", alignItems: "center", justifyContent: "center",
@@ -412,80 +419,80 @@ const s = StyleSheet.create({
   photoRemoveText: { color: "#fff", fontSize: 13, fontWeight: "800" },
 
   angleBtn: {
-    backgroundColor: "#EEF2FF", borderRadius: 14, paddingVertical: 12,
+    backgroundColor: "#EDE9FE", borderRadius: 14, paddingVertical: 12,
     alignItems: "center", marginBottom: 10,
   },
-  angleBtnText: { color: "#6366F1", fontSize: 13, fontWeight: "700" },
+  angleBtnText: { color: "#4C2E96", fontSize: 13, fontWeight: "700" },
 
   referenceRow: {
     flexDirection: "row", alignItems: "center", gap: 10,
     marginBottom: 14, paddingHorizontal: 2,
   },
-  referenceText: { flex: 1, fontSize: 12, color: "#475569", fontWeight: "600", lineHeight: 17 },
+  referenceText: { flex: 1, fontSize: 12, color: "#6B667D", fontWeight: "600", lineHeight: 17 },
 
   analyzingRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, paddingVertical: 16 },
-  analyzingText: { fontSize: 14, fontWeight: "600", color: "#6366F1" },
+  analyzingText: { fontSize: 14, fontWeight: "600", color: "#4C2E96" },
 
   primaryBtn: {
-    backgroundColor: "#6366F1", borderRadius: 16, paddingVertical: 16,
-    alignItems: "center", justifyContent: "center", marginBottom: 10,
+    backgroundColor: "#4C2E96", borderRadius: 16, paddingVertical: 16,
+    flexDirection: "row", alignItems: "center", justifyContent: "center", marginBottom: 10,
   },
-  primaryBtnDisabled: { backgroundColor: "#CBD5E1" },
+  primaryBtnDisabled: { backgroundColor: "#E4E0F0" },
   primaryBtnText: { color: "#fff", fontSize: 15, fontWeight: "800" },
 
   secondaryBtn: {
-    backgroundColor: "#F1F5F9", borderRadius: 16, paddingVertical: 16,
-    alignItems: "center", justifyContent: "center",
+    backgroundColor: "#EDE9FE", borderRadius: 16, paddingVertical: 16,
+    flexDirection: "row", alignItems: "center", justifyContent: "center",
   },
-  secondaryBtnText: { color: "#0F172A", fontSize: 15, fontWeight: "700" },
+  secondaryBtnText: { color: "#1B1730", fontSize: 15, fontWeight: "700" },
 
   retakeBtn: { alignItems: "center", paddingVertical: 10 },
-  retakeBtnText: { color: "#6366F1", fontSize: 13, fontWeight: "700" },
+  retakeBtnText: { color: "#4C2E96", fontSize: 13, fontWeight: "700" },
 
-  sectionTitle: { fontSize: 13, fontWeight: "800", color: "#64748B", marginBottom: 12, letterSpacing: 0.2 },
+  sectionTitle: { fontSize: 13, fontWeight: "800", color: "#6B667D", marginBottom: 12, letterSpacing: 0.2 },
 
   itemCard: {
     backgroundColor: "#fff", borderRadius: 16, padding: 14, marginBottom: 10,
-    borderWidth: 1.5, borderColor: "#EEF2FF",
+    borderWidth: 1.5, borderColor: "#EDE9FE",
   },
-  itemCardMuted: { opacity: 0.45, borderColor: "#E2E8F0" },
+  itemCardMuted: { opacity: 0.45, borderColor: "#E4E0F0" },
   itemTapRow: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
 
   checkbox: {
-    width: 22, height: 22, borderRadius: 7, borderWidth: 2, borderColor: "#CBD5E1",
+    width: 22, height: 22, borderRadius: 7, borderWidth: 2, borderColor: "#E4E0F0",
     alignItems: "center", justifyContent: "center", marginTop: 2,
   },
-  checkboxChecked: { backgroundColor: "#6366F1", borderColor: "#6366F1" },
+  checkboxChecked: { backgroundColor: "#4C2E96", borderColor: "#4C2E96" },
   checkboxTick: { color: "#fff", fontSize: 13, fontWeight: "900" },
 
   itemHeaderRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 3 },
-  itemName: { fontSize: 15, fontWeight: "800", color: "#0F172A", flex: 1, marginRight: 8 },
+  itemName: { fontSize: 15, fontWeight: "800", color: "#1B1730", flex: 1, marginRight: 8 },
   confBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
   confBadgeText: { fontSize: 10, fontWeight: "800" },
-  itemMeta: { fontSize: 13, color: "#475569", fontWeight: "600", marginBottom: 2 },
-  itemMacros: { fontSize: 11, color: "#94A3B8", fontWeight: "600" },
+  itemMeta: { fontSize: 13, color: "#6B667D", fontWeight: "600", marginBottom: 2 },
+  itemMacros: { fontSize: 11, color: "#9A94AE", fontWeight: "600" },
   dbBadge: { fontSize: 10, color: "#22C55E", fontWeight: "700", marginTop: 4 },
-  portionBasisText: { fontSize: 11, color: "#94A3B8", fontStyle: "italic", marginTop: 3 },
+  portionBasisText: { fontSize: 11, color: "#9A94AE", fontStyle: "italic", marginTop: 3 },
 
   gramStepperRow: {
     flexDirection: "row", alignItems: "center", gap: 10,
-    marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: "#F1F5F9",
+    marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: "#EDE9FE",
   },
-  gramStepperLabel: { fontSize: 12, color: "#64748B", fontWeight: "700", marginRight: 2 },
+  gramStepperLabel: { fontSize: 12, color: "#6B667D", fontWeight: "700", marginRight: 2 },
   gramBtn: {
-    width: 30, height: 30, borderRadius: 10, backgroundColor: "#F1F5F9",
+    width: 30, height: 30, borderRadius: 10, backgroundColor: "#EDE9FE",
     alignItems: "center", justifyContent: "center",
   },
-  gramBtnText: { fontSize: 17, fontWeight: "800", color: "#0F172A" },
-  gramValue: { fontSize: 14, fontWeight: "800", color: "#0F172A", minWidth: 48, textAlign: "center" },
+  gramBtnText: { fontSize: 17, fontWeight: "800", color: "#1B1730" },
+  gramValue: { fontSize: 14, fontWeight: "800", color: "#1B1730", minWidth: 48, textAlign: "center" },
 
-  notesText: { fontSize: 12, color: "#94A3B8", fontStyle: "italic", marginBottom: 14, lineHeight: 17 },
+  notesText: { fontSize: 12, color: "#9A94AE", fontStyle: "italic", marginBottom: 14, lineHeight: 17 },
 
   emptyCard: {
     backgroundColor: "#fff", borderRadius: 22, padding: 28, alignItems: "center",
     boxShadow: "0px 2px 12px rgba(15,23,42,0.06)",
   },
   emptyEmoji: { fontSize: 40, marginBottom: 10 },
-  emptyTitle: { fontSize: 16, fontWeight: "800", color: "#0F172A", marginBottom: 6 },
-  emptySub: { fontSize: 13, color: "#94A3B8", textAlign: "center", marginBottom: 20, lineHeight: 19 },
+  emptyTitle: { fontSize: 16, fontWeight: "800", color: "#1B1730", marginBottom: 6 },
+  emptySub: { fontSize: 13, color: "#9A94AE", textAlign: "center", marginBottom: 20, lineHeight: 19 },
 });

@@ -3,6 +3,7 @@ import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   ActivityIndicator, Alert, RefreshControl,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import {
   getTodayLog, getMealHistory, deleteMealLog, getHealthProfile, getCurrentPlan,
@@ -267,12 +268,12 @@ export default function MealLoggerScreen({ navigation }) {
         onPress={() => navigation.navigate("LogMealPhoto")}
         activeOpacity={0.85}
       >
-        <Text style={{ fontSize: 22 }}>📸</Text>
+        <Ionicons name="camera-outline" size={22} color="#4C2E96" />
         <View style={{ flex: 1, marginLeft: 12 }}>
           <Text style={s.photoEntryTitle}>Snap a Photo</Text>
           <Text style={s.photoEntrySub}>Let AI estimate your meal's calories</Text>
         </View>
-        <Text style={s.photoEntryArrow}>→</Text>
+        <Ionicons name="arrow-forward" size={18} color="#4C2E96" />
       </TouchableOpacity>
 
       <Text style={s.sectionTitle}>Today's Meals</Text>
@@ -327,8 +328,10 @@ export default function MealLoggerScreen({ navigation }) {
                       <TouchableOpacity
                         style={s.delBtn}
                         onPress={() => handleDelete(item._id, item.food?.name)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Delete ${item.food?.name ?? "item"}`}
                       >
-                        <Text style={s.delBtnText}>✕</Text>
+                        <Ionicons name="trash-outline" size={13} color="#e53935" />
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -399,14 +402,14 @@ const s = StyleSheet.create({
   sectionTitle: { fontSize: 12, fontWeight: "700", color: "#888", textTransform: "uppercase", letterSpacing: 1, marginBottom: 10, marginTop: 4 },
   photoEntryCard: {
     flexDirection: "row", alignItems: "center",
-    backgroundColor: "#EEF2FF", borderRadius: 18,
-    borderWidth: 1.5, borderColor: "#C7D2FE",
+    backgroundColor: "#EDE9FE", borderRadius: 18,
+    borderWidth: 1.5, borderColor: "#A78BFA",
     paddingVertical: 14, paddingHorizontal: 16,
     marginBottom: 20,
   },
-  photoEntryTitle: { fontSize: 14, fontWeight: "800", color: "#0F172A" },
-  photoEntrySub: { fontSize: 12, color: "#64748B", marginTop: 1 },
-  photoEntryArrow: { fontSize: 18, color: "#6366F1", fontWeight: "700" },
+  photoEntryTitle: { fontSize: 14, fontWeight: "800", color: "#1B1730" },
+  photoEntrySub: { fontSize: 12, color: "#6B667D", marginTop: 1 },
+  photoEntryArrow: { fontSize: 18, color: "#4C2E96", fontWeight: "700" },
 
   mealCard: {
     backgroundColor: "#fff", borderRadius: 16, padding: 14, marginBottom: 12,

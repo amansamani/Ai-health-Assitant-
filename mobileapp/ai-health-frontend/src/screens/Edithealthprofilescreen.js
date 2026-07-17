@@ -6,6 +6,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
 import { AuthContext } from "../context/AuthContext";
 import API from "../services/api";
 
@@ -30,7 +31,7 @@ function AnimatedInput({ icon, label, placeholder, value, onChangeText, keyboard
   };
 
   const borderColor = borderAnim.interpolate({
-    inputRange: [0, 1], outputRange: ["#E2E8F0", "#6366F1"],
+    inputRange: [0, 1], outputRange: ["#E4E0F0", "#4C2E96"],
   });
 
   return (
@@ -41,7 +42,7 @@ function AnimatedInput({ icon, label, placeholder, value, onChangeText, keyboard
         <TextInput
           style={styles.input}
           placeholder={placeholder}
-          placeholderTextColor="#CBD5E1"
+          placeholderTextColor="#E4E0F0"
           value={value}
           onChangeText={onChangeText}
           onFocus={onFocus}
@@ -125,14 +126,14 @@ const GENDER_OPTIONS = [
 ];
 
 const ACTIVITY_OPTIONS = [
-  { key: "sedentary", label: "Sedentary", emoji: "🛋️", desc: "Little movement",  color: "#94A3B8" },
+  { key: "sedentary", label: "Sedentary", emoji: "🛋️", desc: "Little movement",  color: "#9A94AE" },
   { key: "moderate",  label: "Moderate",  emoji: "🚶", desc: "Light exercise",    color: "#F59E0B" },
   { key: "active",    label: "Active",    emoji: "🏃", desc: "Regular training",  color: "#22C55E" },
 ];
 
 const GOAL_OPTIONS = [
   { key: "lose",     label: "Lose",     emoji: "🔥", desc: "Cut fat",      color: "#EF4444" },
-  { key: "maintain", label: "Maintain", emoji: "⚖️", desc: "Stay healthy", color: "#6366F1" },
+  { key: "maintain", label: "Maintain", emoji: "⚖️", desc: "Stay healthy", color: "#4C2E96" },
   { key: "gain",     label: "Gain",     emoji: "💪", desc: "Build mass",   color: "#F59E0B" },
 ];
 
@@ -254,7 +255,7 @@ export default function EditHealthProfileScreen({ navigation }) {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#6366F1" />
+        <ActivityIndicator size="large" color="#4C2E96" />
         <Text style={styles.loadingText}>Loading your profile…</Text>
       </View>
     );
@@ -273,8 +274,8 @@ export default function EditHealthProfileScreen({ navigation }) {
         >
           {/* ── HEADER ── */}
           <Animated.View style={[styles.headerRow, { opacity: headerOpacity, transform: [{ translateY: headerY }] }]}>
-            <Pressable onPress={() => navigation?.goBack()} style={styles.backBtn}>
-              <Text style={styles.backIcon}>←</Text>
+            <Pressable onPress={() => navigation?.goBack()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Go back">
+              <Ionicons name="chevron-back" size={20} color="#1B1730" />
             </Pressable>
             <View>
               <Text style={styles.headerTitle}>Health Profile</Text>
@@ -316,7 +317,7 @@ export default function EditHealthProfileScreen({ navigation }) {
                 <Chip
                   key={g.key} option={g}
                   selected={form.gender === g.key}
-                  color="#6366F1"
+                  color="#4C2E96"
                   onPress={() => handleChange("gender", g.key)}
                 />
               ))}
@@ -390,15 +391,16 @@ export default function EditHealthProfileScreen({ navigation }) {
             style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1, marginTop: 8 }]}
           >
             <LinearGradient
-              colors={saved ? ["#22C55E", "#16A34A"] : ["#6366F1", "#8B5CF6"]}
+              colors={saved ? ["#22C55E", "#16A34A"] : ["#4C2E96", "#6339B8"]}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
               style={styles.saveBtn}
             >
               {(saving || regenerating)
                 ? <ActivityIndicator color="#fff" size="small" />
-                : <Text style={styles.saveBtnText}>
-                    {saved ? "✓  Saved!" : "Save Changes"}
-                  </Text>
+                : <View style={{ flexDirection: "row", alignItems: "center" }}>
+                    {saved && <Ionicons name="checkmark" size={17} color="#fff" style={{ marginRight: 6 }} />}
+                    <Text style={styles.saveBtnText}>{saved ? "Saved!" : "Save Changes"}</Text>
+                  </View>
               }
             </LinearGradient>
           </Pressable>
@@ -412,10 +414,10 @@ export default function EditHealthProfileScreen({ navigation }) {
 
 // ── STYLES ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container:   { flex: 1, backgroundColor: "#F8FAFC" },
+  container:   { flex: 1, backgroundColor: "#F5F3FF" },
   scroll:      { padding: 20, paddingTop: 8 },
-  center:      { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#F8FAFC" },
-  loadingText: { marginTop: 12, color: "#94A3B8", fontSize: 14, fontWeight: "500" },
+  center:      { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#F5F3FF" },
+  loadingText: { marginTop: 12, color: "#9A94AE", fontSize: 14, fontWeight: "500" },
 
   headerRow: {
     flexDirection: "row", alignItems: "center",
@@ -424,71 +426,71 @@ const styles = StyleSheet.create({
   backBtn: {
     width: 40, height: 40, borderRadius: 20,
     backgroundColor: "#fff", justifyContent: "center", alignItems: "center",
-    shadowColor: "#0F172A", shadowOffset: { width: 0, height: 2 },
+    shadowColor: "#1B1730", shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08, shadowRadius: 8, elevation: 3,
   },
-  backIcon:    { fontSize: 20, color: "#0F172A", fontWeight: "700" },
-  headerTitle: { fontSize: 18, fontWeight: "800", color: "#0F172A", letterSpacing: -0.3, textAlign: "center" },
-  headerSub:   { fontSize: 12, color: "#94A3B8", fontWeight: "500", textAlign: "center", marginTop: 2 },
+  backIcon:    { fontSize: 20, color: "#1B1730", fontWeight: "700" },
+  headerTitle: { fontSize: 18, fontWeight: "800", color: "#1B1730", letterSpacing: -0.3, textAlign: "center" },
+  headerSub:   { fontSize: 12, color: "#9A94AE", fontWeight: "500", textAlign: "center", marginTop: 2 },
 
   section: {
     backgroundColor: "#fff", borderRadius: 22,
     padding: 18, marginBottom: 14,
-    shadowColor: "#0F172A", shadowOffset: { width: 0, height: 2 },
+    shadowColor: "#1B1730", shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.07, shadowRadius: 12, elevation: 3,
   },
   sectionHeader: { flexDirection: "row", alignItems: "center", marginBottom: 16 },
   sectionIconWrap: {
     width: 34, height: 34, borderRadius: 10,
-    backgroundColor: "#F1F5F9",
+    backgroundColor: "#EDE9FE",
     justifyContent: "center", alignItems: "center", marginRight: 10,
   },
   sectionIcon:  { fontSize: 16 },
-  sectionTitle: { fontSize: 15, fontWeight: "800", color: "#0F172A" },
+  sectionTitle: { fontSize: 15, fontWeight: "800", color: "#1B1730" },
 
   row:        { flexDirection: "row", marginBottom: 0 },
   inputGroup: { marginBottom: 12 },
-  inputLabel: { fontSize: 11, fontWeight: "700", color: "#64748B", marginBottom: 6, letterSpacing: 0.3, textTransform: "uppercase" },
+  inputLabel: { fontSize: 11, fontWeight: "700", color: "#6B667D", marginBottom: 6, letterSpacing: 0.3, textTransform: "uppercase" },
   inputWrap: {
     flexDirection: "row", alignItems: "center",
-    backgroundColor: "#F8FAFC", borderRadius: 14,
+    backgroundColor: "#F5F3FF", borderRadius: 14,
     borderWidth: 1.5, paddingHorizontal: 12,
   },
   inputIcon: { fontSize: 15, marginRight: 8 },
   input: {
     flex: 1, paddingVertical: 13,
-    fontSize: 15, color: "#0F172A", fontWeight: "600",
+    fontSize: 15, color: "#1B1730", fontWeight: "600",
   },
 
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   chip: {
     flexDirection: "row", alignItems: "center",
-    backgroundColor: "#F8FAFC", borderRadius: 24,
-    borderWidth: 1.5, borderColor: "#E2E8F0",
+    backgroundColor: "#F5F3FF", borderRadius: 24,
+    borderWidth: 1.5, borderColor: "#E4E0F0",
     paddingVertical: 10, paddingHorizontal: 18, gap: 6,
   },
   chipEmoji: { fontSize: 16 },
-  chipText:  { fontSize: 13, color: "#64748B", fontWeight: "600" },
+  chipText:  { fontSize: 13, color: "#6B667D", fontWeight: "600" },
 
   selectorRow: { flexDirection: "row", gap: 8 },
   selectorCard: {
-    flex: 1, backgroundColor: "#F8FAFC",
+    flex: 1, backgroundColor: "#F5F3FF",
     borderRadius: 16, padding: 12,
     alignItems: "center", borderWidth: 2,
-    borderColor: "#F1F5F9", position: "relative",
+    borderColor: "#EDE9FE", position: "relative",
   },
   selDot: {
     position: "absolute", top: 7, right: 7,
     width: 7, height: 7, borderRadius: 4,
   },
   selEmoji: { fontSize: 22, marginBottom: 5 },
-  selLabel: { fontSize: 12, fontWeight: "800", color: "#0F172A", marginBottom: 2 },
-  selDesc:  { fontSize: 10, color: "#94A3B8", textAlign: "center", fontWeight: "500" },
+  selLabel: { fontSize: 12, fontWeight: "800", color: "#1B1730", marginBottom: 2 },
+  selDesc:  { fontSize: 10, color: "#9A94AE", textAlign: "center", fontWeight: "500" },
 
   saveBtn: {
     borderRadius: 18, paddingVertical: 17,
     alignItems: "center", justifyContent: "center",
-    shadowColor: "#6366F1", shadowOffset: { width: 0, height: 6 },
+    shadowColor: "#4C2E96", shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35, shadowRadius: 16, elevation: 8,
   },
   saveBtnText: { color: "#fff", fontSize: 16, fontWeight: "900", letterSpacing: 0.3 },

@@ -6,6 +6,7 @@ import {
   ActivityIndicator, Animated, Pressable,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 import { AuthContext } from "../../context/AuthContext";
 import API from "../../services/api";
 
@@ -51,7 +52,7 @@ function TypingDots() {
 
 const td = StyleSheet.create({
   wrap: { flexDirection: "row", alignItems: "center", gap: 4, paddingVertical: 6 },
-  dot:  { width: 7, height: 7, borderRadius: 4, backgroundColor: "#6366F1" },
+  dot:  { width: 7, height: 7, borderRadius: 4, backgroundColor: "#4C2E96" },
 });
 
 // ─── Message Bubble ───────────────────────────────────────────────────────────
@@ -76,7 +77,7 @@ function MessageBubble({ message }) {
     ]}>
       {!isUser && (
         <View style={mb.avatar}>
-          <Text style={mb.avatarTxt}>🤖</Text>
+          <Ionicons name="sparkles" size={14} color="#4C2E96" />
         </View>
       )}
       <View style={[mb.bubble, isUser ? mb.bubbleUser : mb.bubbleAi]}>
@@ -97,7 +98,7 @@ const mb = StyleSheet.create({
   rowAi:      { justifyContent: "flex-start" },
   avatar: {
     width: 32, height: 32, borderRadius: 16,
-    backgroundColor: "#EEF2FF",
+    backgroundColor: "#EDE9FE",
     justifyContent: "center", alignItems: "center",
   },
   avatarTxt:  { fontSize: 16 },
@@ -105,7 +106,7 @@ const mb = StyleSheet.create({
     maxWidth: "78%", borderRadius: 18, paddingHorizontal: 14, paddingVertical: 10,
   },
   bubbleUser: {
-    backgroundColor: "#6366F1",
+    backgroundColor: "#4C2E96",
     borderBottomRightRadius: 4,
   },
   bubbleAi: {
@@ -116,10 +117,10 @@ const mb = StyleSheet.create({
   },
   text:     { fontSize: 14, lineHeight: 21 },
   textUser: { color: "#fff", fontWeight: "500" },
-  textAi:   { color: "#1E293B", fontWeight: "400" },
+  textAi:   { color: "#29195A", fontWeight: "400" },
   time:     { fontSize: 10, marginTop: 4 },
   timeUser: { color: "rgba(255,255,255,0.6)", textAlign: "right" },
-  timeAi:   { color: "#94A3B8" },
+  timeAi:   { color: "#9A94AE" },
 });
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
@@ -227,12 +228,12 @@ export default function AiChatScreen({ navigation }) {
       >
         {/* ── Header ── */}
         <View style={s.header}>
-          <TouchableOpacity onPress={() => navigation?.goBack()} style={s.backBtn}>
-            <Text style={s.backIcon}>←</Text>
+          <TouchableOpacity onPress={() => navigation?.goBack()} style={s.backBtn} accessibilityRole="button" accessibilityLabel="Go back">
+            <Ionicons name="chevron-back" size={20} color="#1B1730" />
           </TouchableOpacity>
           <View style={s.headerCenter}>
             <View style={s.headerIconWrap}>
-              <Text style={s.headerIcon}>🤖</Text>
+              <Ionicons name="sparkles" size={18} color="#4C2E96" />
             </View>
             <View>
               <Text style={s.headerTitle}>AI Nutrition Coach</Text>
@@ -255,7 +256,7 @@ export default function AiChatScreen({ navigation }) {
             loading ? (
               <View style={s.typingRow}>
                 <View style={mb.avatar}>
-                  <Text style={mb.avatarTxt}>🤖</Text>
+                  <Ionicons name="sparkles" size={14} color="#4C2E96" />
                 </View>
                 <View style={[mb.bubbleAi, { paddingHorizontal: 14 }]}>
                   <TypingDots />
@@ -293,7 +294,7 @@ export default function AiChatScreen({ navigation }) {
           <TextInput
             style={s.input}
             placeholder="Ask about your diet, meals, conditions…"
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor="#9A94AE"
             value={input}
             onChangeText={setInput}
             multiline
@@ -305,10 +306,12 @@ export default function AiChatScreen({ navigation }) {
             style={[s.sendBtn, (!input.trim() || loading) && s.sendBtnDisabled]}
             onPress={() => sendMessage()}
             disabled={!input.trim() || loading}
+            accessibilityRole="button"
+            accessibilityLabel="Send message"
           >
             {loading
               ? <ActivityIndicator size="small" color="#fff" />
-              : <Text style={s.sendIcon}>➤</Text>
+              : <Ionicons name="send" size={16} color="#fff" />
             }
           </Pressable>
         </View>
@@ -320,66 +323,66 @@ export default function AiChatScreen({ navigation }) {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F8FAFC" },
+  container: { flex: 1, backgroundColor: "#F5F3FF" },
 
   header: {
     flexDirection: "row", alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16, paddingVertical: 12,
     backgroundColor: "#fff",
-    borderBottomWidth: 1, borderBottomColor: "#F1F5F9",
+    borderBottomWidth: 1, borderBottomColor: "#EDE9FE",
     shadowColor: "#000", shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05, shadowRadius: 4, elevation: 2,
   },
   backBtn: {
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: "#F1F5F9",
+    backgroundColor: "#EDE9FE",
     justifyContent: "center", alignItems: "center",
   },
-  backIcon:     { fontSize: 18, color: "#0F172A", fontWeight: "700" },
+  backIcon:     { fontSize: 18, color: "#1B1730", fontWeight: "700" },
   headerCenter: { flexDirection: "row", alignItems: "center", gap: 10 },
   headerIconWrap: {
     width: 40, height: 40, borderRadius: 12,
-    backgroundColor: "#EEF2FF",
+    backgroundColor: "#EDE9FE",
     justifyContent: "center", alignItems: "center",
   },
   headerIcon:  { fontSize: 20 },
-  headerTitle: { fontSize: 15, fontWeight: "800", color: "#0F172A" },
-  headerSub:   { fontSize: 11, color: "#6366F1", fontWeight: "500", marginTop: 1 },
+  headerTitle: { fontSize: 15, fontWeight: "800", color: "#1B1730" },
+  headerSub:   { fontSize: 11, color: "#4C2E96", fontWeight: "500", marginTop: 1 },
 
   messageList: { padding: 16, paddingBottom: 8 },
   typingRow:   { flexDirection: "row", alignItems: "flex-end", gap: 8, paddingHorizontal: 16, marginBottom: 8 },
 
   quickWrap:  { paddingTop: 8, paddingBottom: 4 },
-  quickLabel: { fontSize: 11, fontWeight: "700", color: "#94A3B8", paddingHorizontal: 16, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 },
+  quickLabel: { fontSize: 11, fontWeight: "700", color: "#9A94AE", paddingHorizontal: 16, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 },
   quickChip: {
     backgroundColor: "#fff", borderRadius: 20,
     paddingHorizontal: 14, paddingVertical: 9,
-    borderWidth: 1.5, borderColor: "#E2E8F0",
+    borderWidth: 1.5, borderColor: "#E4E0F0",
     shadowColor: "#000", shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04, shadowRadius: 3, elevation: 1,
   },
-  quickChipTxt: { fontSize: 12, color: "#475569", fontWeight: "600" },
+  quickChipTxt: { fontSize: 12, color: "#6B667D", fontWeight: "600" },
 
   inputBar: {
     flexDirection: "row", alignItems: "flex-end",
     paddingHorizontal: 12, paddingVertical: 10,
     backgroundColor: "#fff",
-    borderTopWidth: 1, borderTopColor: "#F1F5F9",
+    borderTopWidth: 1, borderTopColor: "#EDE9FE",
     gap: 8,
   },
   input: {
-    flex: 1, backgroundColor: "#F8FAFC",
-    borderRadius: 22, borderWidth: 1.5, borderColor: "#E2E8F0",
+    flex: 1, backgroundColor: "#F5F3FF",
+    borderRadius: 22, borderWidth: 1.5, borderColor: "#E4E0F0",
     paddingHorizontal: 16, paddingVertical: 10,
-    fontSize: 14, color: "#0F172A", fontWeight: "500",
+    fontSize: 14, color: "#1B1730", fontWeight: "500",
     maxHeight: 100,
   },
   sendBtn: {
     width: 44, height: 44, borderRadius: 22,
-    backgroundColor: "#6366F1",
+    backgroundColor: "#4C2E96",
     justifyContent: "center", alignItems: "center",
   },
-  sendBtnDisabled: { backgroundColor: "#C7D2FE" },
+  sendBtnDisabled: { backgroundColor: "#A78BFA" },
   sendIcon:        { fontSize: 16, color: "#fff", fontWeight: "800" },
 });

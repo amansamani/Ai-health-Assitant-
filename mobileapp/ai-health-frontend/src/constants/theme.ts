@@ -5,17 +5,49 @@
 
 import { Platform } from 'react-native';
 
-const tintColorLight = '#0a7ea4';
+const tintColorLight = '#4C2E96';
 const tintColorDark = '#fff';
 
+// Fitlip brand palette — anchored on #29195A (the deep purple used in the
+// app icon / native splash) so in-app UI actually matches the brand instead
+// of the generic template green it shipped with.
+export const BRAND = {
+  900: "#170F36", // near-black purple, high-emphasis text on light bg
+  800: "#29195A", // brand anchor — icon/splash color
+  700: "#392376",
+  600: "#4C2E96", // primary interactive color (buttons, links)
+  500: "#6339B8",
+  400: "#8257D6",
+  300: "#A78BFA",
+  200: "#C9B8F7",
+  100: "#EDE9FE", // selected-state tints, chip fills
+  50: "#F5F3FF", // subtle tinted backgrounds
+};
+
 export const COLORS = {
-  primary: "#2E7D32",
-  secondary: "#1E88E5",
-  background: "#F9FAFB",
+  // legacy flat keys — kept so already-shipped screens keep working;
+  // values now point at the real brand instead of placeholder green/blue.
+  primary: BRAND[600],
+  secondary: BRAND[400],
+  background: "#FAF9FC",
   card: "#FFFFFF",
-  textDark: "#1F2937",
-  textLight: "#6B7280",
-  accent: "#FF9800",
+  textDark: "#1B1730",
+  textLight: "#6B667D",
+  accent: "#F59E0B",
+  border: "#E4E0F0",
+
+  // semantic tokens for new/redesigned screens
+  primaryDark: BRAND[800],
+  primaryLight: BRAND[300],
+  onPrimary: "#FFFFFF",
+  surface: "#FFFFFF",
+  surfaceMuted: BRAND[50],
+  textMuted: "#9A94AE",
+  error: "#DC2626",
+  errorBg: "#FEF2F2",
+  errorBorder: "#FECACA",
+  success: "#16A34A",
+  warning: "#D97706",
 };
 
 export const SHADOW = {

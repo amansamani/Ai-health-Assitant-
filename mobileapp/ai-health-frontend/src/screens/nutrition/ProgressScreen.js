@@ -35,7 +35,7 @@ function FadeSlideIn({ delay = 0, children }) {
 // ─── Status meta (color + label) per insight state ────────────────────────────
 function getStatusMeta(insight) {
   if (!insight) {
-    return { label: "NO DATA YET", color: "#94A3B8", bg: "#F1F5F9" };
+    return { label: "NO DATA YET", color: "#9A94AE", bg: "#EDE9FE" };
   }
   if (!insight.adjusted) {
     if (insight.reason?.toLowerCase().includes("low adherence")) {
@@ -44,11 +44,11 @@ function getStatusMeta(insight) {
     if (insight.adherence !== undefined) {
       return { label: "ON TRACK", color: "#4CAF50", bg: "#E8F5E9" };
     }
-    return { label: "NOT ENOUGH DATA", color: "#94A3B8", bg: "#F1F5F9" };
+    return { label: "NOT ENOUGH DATA", color: "#9A94AE", bg: "#EDE9FE" };
   }
   return insight.delta > 0
     ? { label: "CALORIES INCREASED", color: "#1E88E5", bg: "#E3F2FD" }
-    : { label: "CALORIES REDUCED", color: "#6366F1", bg: "#EEF2FF" };
+    : { label: "CALORIES REDUCED", color: "#4C2E96", bg: "#EDE9FE" };
 }
 
 // ─── Weekly Insight Card ───────────────────────────────────────────────────────
@@ -160,11 +160,11 @@ export default function ProgressScreen() {
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#6366F1"]} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#4C2E96"]} />
         }
       >
         {loading ? (
-          <ActivityIndicator size="large" color="#6366F1" style={{ marginTop: 40 }} />
+          <ActivityIndicator size="large" color="#4C2E96" style={{ marginTop: 40 }} />
         ) : error ? (
           <Text style={styles.errorTxt}>{error}</Text>
         ) : (
@@ -192,7 +192,7 @@ const wi = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E0E7FF",
     overflow: "hidden",
-    shadowColor: "#6366F1",
+    shadowColor: "#4C2E96",
     shadowOpacity: 0.08,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
@@ -207,7 +207,7 @@ const wi = StyleSheet.create({
     borderBottomColor: "#E0E7FF",
   },
   headerTitle: { fontSize: 15, fontWeight: "800", color: "#3730A3" },
-  headerSub:   { fontSize: 12, color: "#6366F1", fontWeight: "500", marginTop: 2 },
+  headerSub:   { fontSize: 12, color: "#4C2E96", fontWeight: "500", marginTop: 2 },
   badge: {
     borderRadius: 8,
     paddingHorizontal: 8,
@@ -222,14 +222,14 @@ const wi = StyleSheet.create({
   statsRow: { flexDirection: "row", marginTop: 16, gap: 10 },
   statBox: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: "#F5F3FF",
     borderRadius: 12,
     paddingVertical: 10,
     alignItems: "center",
   },
   statValue: { fontSize: 14, fontWeight: "800", color: "#1a1a1a" },
-  statLabel: { fontSize: 10, color: "#64748B", fontWeight: "700", marginTop: 2 },
+  statLabel: { fontSize: 10, color: "#6B667D", fontWeight: "700", marginTop: 2 },
 
   emptyBody: { padding: 16 },
-  emptyTxt:  { fontSize: 13, color: "#64748B", lineHeight: 19 },
+  emptyTxt:  { fontSize: 13, color: "#6B667D", lineHeight: 19 },
 });

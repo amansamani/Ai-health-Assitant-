@@ -42,14 +42,14 @@ function AnimatedInput({ icon, placeholder, value, onChangeText, keyboardType })
     setFocused(false);
     Animated.timing(borderAnim, { toValue: 0, duration: 200, useNativeDriver: false }).start();
   };
-  const borderColor = borderAnim.interpolate({ inputRange: [0, 1], outputRange: ["#E2E8F0", "#6366F1"] });
+  const borderColor = borderAnim.interpolate({ inputRange: [0, 1], outputRange: ["#E4E0F0", "#4C2E96"] });
   return (
     <Animated.View style={[styles.inputWrap, { borderColor }]}>
       <Text style={[styles.inputIcon, { opacity: focused ? 1 : 0.45 }]}>{icon}</Text>
       <TextInput
         style={styles.input}
         placeholder={placeholder}
-        placeholderTextColor="#CBD5E1"
+        placeholderTextColor="#E4E0F0"
         value={value}
         onChangeText={onChangeText}
         onFocus={onFocus}
@@ -62,12 +62,20 @@ function AnimatedInput({ icon, placeholder, value, onChangeText, keyboardType })
 }
 
 // ── Option Chip ───────────────────────────────────────────────────────────────
-function OptionChip({ label, emoji, selected, color = "#6366F1", onPress }) {
+function OptionChip({ label, emoji, selected, color = "#4C2E96", onPress }) {
   const scale = useRef(new Animated.Value(1)).current;
   const onIn  = () => Animated.spring(scale, { toValue: 0.94, useNativeDriver: true }).start();
   const onOut = () => Animated.spring(scale, { toValue: 1,    useNativeDriver: true }).start();
   return (
-    <Pressable onPress={onPress} onPressIn={onIn} onPressOut={onOut}>
+    <Pressable
+      onPress={onPress}
+      onPressIn={onIn}
+      onPressOut={onOut}
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
+      accessibilityLabel={label}
+      hitSlop={4}
+    >
       <Animated.View style={[
         styles.chip,
         selected && { backgroundColor: color + "18", borderColor: color, borderWidth: 2 },
@@ -102,14 +110,14 @@ const GENDER_OPTIONS = [
 ];
 
 const ACTIVITY_OPTIONS = [
-  { key: "sedentary", label: "Sedentary", emoji: "🛋️",  color: "#94A3B8", desc: "Little movement" },
+  { key: "sedentary", label: "Sedentary", emoji: "🛋️",  color: "#9A94AE", desc: "Little movement" },
   { key: "moderate",  label: "Moderate",  emoji: "🚶",  color: "#F59E0B", desc: "Light exercise"  },
   { key: "active",    label: "Active",    emoji: "🏃",  color: "#22C55E", desc: "Regular training" },
 ];
 
 const GOAL_OPTIONS = [
   { key: "lose",     label: "Lose",     emoji: "🔥", color: "#EF4444", desc: "Cut fat"      },
-  { key: "maintain", label: "Maintain", emoji: "⚖️", color: "#6366F1", desc: "Stay healthy" },
+  { key: "maintain", label: "Maintain", emoji: "⚖️", color: "#4C2E96", desc: "Stay healthy" },
   { key: "gain",     label: "Gain",     emoji: "💪", color: "#F59E0B", desc: "Build mass"   },
 ];
 
@@ -174,7 +182,7 @@ export default function HealthProfileScreen({ navigation, route }) {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={{ flex: 1, backgroundColor: "#F8FAFC" }}
+      style={{ flex: 1, backgroundColor: "#F5F3FF" }}
     >
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -191,7 +199,7 @@ export default function HealthProfileScreen({ navigation, route }) {
             <View style={styles.stepRow}>
               <View style={styles.stepDone}><Text style={styles.stepDoneText}>✓</Text></View>
               <View style={styles.stepLine} />
-              <LinearGradient colors={["#6366F1", "#8B5CF6"]} style={styles.stepActive}>
+              <LinearGradient colors={["#4C2E96", "#6339B8"]} style={styles.stepActive}>
                 <Text style={styles.stepActiveText}>2</Text>
               </LinearGradient>
             </View>
@@ -229,7 +237,7 @@ export default function HealthProfileScreen({ navigation, route }) {
             <View style={styles.chipRow}>
               {GENDER_OPTIONS.map((g) => (
                 <OptionChip key={g.key} label={g.label} emoji={g.emoji}
-                  selected={form.gender === g.key} color="#6366F1"
+                  selected={form.gender === g.key} color="#4C2E96"
                   onPress={() => handleChange("gender", g.key)} />
               ))}
             </View>
@@ -242,7 +250,10 @@ export default function HealthProfileScreen({ navigation, route }) {
             <View style={styles.activityRow}>
               {ACTIVITY_OPTIONS.map((a) => (
                 <Pressable key={a.key} onPress={() => handleChange("activityLevel", a.key)}
-                  style={{ flex: 1 }}>
+                  style={{ flex: 1 }}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: form.activityLevel === a.key }}
+                  accessibilityLabel={`${a.label}: ${a.desc}`}>
                   <View style={[
                     styles.activityCard,
                     form.activityLevel === a.key && {
@@ -271,7 +282,10 @@ export default function HealthProfileScreen({ navigation, route }) {
             <View style={styles.activityRow}>
               {GOAL_OPTIONS.map((g) => (
                 <Pressable key={g.key} onPress={() => handleChange("goal", g.key)}
-                  style={{ flex: 1 }}>
+                  style={{ flex: 1 }}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: form.goal === g.key }}
+                  accessibilityLabel={`${g.label}: ${g.desc}`}>
                   <View style={[
                     styles.activityCard,
                     form.goal === g.key && {
@@ -330,10 +344,13 @@ export default function HealthProfileScreen({ navigation, route }) {
         {/* ── SUBMIT ── */}
         <FadeSlideIn delay={420}>
           <Pressable onPress={submitProfile} onPressIn={onBtnIn}
-            onPressOut={onBtnOut} disabled={submitting}>
+            onPressOut={onBtnOut} disabled={submitting}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: submitting, busy: submitting }}
+            accessibilityLabel="Create my plan">
             <Animated.View style={{ transform: [{ scale: btnScale }] }}>
               <LinearGradient
-                colors={submitting ? ["#94A3B8", "#94A3B8"] : ["#6366F1", "#8B5CF6", "#A855F7"]}
+                colors={submitting ? ["#9A94AE", "#9A94AE"] : ["#4C2E96", "#6339B8", "#8257D6"]}
                 start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                 style={styles.submitBtn}
               >
@@ -363,12 +380,12 @@ const styles = StyleSheet.create({
   blobTop: {
     position: "absolute", top: -80, right: -70,
     width: 220, height: 220, borderRadius: 110,
-    backgroundColor: "#6366F110",
+    backgroundColor: "#4C2E9610",
   },
   blobBottom: {
     position: "absolute", bottom: 100, left: -60,
     width: 180, height: 180, borderRadius: 90,
-    backgroundColor: "#A855F70C",
+    backgroundColor: "#8257D60C",
   },
 
   headerWrap:    { alignItems: "center", marginBottom: 28 },
@@ -379,15 +396,15 @@ const styles = StyleSheet.create({
     justifyContent: "center", alignItems: "center",
   },
   stepDoneText:  { color: "#fff", fontSize: 14, fontWeight: "800" },
-  stepLine:      { width: 36, height: 2, backgroundColor: "#6366F1", marginHorizontal: 6 },
+  stepLine:      { width: 36, height: 2, backgroundColor: "#4C2E96", marginHorizontal: 6 },
   stepActive: {
     width: 32, height: 32, borderRadius: 16,
     justifyContent: "center", alignItems: "center",
   },
   stepActiveText: { color: "#fff", fontSize: 14, fontWeight: "900" },
-  stepLabel:  { fontSize: 12, color: "#94A3B8", fontWeight: "700", letterSpacing: 0.5, marginBottom: 8 },
-  title:      { fontSize: 26, fontWeight: "900", color: "#0F172A", letterSpacing: -0.6, marginBottom: 6 },
-  subtitle:   { fontSize: 14, color: "#94A3B8", fontWeight: "500" },
+  stepLabel:  { fontSize: 12, color: "#9A94AE", fontWeight: "700", letterSpacing: 0.5, marginBottom: 8 },
+  title:      { fontSize: 26, fontWeight: "900", color: "#1B1730", letterSpacing: -0.6, marginBottom: 6 },
+  subtitle:   { fontSize: 14, color: "#9A94AE", fontWeight: "500" },
 
   sectionCard: {
     backgroundColor: "#fff", borderRadius: 22,
@@ -397,50 +414,50 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: "row", alignItems: "center", marginBottom: 16 },
   sectionIconWrap: {
     width: 34, height: 34, borderRadius: 10,
-    backgroundColor: "#F1F5F9",
+    backgroundColor: "#EDE9FE",
     justifyContent: "center", alignItems: "center", marginRight: 10,
   },
   sectionIcon:  { fontSize: 16 },
-  sectionTitle: { fontSize: 15, fontWeight: "800", color: "#0F172A", letterSpacing: -0.2 },
+  sectionTitle: { fontSize: 15, fontWeight: "800", color: "#1B1730", letterSpacing: -0.2 },
 
-  fieldLabel: { fontSize: 12, fontWeight: "700", color: "#64748B", marginBottom: 6, letterSpacing: 0.2 },
+  fieldLabel: { fontSize: 12, fontWeight: "700", color: "#6B667D", marginBottom: 6, letterSpacing: 0.2 },
   metricsRow: { flexDirection: "row", marginBottom: 12 },
   inputWrap: {
     flexDirection: "row", alignItems: "center",
-    backgroundColor: "#F8FAFC", borderRadius: 14,
+    backgroundColor: "#F5F3FF", borderRadius: 14,
     borderWidth: 1.5, marginBottom: 0,
     paddingHorizontal: 12, paddingVertical: 2,
   },
   inputIcon: { fontSize: 15, marginRight: 8 },
   input: {
     flex: 1, paddingVertical: 12,
-    fontSize: 15, color: "#0F172A", fontWeight: "500",
+    fontSize: 15, color: "#1B1730", fontWeight: "500",
   },
 
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   chip: {
     flexDirection: "row", alignItems: "center",
-    backgroundColor: "#F8FAFC", borderRadius: 24,
-    borderWidth: 1.5, borderColor: "#E2E8F0",
+    backgroundColor: "#F5F3FF", borderRadius: 24,
+    borderWidth: 1.5, borderColor: "#E4E0F0",
     paddingVertical: 10, paddingHorizontal: 18, gap: 6,
   },
   chipEmoji: { fontSize: 16 },
-  chipText:  { fontSize: 13, color: "#64748B", fontWeight: "600" },
+  chipText:  { fontSize: 13, color: "#6B667D", fontWeight: "600" },
 
   activityRow: { flexDirection: "row", gap: 10 },
   activityCard: {
-    flex: 1, backgroundColor: "#F8FAFC",
+    flex: 1, backgroundColor: "#F5F3FF",
     borderRadius: 16, padding: 12,
     alignItems: "center", borderWidth: 2,
-    borderColor: "#F1F5F9", position: "relative",
+    borderColor: "#EDE9FE", position: "relative",
   },
   activityDot: {
     position: "absolute", top: 8, right: 8,
     width: 7, height: 7, borderRadius: 4,
   },
   activityEmoji: { fontSize: 22, marginBottom: 5 },
-  activityLabel: { fontSize: 12, fontWeight: "800", color: "#0F172A", marginBottom: 3 },
-  activityDesc:  { fontSize: 10, color: "#94A3B8", textAlign: "center", fontWeight: "500" },
+  activityLabel: { fontSize: 12, fontWeight: "800", color: "#1B1730", marginBottom: 3 },
+  activityDesc:  { fontSize: 10, color: "#9A94AE", textAlign: "center", fontWeight: "500" },
 
   submitBtn: {
     borderRadius: 18, paddingVertical: 17,

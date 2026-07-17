@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { View, Text, StyleSheet, Animated } from "react-native";
 import Svg, { Circle } from "react-native-svg";
+import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "../constants/theme";
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
@@ -9,6 +10,7 @@ export default function CircularProgressRing({
   size = 110,
   strokeWidth = 10,
   progress = 0,       // 0 → 1
+  icon = null,        // Ionicons name — takes priority over valueText when set
   valueText = "",
   label = "",
   color = COLORS.primary,
@@ -62,7 +64,7 @@ export default function CircularProgressRing({
 
       {/* Center text */}
       <View style={styles.center}>
-        <Text style={styles.value}>{valueText}</Text>
+        {icon ? <Ionicons name={icon} size={22} color={color} /> : <Text style={styles.value}>{valueText}</Text>}
         <Text style={styles.label}>{label}</Text>
       </View>
     </View>
