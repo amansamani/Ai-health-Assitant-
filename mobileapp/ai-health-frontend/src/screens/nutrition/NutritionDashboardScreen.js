@@ -5,6 +5,7 @@ import {
   TouchableOpacity, RefreshControl, Modal, FlatList, Alert, Animated,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { SafeAreaView } from "react-native-safe-area-context";
 import API from "../../services/api";
 import { AuthContext } from "../../context/AuthContext";
 import MealCompletionCard from "../../components/MealCompletionCard";
@@ -423,23 +424,23 @@ export default function NutritionDashboardScreen({ navigation }) {
 
   if (loading) {
     return (
-      <View style={s.center}>
-        <ActivityIndicator size="large" color="#4CAF50" />
+      <SafeAreaView style={s.center} edges={["top"]}>
+        <ActivityIndicator size="large" color="#4C2E96" />
         <Text style={s.loadingTxt}>Loading your plan…</Text>
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (!plan) {
     return (
-      <View style={s.center}>
+      <SafeAreaView style={s.center} edges={["top"]}>
         <Text style={{ fontSize: 52, marginBottom: 14 }}>🥗</Text>
         <Text style={s.emptyTitle}>No Diet Plan Found</Text>
         <Text style={s.emptySub}>Generate your personalised plan to get started</Text>
         <TouchableOpacity style={s.genBtn} onPress={handleGenerate}>
           <Text style={s.genBtnTxt}>Generate My Plan</Text>
         </TouchableOpacity>
-      </View>
+      </SafeAreaView>
     );
   }
 
@@ -475,19 +476,27 @@ export default function NutritionDashboardScreen({ navigation }) {
   const calDiffColor = Math.abs(calDiff) < 100 ? "#4CAF50" : calDiff > 0 ? "#FF8F00" : "#1E88E5";
 
   return (
-    <>
+    <SafeAreaView style={s.container} edges={["top"]}>
       <ScrollView
-        style={s.container}
         contentContainerStyle={s.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={() => { setRefreshing(true); fetchPlan(); }}
-            colors={["#4CAF50"]}
+            colors={["#4C2E96"]}
+            tintColor="#4C2E96"
           />
         }
       >
+        {/* ── Screen header ── */}
+        <View style={s.screenHeader}>
+          <Text style={s.screenTitle}>Diet</Text>
+          <View style={s.headerIconWrap}>
+            <Ionicons name="restaurant-outline" size={18} color="#4C2E96" />
+          </View>
+        </View>
+
         {/* ── Title row ── */}
         <View style={s.titleRow}>
           <View>
@@ -603,7 +612,7 @@ export default function NutritionDashboardScreen({ navigation }) {
         onClose={() => setSwapState({ visible: false, mealType: null, combo: null })}
         onSwapped={fetchPlan}
       />
-    </>
+    </SafeAreaView>
   );
 }
 
@@ -674,18 +683,25 @@ const sw = StyleSheet.create({
 // ─── Main Styles ──────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  container:   { flex: 1, backgroundColor: "#F4F6F8" },
-  content:     { padding: 16 },
-  center:      { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#F4F6F8", padding: 24 },
-  loadingTxt:  { marginTop: 12, color: "#888", fontSize: 14 },
-  emptyTitle:  { fontSize: 22, fontWeight: "800", color: "#1a1a1a", marginBottom: 6 },
-  emptySub:    { fontSize: 14, color: "#888", textAlign: "center", marginBottom: 24 },
-  genBtn:      { backgroundColor: "#4CAF50", paddingHorizontal: 28, paddingVertical: 14, borderRadius: 14 },
+  container:   { flex: 1, backgroundColor: "#FAF9FC" },
+  content:     { padding: 16, paddingTop: 4 },
+  center:      { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#FAF9FC", padding: 24 },
+  loadingTxt:  { marginTop: 12, color: "#9A94AE", fontSize: 14 },
+  emptyTitle:  { fontSize: 22, fontWeight: "800", color: "#1B1730", marginBottom: 6 },
+  emptySub:    { fontSize: 14, color: "#9A94AE", textAlign: "center", marginBottom: 24 },
+  genBtn:      { backgroundColor: "#4C2E96", paddingHorizontal: 28, paddingVertical: 14, borderRadius: 14 },
   genBtnTxt:   { color: "#fff", fontWeight: "800", fontSize: 15 },
 
-  titleRow:    { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
-  title:       { fontSize: 24, fontWeight: "900", color: "#1a1a1a" },
-  titleSub:    { fontSize: 12, color: "#aaa", fontWeight: "600", marginTop: 2, letterSpacing: 0.6 },
+  screenHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 },
+  screenTitle:  { fontSize: 22, fontWeight: "800", color: "#1B1730", letterSpacing: -0.5 },
+  headerIconWrap: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: "#EDE9FE", justifyContent: "center", alignItems: "center",
+  },
+
+  titleRow:    { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 14, marginBottom: 16 },
+  title:       { fontSize: 20, fontWeight: "800", color: "#1B1730" },
+  titleSub:    { fontSize: 12, color: "#9A94AE", fontWeight: "600", marginTop: 2, letterSpacing: 0.6 },
   regenBtn:    { width: 40, height: 40, borderRadius: 20, backgroundColor: "#fff", justifyContent: "center", alignItems: "center", elevation: 2, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 3 },
   regenBtnTxt: { fontSize: 18 },
 

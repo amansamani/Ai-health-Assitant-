@@ -364,7 +364,7 @@ export default function HomeScreen() {
           </Pressable>
 
           {/* ── AI CHAT BUTTON ── */}
-          <AiChatButton onPress={() => router.push("/(app)/nutrition/ai-chat")} />
+          <AiChatButton onPress={() => router.push("/(app)/coach")} />
 
           {/* 2-col grid */}
           <View style={styles.actionGrid}>
@@ -382,10 +382,6 @@ export default function HomeScreen() {
             <ActionCard
               icon="stats-chart-outline" title="Summary" sub="7-day progress"
               accent={COLORS.primary} onPress={() => router.push("/(app)/weekly-summary")}
-            />
-            <ActionCard
-              icon="nutrition-outline" title="Diet Plan" sub="Today's meals"
-              accent={COLORS.success} onPress={() => router.push("/(app)/nutrition")}
             />
             <ActionCard
               icon="trophy-outline" title="Challenges" sub="Stay consistent"

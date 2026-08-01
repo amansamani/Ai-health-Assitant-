@@ -30,11 +30,12 @@ export default function AppLayout() {
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
+      {/* Persistent bottom-tab shell — Home / Diet / Track / AI Coach / Profile */}
+      <Stack.Screen name="(tabs)" />
       <Stack.Screen
         name="workout-detail"
         options={{ animation: "slide_from_right", animationDuration: 180 }}
       />
-      <Stack.Screen name="nutrition/index" options={{ title: "My Nutrition Plan" }} />
       <Stack.Screen
         name="nutrition/meal-logger"
         options={{ headerShown: true, title: "Log Meal", headerBackTitle: "Home" }}
@@ -48,10 +49,6 @@ export default function AppLayout() {
         options={{ headerShown: true, title: "Snap Your Meal", headerBackTitle: "Log Meal" }}
       />
       <Stack.Screen name="nutrition/progress" options={{ title: "Progress" }} />
-      <Stack.Screen
-        name="nutrition/ai-chat"
-        options={{ animation: "slide_from_right", animationDuration: 200 }}
-      />
     </Stack>
   );
 }

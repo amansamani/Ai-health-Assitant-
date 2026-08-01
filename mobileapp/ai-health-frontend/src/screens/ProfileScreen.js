@@ -153,16 +153,10 @@ export default function ProfileScreen() {
         {/* ── HEADER ── */}
         <FadeSlideIn delay={0}>
           <View style={styles.headerRow}>
-            <Pressable
-              onPress={() => router.back()}
-              style={styles.backBtn}
-              accessibilityRole="button"
-              accessibilityLabel="Go back"
-            >
-              <Ionicons name="chevron-back" size={20} color={COLORS.textDark} />
-            </Pressable>
             <Text style={styles.headerTitle}>Profile</Text>
-            <View style={{ width: 40 }} />
+            <View style={styles.headerIconWrap}>
+              <Ionicons name="person-circle-outline" size={22} color={COLORS.primary} />
+            </View>
           </View>
         </FadeSlideIn>
 
@@ -286,14 +280,13 @@ const styles = StyleSheet.create({
   // Header
   headerRow: {
     flexDirection: "row", alignItems: "center",
-    justifyContent: "space-between", marginBottom: 28,
+    justifyContent: "space-between", marginBottom: 22,
   },
-  backBtn: {
+  headerIconWrap: {
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: COLORS.surface, justifyContent: "center", alignItems: "center",
-    boxShadow: "0px 2px 8px rgba(23,15,54,0.08)",
+    backgroundColor: COLORS.surfaceMuted, justifyContent: "center", alignItems: "center",
   },
-  headerTitle: { fontSize: 18, fontWeight: "800", color: COLORS.textDark, letterSpacing: -0.3 },
+  headerTitle: { fontSize: 22, fontWeight: "800", color: COLORS.textDark, letterSpacing: -0.5 },
 
   // Avatar
   avatarSection: { alignItems: "center", marginBottom: 28 },

@@ -228,19 +228,15 @@ export default function AiChatScreen({ navigation }) {
       >
         {/* ── Header ── */}
         <View style={s.header}>
-          <TouchableOpacity onPress={() => navigation?.goBack()} style={s.backBtn} accessibilityRole="button" accessibilityLabel="Go back">
-            <Ionicons name="chevron-back" size={20} color="#1B1730" />
-          </TouchableOpacity>
           <View style={s.headerCenter}>
             <View style={s.headerIconWrap}>
               <Ionicons name="sparkles" size={18} color="#4C2E96" />
             </View>
             <View>
               <Text style={s.headerTitle}>AI Nutrition Coach</Text>
-              <Text style={s.headerSub}>Powered by Gemini · Knows your profile</Text>
+              <Text style={s.headerSub}>Your personal health assistant</Text>
             </View>
           </View>
-          <View style={{ width: 40 }} />
         </View>
 
         {/* ── Messages ── */}

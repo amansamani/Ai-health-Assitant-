@@ -34,13 +34,13 @@ export const ROUTE_MAP = {
   WaterTracking: "/(app)/water-tracking",
   TrackDetail: "/(app)/track-detail",
   WorkoutDetail: "/(app)/workout-detail",
-  NutritionDashboard: "/(app)/nutrition",
+  NutritionDashboard: "/(app)/diet",
   MealLogger: "/(app)/nutrition/meal-logger",
   LogMeal: "/(app)/nutrition/log-meal",
   LogMealPhoto: "/(app)/nutrition/log-meal-photo",
   Progress: "/(app)/nutrition/progress",
   EditHealthProfile: "/(app)/edit-health-profile",
-  AiChat: "/(app)/nutrition/ai-chat",
+  AiChat: "/(app)/coach",
 };
 
 // Expo Router params are always strings (they live in a URL). Every value
