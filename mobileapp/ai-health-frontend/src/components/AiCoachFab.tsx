@@ -1,11 +1,13 @@
 import { useEffect } from "react";
 import { View, Pressable, StyleSheet, Platform } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, usePathname } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, {
+  Easing,
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
@@ -16,13 +18,25 @@ import Animated, {
 import { COLORS } from "@/src/constants/theme";
 
 // Floating chat-bubble entry point into the AI Coach. Lives in the tabs
-// layout (above <Tabs>) so it stays put on top of every root tab screen
-// instead of being a 5th/6th tab competing for space in the bar.
+// layout (above <Tabs>) so it stays put on top of every root tab screen.
+//
+// Two things this fixes vs. the first version:
+//  1. The bubble now hides itself once the coach screen is actually the
+//     active route (via usePathname) — previously it kept rendering
+//     underneath/over the pushed screen, which is why it looked like the
+//     logo "appeared after" the chat opened instead of disappearing before it.
+//  2. Tapping now plays an expand + fade "opening" animation on the bubble
+//     itself, and only pushes the coach route once that animation finishes —
+//     so the sequence is bubble opens → bubble disappears → chat appears,
+//     not chat appears → bubble shows up on top.
 export default function AiCoachFab() {
   const router = useRouter();
+  const pathname = usePathname();
   const insets = useSafeAreaInsets();
+
   const press = useSharedValue(1);
   const pulse = useSharedValue(0);
+  const expand = useSharedValue(0); // 0 = idle bubble, 1 = fully opened
 
   useEffect(() => {
     pulse.value = withRepeat(
@@ -34,14 +48,36 @@ export default function AiCoachFab() {
     );
   }, []);
 
+  const openCoach = () => {
+    router.push("/(app)/coach");
+    // Reset so the next time this mounts visible again it's a fresh bubble,
+    // not the tail end of the previous expand animation.
+    expand.value = 0;
+    press.value = 1;
+  };
+
+  const handlePress = () => {
+    if (Platform.OS === "ios") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    expand.value = withTiming(
+      1,
+      { duration: 260, easing: Easing.out(Easing.cubic) },
+      () => runOnJS(openCoach)()
+    );
+  };
+
   const buttonStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: press.value }],
+    transform: [{ scale: press.value * (1 + expand.value * 5) }],
+    opacity: 1 - expand.value,
   }));
 
   const ringStyle = useAnimatedStyle(() => ({
-    opacity: 0.32 - pulse.value * 0.24,
+    opacity: (0.32 - pulse.value * 0.24) * (1 - expand.value),
     transform: [{ scale: 1 + pulse.value * 0.3 }],
   }));
+
+  // The coach screen is the active route — hide the bubble entirely instead
+  // of letting it linger underneath/over the chat screen.
+  if (pathname === "/coach") return null;
 
   return (
     <View
@@ -50,10 +86,9 @@ export default function AiCoachFab() {
     >
       <Animated.View style={[styles.ring, ringStyle]} />
       <Pressable
-        onPress={() => router.push("/(app)/coach")}
+        onPress={handlePress}
         onPressIn={() => {
           press.value = withSpring(0.92);
-          if (Platform.OS === "ios") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         }}
         onPressOut={() => {
           press.value = withSpring(1);
