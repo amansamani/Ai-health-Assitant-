@@ -38,6 +38,7 @@ export const ROUTE_MAP = {
   MealLogger: "/(app)/nutrition/meal-logger",
   LogMeal: "/(app)/nutrition/log-meal",
   LogMealPhoto: "/(app)/nutrition/log-meal-photo",
+  Camera: "/(app)/camera",
   Progress: "/(app)/nutrition/progress",
   EditHealthProfile: "/(app)/edit-health-profile",
   AiChat: "/(app)/coach",

@@ -6,9 +6,8 @@ import {
   ScrollView,
   Animated,
   Dimensions,
-  Alert,
 } from "react-native";
-import { useState, useCallback, useContext, useRef, useEffect } from "react";
+import { useState, useCallback, useContext, useRef, useEffect, useMemo } from "react";
 import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import API from "../services/api";
@@ -71,99 +70,40 @@ function StatSquare({ icon, label, value, color, progress, onPress }) {
   );
 }
 
-// ─── Action Card ──────────────────────────────────────────────────────────────
-function ActionCard({ icon, title, sub, accent, onPress, wide }) {
-  const scale      = useRef(new Animated.Value(1)).current;
-  const onPressIn  = () => Animated.spring(scale, { toValue: 0.97, useNativeDriver: true }).start();
-  const onPressOut = () => Animated.spring(scale, { toValue: 1,    useNativeDriver: true }).start();
+// ─── Motivation Card ────────────────────────────────────────────────────────
+// A small rotating set of one-liners, deterministically picked by day-of-year
+// so it changes daily without needing any backend call or extra state.
+const MOTIVATION_QUOTES = [
+  "Small steps every day add up to big change.",
+  "Discipline is choosing what you want most over what you want now.",
+  "Your only competition is who you were yesterday.",
+  "Progress, not perfection.",
+  "The body achieves what the mind believes.",
+  "Consistency beats intensity.",
+  "Every workout counts, even the short ones.",
+  "Take care of your body — it's the only place you have to live.",
+  "Energy and persistence conquer all things.",
+  "You don't have to be extreme, just consistent.",
+];
 
-  return (
-    <Pressable
-      onPress={onPress} onPressIn={onPressIn} onPressOut={onPressOut}
-      style={wide ? { width: "100%" } : { width: "48%" }}
-      accessibilityRole="button"
-      accessibilityLabel={`${title}: ${sub}`}
-    >
-      <Animated.View style={[styles.actionCard, wide && styles.actionCardWide, { transform: [{ scale }] }]}>
-        <View style={[styles.actionAccentBar, { backgroundColor: accent }]} />
-        <View style={[styles.actionIconWrap, { backgroundColor: accent + "18" }]}>
-          <Ionicons name={icon} size={20} color={accent} />
-        </View>
-        <Text style={styles.actionTitle}>{title}</Text>
-        <Text style={styles.actionSub}>{sub}</Text>
-        <View style={[styles.actionArrow, { backgroundColor: accent + "22" }]}>
-          <Ionicons name="arrow-forward" size={14} color={accent} />
-        </View>
-      </Animated.View>
-    </Pressable>
-  );
+function getDailyQuote() {
+  const start = new Date(new Date().getFullYear(), 0, 0);
+  const dayOfYear = Math.floor((Date.now() - start.getTime()) / 86400000);
+  return MOTIVATION_QUOTES[dayOfYear % MOTIVATION_QUOTES.length];
 }
 
-// ─── AI Chat Button ───────────────────────────────────────────────────────────
-function AiChatButton({ onPress }) {
-  const scale      = useRef(new Animated.Value(1)).current;
-  const glowAnim   = useRef(new Animated.Value(0)).current;
-  const onPressIn  = () => Animated.spring(scale, { toValue: 0.97, useNativeDriver: true }).start();
-  const onPressOut = () => Animated.spring(scale, { toValue: 1,    useNativeDriver: true }).start();
-
-  // Pulse glow loop
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(glowAnim, { toValue: 1, duration: 1800, useNativeDriver: false }),
-        Animated.timing(glowAnim, { toValue: 0, duration: 1800, useNativeDriver: false }),
-      ])
-    ).start();
-  }, []);
-
-  const borderColor = glowAnim.interpolate({
-    inputRange:  [0, 1],
-    outputRange: [`${COLORS.primary}4D`, `${COLORS.primary}E6`],
-  });
-
+function MotivationCard() {
+  const quote = useMemo(getDailyQuote, []);
   return (
-    <Pressable
-      onPress={onPress} onPressIn={onPressIn} onPressOut={onPressOut}
-      accessibilityRole="button"
-      accessibilityLabel="Ask your AI nutrition coach"
-    >
-      {/* Outer: JS-driver glow border only */}
-      <Animated.View style={[styles.aiCard, { borderColor }]}>
-      {/* Inner: native-driver scale only */}
-      <Animated.View style={{ transform: [{ scale }] }}>
-        <LinearGradient
-          colors={[COLORS.primaryDark, COLORS.primary, COLORS.primaryLight]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.aiGradient}
-        >
-          {/* Decorative blobs */}
-          <View style={styles.aiBlob1} />
-          <View style={styles.aiBlob2} />
-
-          {/* Left content */}
-          <View style={styles.aiLeft}>
-            <View style={styles.aiBadgeWrap}>
-              <Ionicons name="sparkles" size={11} color="#E0E7FF" />
-              <Text style={styles.aiBadge}>AI POWERED</Text>
-            </View>
-            <Text style={styles.aiTitle}>Ask Your Nutrition Coach</Text>
-            <Text style={styles.aiSub}>
-              Get personalized advice based on{"\n"}your health profile & diet plan
-            </Text>
-          </View>
-
-          {/* Right button */}
-          <View style={styles.aiRight}>
-            <View style={styles.aiIconCircle}>
-              <Ionicons name="chatbubble-ellipses" size={24} color="#fff" />
-            </View>
-            <Text style={styles.aiCta}>Chat now</Text>
-          </View>
-        </LinearGradient>
-      </Animated.View>{/* inner scale */}
-      </Animated.View>{/* outer glow */}
-    </Pressable>
+    <View style={styles.motivationCard}>
+      <View style={styles.motivationIconWrap}>
+        <Ionicons name="sparkles-outline" size={16} color={COLORS.primary} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.motivationLabel}>TODAY'S MOTIVATION</Text>
+        <Text style={styles.motivationQuote}>{quote}</Text>
+      </View>
+    </View>
   );
 }
 
@@ -335,59 +275,9 @@ export default function HomeScreen() {
 
         <WeeklyInsightCard />
 
-        {/* ── QUICK ACTIONS ── */}
+        {/* ── TODAY'S MOTIVATION ── */}
         <FadeSlideIn delay={240}>
-          <Text style={[styles.sectionTitle, { marginBottom: 14 }]}>Quick Actions</Text>
-
-          {/* Meal Tracker — featured */}
-          <Pressable
-            onPress={() => router.push("/(app)/nutrition/meal-logger")}
-            style={({ pressed }) => [{ opacity: pressed ? 0.93 : 1 }]}
-            accessibilityRole="button"
-            accessibilityLabel="Log today's meal"
-          >
-            <LinearGradient
-              colors={["#EA580C", "#F97316", "#FB923C"]}
-              start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-              style={styles.featuredCard}
-            >
-              <View style={styles.featuredLeft}>
-                <Text style={styles.featuredLabel}>MEAL TRACKER</Text>
-                <Text style={styles.featuredTitle}>Log Today's Meal</Text>
-                <Text style={styles.featuredSub}>Track calories & nutrition intake</Text>
-              </View>
-              <View style={styles.featuredBadge}>
-                <Ionicons name="add" size={16} color="#fff" />
-                <Text style={styles.featuredBadgeText}>Add</Text>
-              </View>
-            </LinearGradient>
-          </Pressable>
-
-          {/* ── AI CHAT BUTTON ── */}
-          <AiChatButton onPress={() => router.push("/(app)/coach")} />
-
-          {/* 2-col grid */}
-          <View style={styles.actionGrid}>
-            <ActionCard
-              icon="water-outline"
-              title="Water Intake"
-              sub="Track daily hydration"
-              accent="#3B82F6"
-              onPress={() => router.push("/(app)/water-tracking")}
-            />
-            <ActionCard
-              icon="barbell-outline" title="Workouts" sub="Training plan"
-              accent={COLORS.warning} onPress={() => router.push("/(app)/workout")}
-            />
-            <ActionCard
-              icon="stats-chart-outline" title="Summary" sub="7-day progress"
-              accent={COLORS.primary} onPress={() => router.push("/(app)/weekly-summary")}
-            />
-            <ActionCard
-              icon="trophy-outline" title="Challenges" sub="Stay consistent"
-              accent="#EC4899" onPress={() => Alert.alert("Coming Soon", "Challenges feature is coming soon!")}
-            />
-          </View>
+          <MotivationCard />
         </FadeSlideIn>
 
         <View style={{ height: 32 }} />
@@ -475,88 +365,25 @@ const styles = StyleSheet.create({
   squareValue:   { fontSize: 14, fontWeight: "800", color: COLORS.textDark, letterSpacing: -0.3 },
   squareLabel:   { fontSize: 11, marginTop: 2, fontWeight: "700" },
 
-  // Featured card
-  featuredCard: {
-    borderRadius: 20, padding: 20,
-    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    marginBottom: 14,
-    boxShadow: "0px 6px 14px rgba(234, 88, 12, 0.35)",
+  // ── Motivation card ────────────────────────────────────────────────────────
+  motivationCard: {
+    flexDirection: "row", alignItems: "flex-start", gap: 12,
+    backgroundColor: COLORS.surface, borderRadius: 18,
+    padding: 16,
+    boxShadow: "0px 2px 10px rgba(23, 15, 54, 0.06)",
   },
-  featuredLeft:      { flex: 1 },
-  featuredLabel:     { fontSize: 10, fontWeight: "800", color: "rgba(255,255,255,0.65)", letterSpacing: 1, marginBottom: 4 },
-  featuredTitle:     { fontSize: 18, fontWeight: "800", color: "#fff" },
-  featuredSub:       { fontSize: 13, color: "rgba(255,255,255,0.75)", marginTop: 4 },
-  featuredBadge:     {
-    flexDirection: "row", alignItems: "center", gap: 4,
-    backgroundColor: "rgba(255,255,255,0.25)", borderRadius: 22,
-    paddingHorizontal: 16, paddingVertical: 10,
-  },
-  featuredBadgeText: { color: "#fff", fontWeight: "900", fontSize: 14 },
-
-  // ── AI Chat Card ──────────────────────────────────────────────────────────
-  aiCard: {
-    borderRadius: 22, marginBottom: 14,
-    borderWidth: 1.5,
-    overflow: "hidden",
-    boxShadow: "0px 8px 22px rgba(41, 25, 90, 0.35)",
-  },
-  aiGradient: {
-    flexDirection: "row", alignItems: "center",
-    padding: 20, overflow: "hidden",
-  },
-  aiBlob1: {
-    position: "absolute", width: 180, height: 180, borderRadius: 90,
-    backgroundColor: "rgba(255,255,255,0.05)", top: -60, right: -40,
-  },
-  aiBlob2: {
-    position: "absolute", width: 120, height: 120, borderRadius: 60,
-    backgroundColor: "rgba(255,255,255,0.04)", bottom: -50, left: 20,
-  },
-  aiLeft:       { flex: 1, paddingRight: 12 },
-  aiBadgeWrap: {
-    flexDirection: "row", alignItems: "center", gap: 5,
-    backgroundColor: "rgba(255,255,255,0.15)",
-    borderWidth: 1, borderColor: "rgba(255,255,255,0.25)",
-    borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4,
-    alignSelf: "flex-start", marginBottom: 10,
-  },
-  aiBadge:      { color: "#E0E7FF", fontSize: 10, fontWeight: "800", letterSpacing: 0.6 },
-  aiTitle:      { fontSize: 16, fontWeight: "800", color: "#fff", marginBottom: 6 },
-  aiSub:        { fontSize: 12, color: "rgba(255,255,255,0.72)", lineHeight: 18 },
-  aiRight:      { alignItems: "center", gap: 8 },
-  aiIconCircle: {
-    width: 56, height: 56, borderRadius: 28,
-    backgroundColor: "rgba(255,255,255,0.18)",
+  motivationIconWrap: {
+    width: 30, height: 30, borderRadius: 10,
+    backgroundColor: COLORS.surfaceMuted,
     justifyContent: "center", alignItems: "center",
-    borderWidth: 1, borderColor: "rgba(255,255,255,0.3)",
+    marginTop: 1,
   },
-  aiCta:        { fontSize: 11, color: "#C7D2FE", fontWeight: "800", letterSpacing: 0.3 },
-
-  // Action grid
-  actionGrid: {
-    flexDirection: "row", flexWrap: "wrap",
-    justifyContent: "space-between", gap: 12,
+  motivationLabel: {
+    fontSize: 10, fontWeight: "800", color: COLORS.textMuted,
+    letterSpacing: 0.8, marginBottom: 4,
   },
-  actionCard: {
-    backgroundColor: COLORS.surface, borderRadius: 20, padding: 18,
-    boxShadow: "0px 2px 10px rgba(23, 15, 54, 0.07)",
-    overflow: "hidden", position: "relative", minHeight: 120,
-  },
-  actionCardWide:  { width: "100%" },
-  actionAccentBar: {
-    position: "absolute", top: 0, left: 0, right: 0, height: 3,
-    borderTopLeftRadius: 20, borderTopRightRadius: 20,
-  },
-  actionIconWrap: {
-    width: 38, height: 38, borderRadius: 12,
-    justifyContent: "center", alignItems: "center",
-    marginBottom: 10, marginTop: 4,
-  },
-  actionTitle:     { fontSize: 16, fontWeight: "800", color: COLORS.textDark, letterSpacing: -0.2 },
-  actionSub:       { fontSize: 12, color: COLORS.textMuted, marginTop: 3, fontWeight: "500" },
-  actionArrow: {
-    position: "absolute", bottom: 14, right: 14,
-    width: 30, height: 30, borderRadius: 15,
-    justifyContent: "center", alignItems: "center",
+  motivationQuote: {
+    fontSize: 14, fontWeight: "600", color: COLORS.textDark,
+    lineHeight: 20,
   },
 });

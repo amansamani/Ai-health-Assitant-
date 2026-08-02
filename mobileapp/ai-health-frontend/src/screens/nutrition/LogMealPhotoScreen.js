@@ -188,7 +188,22 @@ export default function LogMealPhotoScreen({ navigation, route }) {
       Alert.alert(
         "Logged! 🎉",
         `${itemsToLog.length} item${itemsToLog.length === 1 ? "" : "s"} added to ${MEAL_META[mealType].label}.`,
-        [{ text: "Done", onPress: () => navigation.goBack() }]
+        [{
+          text: "Done",
+          onPress: () => {
+            // Pushed from Meal Logger — a real screen to return to. Opened
+            // directly from the Camera tab — no back-stack, so goBack()
+            // would silently no-op. Reset for the next capture instead.
+            if (navigation.canGoBack?.()) {
+              navigation.goBack();
+            } else {
+              setPhotos([]);
+              setResults(null);
+              setItems([]);
+              setSelected({});
+            }
+          },
+        }]
       );
     } catch (err) {
       Alert.alert("Something went wrong", "Some items may not have logged. Check your meal log and try again for any missing ones.");

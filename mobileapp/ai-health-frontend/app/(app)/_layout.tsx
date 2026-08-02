@@ -30,8 +30,16 @@ export default function AppLayout() {
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      {/* Persistent bottom-tab shell — Home / Diet / Track / AI Coach / Profile */}
+      {/* Persistent bottom-tab shell — Home / Exercise / Camera / Diet / Track */}
       <Stack.Screen name="(tabs)" />
+      <Stack.Screen
+        name="profile"
+        options={{ animation: "slide_from_right", animationDuration: 180 }}
+      />
+      <Stack.Screen
+        name="coach"
+        options={{ animation: "slide_from_bottom", animationDuration: 200 }}
+      />
       <Stack.Screen
         name="workout-detail"
         options={{ animation: "slide_from_right", animationDuration: 180 }}

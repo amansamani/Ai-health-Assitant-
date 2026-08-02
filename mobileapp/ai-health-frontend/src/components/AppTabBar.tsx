@@ -3,6 +3,7 @@ import { View, Pressable, StyleSheet, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { LinearGradient } from "expo-linear-gradient";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -14,14 +15,15 @@ import { COLORS } from "@/src/constants/theme";
 
 // ─── Tab config ─────────────────────────────────────────────────────────────
 // Keyed by the file-based route name (app/(app)/(tabs)/<name>.tsx).
+// "camera" is handled separately below — it renders as a raised, oversized
+// button instead of a normal tab, since food-logging is the primary action.
 type IconName = keyof typeof Ionicons.glyphMap;
 
 const TAB_META: Record<string, { label: string; icon: IconName; iconOutline: IconName }> = {
-  home:    { label: "Home",    icon: "home",               iconOutline: "home-outline" },
-  diet:    { label: "Diet",    icon: "nutrition",           iconOutline: "nutrition-outline" },
-  tracking:{ label: "Track",   icon: "bar-chart",           iconOutline: "bar-chart-outline" },
-  coach:   { label: "AI Coach",icon: "sparkles",            iconOutline: "sparkles-outline" },
-  profile: { label: "Profile", icon: "person",              iconOutline: "person-outline" },
+  home:     { label: "Home",     icon: "home",          iconOutline: "home-outline" },
+  workout:  { label: "Exercise", icon: "barbell",        iconOutline: "barbell-outline" },
+  diet:     { label: "Diet",     icon: "nutrition",      iconOutline: "nutrition-outline" },
+  tracking: { label: "Track",    icon: "bar-chart",      iconOutline: "bar-chart-outline" },
 };
 
 function TabButton({
@@ -90,6 +92,54 @@ function TabButton({
   );
 }
 
+// ─── Camera tab — raised, oversized center button ──────────────────────────
+function CameraTabButton({
+  focused,
+  onPress,
+  onLongPress,
+}: {
+  focused: boolean;
+  onPress: () => void;
+  onLongPress: () => void;
+}) {
+  const press = useSharedValue(1);
+
+  const buttonStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: press.value }],
+  }));
+
+  return (
+    <View style={styles.cameraSlot}>
+      <Pressable
+        onPress={onPress}
+        onLongPress={onLongPress}
+        onPressIn={() => {
+          press.value = withTiming(0.92, { duration: 90 });
+          if (Platform.OS === "ios") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        }}
+        onPressOut={() => {
+          press.value = withTiming(1, { duration: 120 });
+        }}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        accessibilityRole="tab"
+        accessibilityState={{ selected: focused }}
+        accessibilityLabel="Log meal with camera"
+      >
+        <Animated.View style={[styles.cameraButton, buttonStyle]}>
+          <LinearGradient
+            colors={[COLORS.primaryLight, COLORS.primary, COLORS.primaryDark]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.cameraGradient}
+          >
+            <Ionicons name="camera" size={26} color="#fff" />
+          </LinearGradient>
+        </Animated.View>
+      </Pressable>
+    </View>
+  );
+}
+
 export default function AppTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
 
@@ -99,11 +149,6 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
         {state.routes.map((route, index) => {
           const { options } = descriptors[route.key];
           const focused = state.index === index;
-          const meta = TAB_META[route.name] ?? {
-            label: options.title ?? route.name,
-            icon: "ellipse" as IconName,
-            iconOutline: "ellipse-outline" as IconName,
-          };
 
           const onPress = () => {
             const event = navigation.emit({
@@ -118,6 +163,23 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
 
           const onLongPress = () => {
             navigation.emit({ type: "tabLongPress", target: route.key });
+          };
+
+          if (route.name === "camera") {
+            return (
+              <CameraTabButton
+                key={route.key}
+                focused={focused}
+                onPress={onPress}
+                onLongPress={onLongPress}
+              />
+            );
+          }
+
+          const meta = TAB_META[route.name] ?? {
+            label: options.title ?? route.name,
+            icon: "ellipse" as IconName,
+            iconOutline: "ellipse-outline" as IconName,
           };
 
           return (
@@ -166,5 +228,27 @@ const styles = StyleSheet.create({
     fontSize: 10.5,
     fontWeight: "700",
     letterSpacing: 0.1,
+  },
+
+  // Camera — raised above the bar line, bigger than the other tab chips.
+  cameraSlot: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "flex-start",
+  },
+  cameraButton: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    marginTop: -28,
+    borderWidth: 4,
+    borderColor: COLORS.background,
+    overflow: "hidden",
+    boxShadow: "0px 6px 16px rgba(76, 46, 150, 0.45)",
+  },
+  cameraGradient: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });
