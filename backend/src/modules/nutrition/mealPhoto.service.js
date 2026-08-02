@@ -8,12 +8,14 @@ const FoodItem = require("./foodItem.model");
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // ── Model strategy ───────────────────────────────────────────────────────────
-// gemini-2.5-pro reasons noticeably better about spatial/portion questions than
-// flash (it's a "thinking" model by default), so it's the primary model for
-// this task. Flash is kept as an automatic fallback so a photo still gets
-// analyzed if pro is rate-limited, over quota, or briefly unavailable.
-// Override via env if you want to point at a newer model without a code change.
-const PRIMARY_MODEL  = process.env.GEMINI_VISION_MODEL          || "gemini-2.5-pro";
+// gemini-2.5-pro requires a billing-enabled project — it's no longer on the
+// free tier (Google moved Pro models behind billing in 2026), so it's not
+// usable on a free API key: every call 429s with quota limit 0, permanently,
+// not just under load. Primary is now gemini-3.6-flash, the current
+// free-tier flash model (GA July 2026). 2.5-flash stays as a fallback in
+// case 3.6 has an outage or your key doesn't have access to it yet.
+// Override via env if you want to point at a different model without a code change.
+const PRIMARY_MODEL  = process.env.GEMINI_VISION_MODEL          || "gemini-3.6-flash";
 const FALLBACK_MODEL = process.env.GEMINI_VISION_FALLBACK_MODEL || "gemini-2.5-flash";
 const REQUEST_TIMEOUT_MS = Number(process.env.GEMINI_VISION_TIMEOUT_MS) || 25_000;
 
