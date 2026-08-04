@@ -17,6 +17,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { COLORS } from "../constants/theme";
 import CircularProgressRing from "../components/CircularProgressRing";
 import WeeklyInsightCard from "../components/WeeklyInsightCard";
+import { StepsIcon, WaterIcon, SleepIcon, ManualLogIcon } from "../components/icons/MotionIcons";
+import { useReplayOnFocus } from "../hooks/useReplayOnFocus";
 
 const { width } = Dimensions.get("window");
 
@@ -40,7 +42,7 @@ function FadeSlideIn({ delay = 0, children }) {
 }
 
 // ─── Stat Square ──────────────────────────────────────────────────────────────
-function StatSquare({ icon, label, value, color, progress, onPress }) {
+function StatSquare({ icon, renderIcon, label, value, color, progress, onPress }) {
   const scale      = useRef(new Animated.Value(1)).current;
   const onPressIn  = () => Animated.spring(scale, { toValue: 0.95, useNativeDriver: true }).start();
   const onPressOut = () => Animated.spring(scale, { toValue: 1,    useNativeDriver: true }).start();
@@ -57,6 +59,7 @@ function StatSquare({ icon, label, value, color, progress, onPress }) {
           <CircularProgressRing
             progress={Math.min(progress, 1)}
             icon={icon}
+            renderIcon={renderIcon}
             label=""
             color={color}
             size={72}
@@ -120,6 +123,8 @@ export default function HomeScreen() {
   const STEP_GOAL  = 10000;
   const WATER_GOAL = 3;
   const SLEEP_GOAL = 8;
+
+  const iconTrigger = useReplayOnFocus();
 
   useEffect(() => {
     const h = new Date().getHours();
@@ -254,18 +259,21 @@ export default function HomeScreen() {
           <View style={styles.statRow}>
             <StatSquare
               icon="footsteps-outline" label="Steps"
+              renderIcon={<StepsIcon trigger={iconTrigger} size={24} color="#22C55E" />}
               value={loading ? "—" : steps.toLocaleString()}
               color="#22C55E" progress={Math.min(steps / STEP_GOAL, 1)}
               onPress={() => router.push({ pathname: "/(app)/track-detail", params: { type: "steps" } })}
             />
             <StatSquare
               icon="water-outline" label="Water"
+              renderIcon={<WaterIcon trigger={iconTrigger} size={24} color="#3B82F6" />}
               value={loading ? "—" : `${water} L`}
               color="#3B82F6" progress={Math.min(water / WATER_GOAL, 1)}
               onPress={() => router.push({ pathname: "/(app)/track-detail", params: { type: "water" } })}
             />
             <StatSquare
               icon="moon-outline" label="Sleep"
+              renderIcon={<SleepIcon trigger={iconTrigger} size={24} color={COLORS.primary} />}
               value={loading ? "—" : `${sleep}h`}
               color={COLORS.primary} progress={Math.min(sleep / SLEEP_GOAL, 1)}
               onPress={() => router.push({ pathname: "/(app)/track-detail", params: { type: "sleep" } })}
@@ -274,6 +282,26 @@ export default function HomeScreen() {
         </FadeSlideIn>
 
         <WeeklyInsightCard />
+
+        {/* ── LOG TODAY'S FOOD (manual entry) ── */}
+        <FadeSlideIn delay={200}>
+          <Pressable
+            onPress={() => router.push("/(app)/nutrition/meal-logger")}
+            style={({ pressed }) => [styles.logFoodCard, { opacity: pressed ? 0.93 : 1 }]}
+            accessibilityRole="button"
+            accessibilityLabel="Log today's food manually"
+          >
+            <View style={styles.logFoodAccent} />
+            <View style={styles.logFoodIconWrap}>
+              <ManualLogIcon trigger={iconTrigger} size={22} color={COLORS.accent} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.logFoodTitle}>Log Today's Food</Text>
+              <Text style={styles.logFoodSub}>Search & add manually</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
+          </Pressable>
+        </FadeSlideIn>
 
         {/* ── TODAY'S MOTIVATION ── */}
         <FadeSlideIn delay={240}>
@@ -364,6 +392,26 @@ const styles = StyleSheet.create({
   ringContainer: { marginBottom: 10 },
   squareValue:   { fontSize: 14, fontWeight: "800", color: COLORS.textDark, letterSpacing: -0.3 },
   squareLabel:   { fontSize: 11, marginTop: 2, fontWeight: "700" },
+
+  // ── Log Today's Food card ──────────────────────────────────────────────────
+  logFoodCard: {
+    flexDirection: "row", alignItems: "center", gap: 12,
+    backgroundColor: COLORS.surface, borderRadius: 18,
+    padding: 16, marginBottom: 14,
+    overflow: "hidden",
+    boxShadow: "0px 2px 10px rgba(23, 15, 54, 0.06)",
+  },
+  logFoodAccent: {
+    position: "absolute", left: 0, top: 0, bottom: 0, width: 4,
+    backgroundColor: COLORS.accent,
+  },
+  logFoodIconWrap: {
+    width: 42, height: 42, borderRadius: 13,
+    backgroundColor: COLORS.accent + "18",
+    justifyContent: "center", alignItems: "center",
+  },
+  logFoodTitle: { fontSize: 15, fontWeight: "800", color: COLORS.textDark },
+  logFoodSub:   { fontSize: 12, color: COLORS.textMuted, marginTop: 2, fontWeight: "500" },
 
   // ── Motivation card ────────────────────────────────────────────────────────
   motivationCard: {

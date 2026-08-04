@@ -11,6 +11,7 @@ export default function CircularProgressRing({
   strokeWidth = 10,
   progress = 0,       // 0 → 1
   icon = null,        // Ionicons name — takes priority over valueText when set
+  renderIcon = null,  // custom node (e.g. an animated SVG icon) — takes priority over `icon`
   valueText = "",
   label = "",
   color = COLORS.primary,
@@ -64,7 +65,11 @@ export default function CircularProgressRing({
 
       {/* Center text */}
       <View style={styles.center}>
-        {icon ? <Ionicons name={icon} size={22} color={color} /> : <Text style={styles.value}>{valueText}</Text>}
+        {renderIcon
+          ? renderIcon
+          : icon
+          ? <Ionicons name={icon} size={22} color={color} />
+          : <Text style={styles.value}>{valueText}</Text>}
         <Text style={styles.label}>{label}</Text>
       </View>
     </View>

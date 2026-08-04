@@ -8,25 +8,28 @@ import { useFocusEffect } from "@react-navigation/native";
 import {
   getTodayLog, getMealHistory, deleteMealLog, getHealthProfile, getCurrentPlan,
 } from "../../services/nutritionService";
+import { COLORS } from "../../constants/theme";
+import { SunriseIcon, SunIcon, MoonStarIcon, AppleIcon } from "../../components/icons/MotionIcons";
+import { useReplayOnFocus } from "../../hooks/useReplayOnFocus";
 
 const MEAL_META = {
-  breakfast: { icon: "🌅", label: "Breakfast", color: "#FF8F00" },
-  lunch:     { icon: "☀️", label: "Lunch",     color: "#43A047" },
-  dinner:    { icon: "🌙", label: "Dinner",     color: "#1E88E5" },
-  snacks:    { icon: "🍎", label: "Snacks",     color: "#8E24AA" },
+  breakfast: { Icon: SunriseIcon, label: "Breakfast", color: "#FF8F00" },
+  lunch:     { Icon: SunIcon,     label: "Lunch",     color: "#43A047" },
+  dinner:    { Icon: MoonStarIcon,label: "Dinner",     color: "#1E88E5" },
+  snacks:    { Icon: AppleIcon,   label: "Snacks",     color: "#8E24AA" },
 };
 
 function CalorieRing({ consumed, goal }) {
   const pct       = goal > 0 ? Math.min(consumed / goal, 1) : 0;
   const remaining = Math.max(goal - consumed, 0);
   const over      = consumed > goal;
-  const ringColor = over ? "#e53935" : "#FF6F00";
+  const ringColor = over ? COLORS.error : COLORS.accent;
   const SIZE      = 170;
   const BORDER    = 14;
 
   return (
     <View style={{ alignSelf: "center", width: SIZE, height: SIZE, justifyContent: "center", alignItems: "center", marginVertical: 16 }}>
-      <View style={{ position: "absolute", width: SIZE, height: SIZE, borderRadius: SIZE / 2, borderWidth: BORDER, borderColor: "#f0f0f0" }} />
+      <View style={{ position: "absolute", width: SIZE, height: SIZE, borderRadius: SIZE / 2, borderWidth: BORDER, borderColor: COLORS.border }} />
       {pct > 0 && (
         <View style={{
           position: "absolute", width: SIZE, height: SIZE,
@@ -40,15 +43,15 @@ function CalorieRing({ consumed, goal }) {
         }} />
       )}
       <View style={{ alignItems: "center" }}>
-        <Text style={{ fontSize: 30, fontWeight: "800", color: over ? "#e53935" : "#1a1a1a" }}>
+        <Text style={{ fontSize: 30, fontWeight: "800", color: over ? COLORS.error : COLORS.textDark }}>
           {Math.round(consumed)}
         </Text>
-        <Text style={{ fontSize: 11, color: "#aaa", fontWeight: "500" }}>kcal eaten</Text>
-        <View style={{ width: 32, height: 1, backgroundColor: "#e0e0e0", marginVertical: 5 }} />
-        <Text style={{ fontSize: 20, fontWeight: "700", color: over ? "#e53935" : "#FF6F00" }}>
+        <Text style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: "500" }}>kcal eaten</Text>
+        <View style={{ width: 32, height: 1, backgroundColor: COLORS.border, marginVertical: 5 }} />
+        <Text style={{ fontSize: 20, fontWeight: "700", color: over ? COLORS.error : COLORS.accent }}>
           {over ? `+${Math.round(consumed - goal)}` : Math.round(remaining)}
         </Text>
-        <Text style={{ fontSize: 10, color: "#aaa", fontWeight: "500" }}>
+        <Text style={{ fontSize: 10, color: COLORS.textMuted, fontWeight: "500" }}>
           {over ? "over goal" : "remaining"}
         </Text>
       </View>
@@ -62,14 +65,14 @@ function MacroBar({ label, consumed, goal, color }) {
   return (
     <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 14, gap: 10 }}>
       <Text style={{ width: 92, fontSize: 13, fontWeight: "600", color: "#444" }}>{label}</Text>
-      <View style={{ flex: 1, height: 8, backgroundColor: "#f0f0f0", borderRadius: 4, overflow: "hidden" }}>
-        <View style={{ width: `${pct}%`, height: "100%", backgroundColor: over ? "#e53935" : color, borderRadius: 4 }} />
+      <View style={{ flex: 1, height: 8, backgroundColor: COLORS.border, borderRadius: 4, overflow: "hidden" }}>
+        <View style={{ width: `${pct}%`, height: "100%", backgroundColor: over ? COLORS.error : color, borderRadius: 4 }} />
       </View>
       <Text style={{ width: 76, fontSize: 12, textAlign: "right" }}>
-        <Text style={{ color: over ? "#e53935" : "#1a1a1a", fontWeight: "700" }}>
+        <Text style={{ color: over ? COLORS.error : COLORS.textDark, fontWeight: "700" }}>
           {parseFloat(consumed.toFixed(1))}
         </Text>
-        <Text style={{ color: "#aaa" }}>/{goal}g</Text>
+        <Text style={{ color: COLORS.textMuted }}>/{goal}g</Text>
       </Text>
     </View>
   );
@@ -83,6 +86,7 @@ export default function MealLoggerScreen({ navigation }) {
   const [goals, setGoals]           = useState({
     calories: 2000, protein: 120, carbs: 250, fats: 65,
   });
+  const iconTrigger = useReplayOnFocus();
 
   const todayDate = new Date().toLocaleDateString("en-IN", {
     weekday: "long", day: "numeric", month: "long",
@@ -208,8 +212,8 @@ export default function MealLoggerScreen({ navigation }) {
   if (loading) {
     return (
       <View style={s.center}>
-        <ActivityIndicator size="large" color="#FF6F00" />
-        <Text style={{ marginTop: 12, color: "#888", fontSize: 14 }}>Loading...</Text>
+        <ActivityIndicator size="large" color={COLORS.accent} />
+        <Text style={{ marginTop: 12, color: COLORS.textLight, fontSize: 14 }}>Loading...</Text>
       </View>
     );
   }
@@ -223,7 +227,7 @@ export default function MealLoggerScreen({ navigation }) {
       contentContainerStyle={s.content}
       showsVerticalScrollIndicator={false}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={["#FF6F00"]} />
+        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={[COLORS.accent]} />
       }
     >
       <View style={s.header}>
@@ -241,12 +245,12 @@ export default function MealLoggerScreen({ navigation }) {
           </View>
           <View style={s.statDivider} />
           <View style={s.statBox}>
-            <Text style={[s.statVal, { color: "#FF6F00" }]}>{Math.round(totals.calories)}</Text>
+            <Text style={[s.statVal, { color: COLORS.accent }]}>{Math.round(totals.calories)}</Text>
             <Text style={s.statLbl}>Eaten</Text>
           </View>
           <View style={s.statDivider} />
           <View style={s.statBox}>
-            <Text style={[s.statVal, { color: Math.round(totals.calories) > goals.calories ? "#e53935" : "#43A047" }]}>
+            <Text style={[s.statVal, { color: Math.round(totals.calories) > goals.calories ? COLORS.error : "#43A047" }]}>
               {Math.max(goals.calories - Math.round(totals.calories), 0)}
             </Text>
             <Text style={s.statLbl}>Left</Text>
@@ -286,7 +290,7 @@ export default function MealLoggerScreen({ navigation }) {
             <View style={s.mealHeader}>
               <View style={s.mealLeft}>
                 <View style={[s.mealIconBox, { backgroundColor: meta.color + "20" }]}>
-                  <Text style={{ fontSize: 20 }}>{meta.icon}</Text>
+                  <meta.Icon trigger={iconTrigger} size={22} color={meta.color} />
                 </View>
                 <View>
                   <Text style={s.mealLabel}>{meta.label}</Text>
@@ -331,7 +335,7 @@ export default function MealLoggerScreen({ navigation }) {
                         accessibilityRole="button"
                         accessibilityLabel={`Delete ${item.food?.name ?? "item"}`}
                       >
-                        <Ionicons name="trash-outline" size={13} color="#e53935" />
+                        <Ionicons name="trash-outline" size={13} color={COLORS.error} />
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -352,7 +356,7 @@ export default function MealLoggerScreen({ navigation }) {
               return (
                 <View
                   key={day.date}
-                  style={[s.histRow, idx < history.length - 1 && { borderBottomWidth: 1, borderBottomColor: "#f5f5f5" }]}
+                  style={[s.histRow, idx < history.length - 1 && { borderBottomWidth: 1, borderBottomColor: COLORS.border }]}
                 >
                   <View>
                     <Text style={s.histDate}>{formatDate(day.date)}</Text>
@@ -360,9 +364,9 @@ export default function MealLoggerScreen({ navigation }) {
                   </View>
                   <View style={{ flex: 1, marginLeft: 16 }}>
                     <View style={s.histBarBg}>
-                      <View style={[s.histBarFill, { width: `${pct}%`, backgroundColor: over ? "#e53935" : "#FF6F00" }]} />
+                      <View style={[s.histBarFill, { width: `${pct}%`, backgroundColor: over ? COLORS.error : COLORS.accent }]} />
                     </View>
-                    <Text style={[s.histCal, { color: over ? "#e53935" : "#555" }]}>
+                    <Text style={[s.histCal, { color: over ? COLORS.error : "#555" }]}>
                       {Math.round(day.calories)} kcal
                     </Text>
                   </View>
@@ -379,27 +383,27 @@ export default function MealLoggerScreen({ navigation }) {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f9fafb" },
+  container: { flex: 1, backgroundColor: COLORS.background },
   content:   { padding: 16, paddingBottom: 40 },
-  center:    { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#f9fafb" },
+  center:    { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: COLORS.background },
 
   header: { marginBottom: 20 },
-  title:  { fontSize: 26, fontWeight: "800", color: "#1a1a1a" },
-  date:   { fontSize: 13, color: "#888", marginTop: 3 },
+  title:  { fontSize: 26, fontWeight: "800", color: COLORS.textDark },
+  date:   { fontSize: 13, color: COLORS.textLight, marginTop: 3 },
 
   card: {
-    backgroundColor: "#fff", borderRadius: 16, padding: 16, marginBottom: 14,
+    backgroundColor: COLORS.surface, borderRadius: 16, padding: 16, marginBottom: 14,
     elevation: 2, shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06, shadowRadius: 8,
   },
-  cardLabel:   { fontSize: 11, fontWeight: "700", color: "#aaa", letterSpacing: 1.2, textTransform: "uppercase" },
+  cardLabel:   { fontSize: 11, fontWeight: "700", color: COLORS.textMuted, letterSpacing: 1.2, textTransform: "uppercase" },
   statRow:     { flexDirection: "row", justifyContent: "space-around", marginTop: 4 },
   statBox:     { alignItems: "center" },
-  statVal:     { fontSize: 20, fontWeight: "800", color: "#1a1a1a" },
-  statLbl:     { fontSize: 11, color: "#aaa", marginTop: 2, fontWeight: "500" },
-  statDivider: { width: 1, backgroundColor: "#f0f0f0" },
+  statVal:     { fontSize: 20, fontWeight: "800", color: COLORS.textDark },
+  statLbl:     { fontSize: 11, color: COLORS.textMuted, marginTop: 2, fontWeight: "500" },
+  statDivider: { width: 1, backgroundColor: COLORS.border },
 
-  sectionTitle: { fontSize: 12, fontWeight: "700", color: "#888", textTransform: "uppercase", letterSpacing: 1, marginBottom: 10, marginTop: 4 },
+  sectionTitle: { fontSize: 12, fontWeight: "700", color: COLORS.textLight, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10, marginTop: 4 },
   photoEntryCard: {
     flexDirection: "row", alignItems: "center",
     backgroundColor: "#EDE9FE", borderRadius: 18,
@@ -412,31 +416,31 @@ const s = StyleSheet.create({
   photoEntryArrow: { fontSize: 18, color: "#4C2E96", fontWeight: "700" },
 
   mealCard: {
-    backgroundColor: "#fff", borderRadius: 16, padding: 14, marginBottom: 12,
+    backgroundColor: COLORS.surface, borderRadius: 16, padding: 14, marginBottom: 12,
     elevation: 2, shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06, shadowRadius: 8,
   },
   mealHeader:  { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   mealLeft:    { flexDirection: "row", alignItems: "center", gap: 10 },
   mealIconBox: { width: 42, height: 42, borderRadius: 11, justifyContent: "center", alignItems: "center" },
-  mealLabel:   { fontSize: 15, fontWeight: "700", color: "#1a1a1a" },
-  mealCal:     { fontSize: 12, color: "#aaa", marginTop: 1 },
+  mealLabel:   { fontSize: 15, fontWeight: "700", color: COLORS.textDark },
+  mealCal:     { fontSize: 12, color: COLORS.textMuted, marginTop: 1 },
   addBtn:      { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
-  addBtnText:  { color: "#fff", fontWeight: "700", fontSize: 13 },
+  addBtnText:  { color: COLORS.surface, fontWeight: "700", fontSize: 13 },
 
-  foodList:   { marginTop: 12, borderTopWidth: 1, borderTopColor: "#f5f5f5", paddingTop: 10, gap: 10 },
+  foodList:   { marginTop: 12, borderTopWidth: 1, borderTopColor: COLORS.border, paddingTop: 10, gap: 10 },
   foodRow:    { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  foodName:   { fontSize: 14, fontWeight: "600", color: "#1a1a1a" },
-  foodMeta:   { fontSize: 11, color: "#aaa", marginTop: 2 },
+  foodName:   { fontSize: 14, fontWeight: "600", color: COLORS.textDark },
+  foodMeta:   { fontSize: 11, color: COLORS.textMuted, marginTop: 2 },
   foodCal:    { fontSize: 13, fontWeight: "700" },
   delBtn:     { width: 24, height: 24, borderRadius: 12, backgroundColor: "#fce4ec", justifyContent: "center", alignItems: "center" },
-  delBtnText: { fontSize: 10, color: "#e53935", fontWeight: "700" },
+  delBtnText: { fontSize: 10, color: COLORS.error, fontWeight: "700" },
 
-  histCard:    { backgroundColor: "#fff", borderRadius: 16, padding: 4, marginBottom: 14, elevation: 2, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8 },
+  histCard:    { backgroundColor: COLORS.surface, borderRadius: 16, padding: 4, marginBottom: 14, elevation: 2, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8 },
   histRow:     { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 12 },
-  histDate:    { fontSize: 14, fontWeight: "700", color: "#1a1a1a" },
-  histCount:   { fontSize: 11, color: "#aaa", marginTop: 1 },
-  histBarBg:   { height: 6, backgroundColor: "#f0f0f0", borderRadius: 3, overflow: "hidden", marginBottom: 4 },
+  histDate:    { fontSize: 14, fontWeight: "700", color: COLORS.textDark },
+  histCount:   { fontSize: 11, color: COLORS.textMuted, marginTop: 1 },
+  histBarBg:   { height: 6, backgroundColor: COLORS.border, borderRadius: 3, overflow: "hidden", marginBottom: 4 },
   histBarFill: { height: "100%", borderRadius: 3 },
   histCal:     { fontSize: 12, fontWeight: "700", textAlign: "right" },
 });

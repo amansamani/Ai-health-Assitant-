@@ -168,7 +168,8 @@ export default function TrackingScreen() {
         params: { updatedToday: JSON.stringify(payload) },
       });
     } catch (err) {
-      setErrorMsg("Failed to save data. Please try again.");
+      const backendMsg = err.response?.data?.message;
+      setErrorMsg(backendMsg || "Failed to save data. Please try again.");
     } finally {
       setSaving(false);
     }
