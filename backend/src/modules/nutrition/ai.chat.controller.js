@@ -96,7 +96,11 @@ const aiChat = async (req, res, next) => {
           role:  "model",
           parts: [{ text: "Understood. I'm ready to help with personalized nutrition advice based on this user's profile." }],
         },
-        ...history,
+        // `ts` lives on each saved entry for our own bookkeeping (see
+        // getChatHistoryCtrl) but Gemini's API hard-rejects any content
+        // object with a field it doesn't recognize — strip it down to
+        // exactly {role, parts} for what actually goes to the model.
+        ...history.map(({ role, parts }) => ({ role, parts })),
       ],
       generationConfig: { maxOutputTokens: 512, temperature: 0.7 },
     });
