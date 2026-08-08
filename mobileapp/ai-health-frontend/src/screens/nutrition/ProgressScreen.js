@@ -1,170 +1,235 @@
-// src/screens/nutrition/ProgressScreen.js
-"use strict";
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { useRouter, useFocusEffect } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { FadeInDown } from 'react-native-reanimated';
-import API from '../../services/api';
-import { COLORS, SHADOWS, RADIUS, SPACING } from '../../constants/theme';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  ActivityIndicator,
+  Animated,
+  RefreshControl,
+} from "react-native";
+import { useState, useCallback, useRef, useEffect } from "react";
+import { useFocusEffect } from "@react-navigation/native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
+import { getWeeklyInsight } from "../../services/nutritionService";
 
-// ─── Insight History Card ────────────────────────────────────────────────────
-function InsightCard({ item, index }) {
-  const date = item.createdAt ? new Date(item.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—';
-  const improved = item.calorieChange > 0;
+// ─── Fade/slide wrapper (matches HomeScreen's entrance animation) ─────────────
+function FadeSlideIn({ delay = 0, children }) {
+  const opacity    = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(18)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(opacity,    { toValue: 1, duration: 480, delay, useNativeDriver: true }),
+      Animated.timing(translateY, { toValue: 0, duration: 480, delay, useNativeDriver: true }),
+    ]).start();
+  }, []);
+
   return (
-    <Animated.View entering={FadeInDown.delay(index * 80).springify()} style={styles.insightCard}>
-      <View style={styles.insightHeader}>
-        <Text style={styles.insightDate}>{date}</Text>
-        <View style={[styles.insightBadge, { backgroundColor: improved ? 'rgba(16,185,129,0.12)' : 'rgba(245,158,11,0.12)' }]}>
-          <Ionicons name={improved ? 'trending-up' : 'trending-down'} size={12} color={improved ? COLORS.primary : COLORS.warning} />
-          <Text style={[styles.insightBadgeText, { color: improved ? COLORS.primary : COLORS.warning }]}>
-            {item.calorieChange > 0 ? '+' : ''}{item.calorieChange || 0} kcal
-          </Text>
-        </View>
-      </View>
-      <Text style={styles.insightMessage} numberOfLines={3}>{item.message || 'Weekly adjustment applied.'}</Text>
-      {item.newTargetCalories && (
-        <Text style={styles.insightTarget}>New target: {item.newTargetCalories} kcal/day</Text>
-      )}
+    <Animated.View style={{ opacity, transform: [{ translateY }] }}>
+      {children}
     </Animated.View>
   );
 }
 
-// ─── Main Screen ─────────────────────────────────────────────────────────────
-export default function ProgressScreen() {
-  const router = useRouter();
-  const [insights, setInsights] = useState([]);
-  const [currentPlan, setCurrentPlan] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  const fetchData = useCallback(async () => {
-    try {
-      const [insightRes, planRes] = await Promise.all([
-        API.get('/nutrition/weekly-insight-log?limit=10'),
-        API.get('/nutrition/current'),
-      ]);
-      setInsights(insightRes.data?.insights || insightRes.data || []);
-      setCurrentPlan(planRes.data);
-    } catch (e) { /* silent */ }
-    finally { setLoading(false); }
-  }, []);
-
-  useFocusEffect(useCallback(() => { fetchData(); }, [fetchData]));
-
-  if (loading) {
-    return (
-      <View style={[styles.container, styles.center]}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
-    );
+// ─── Status meta (color + label) per insight state ────────────────────────────
+function getStatusMeta(insight) {
+  if (!insight) {
+    return { label: "NO DATA YET", color: "#9A94AE", bg: "#EDE9FE" };
   }
+  if (!insight.adjusted) {
+    if (insight.reason?.toLowerCase().includes("low adherence")) {
+      return { label: "NEEDS CONSISTENCY", color: "#FF8F00", bg: "#FFF3E0" };
+    }
+    if (insight.adherence !== undefined) {
+      return { label: "ON TRACK", color: "#4CAF50", bg: "#E8F5E9" };
+    }
+    return { label: "NOT ENOUGH DATA", color: "#9A94AE", bg: "#EDE9FE" };
+  }
+  return insight.delta > 0
+    ? { label: "CALORIES INCREASED", color: "#1E88E5", bg: "#E3F2FD" }
+    : { label: "CALORIES REDUCED", color: "#4C2E96", bg: "#EDE9FE" };
+}
 
-  const target = currentPlan?.summary?.targetCalories || currentPlan?.targetCalories || 0;
+// ─── Weekly Insight Card ───────────────────────────────────────────────────────
+function WeeklyInsightCard({ insight }) {
+  const meta = getStatusMeta(insight);
+  const deltaText =
+    !insight || !insight.adjusted
+      ? null
+      : insight.delta > 0 ? `+${insight.delta} kcal` : `${insight.delta} kcal`;
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <Animated.View entering={FadeInDown.delay(0)} style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={22} color={COLORS.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Diet Progress</Text>
-        <View style={{ width: 40 }} />
-      </Animated.View>
+    <View style={wi.card}>
+      <LinearGradient
+        colors={["#F0F4FF", "#FAFBFF"]}
+        style={wi.headerStrip}
+      >
+        <View>
+          <Text style={wi.headerTitle}>This Week's Adjustment</Text>
+          <Text style={wi.headerSub}>
+            {insight?.weekEnding
+              ? new Date(insight.weekEnding).toLocaleDateString(undefined, {
+                  month: "short", day: "numeric",
+                })
+              : "Awaiting first weekly review"}
+          </Text>
+        </View>
+        <View style={[wi.badge, { backgroundColor: meta.bg }]}>
+          <Text style={[wi.badgeTxt, { color: meta.color }]}>{meta.label}</Text>
+        </View>
+      </LinearGradient>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+      {!insight ? (
+        <View style={wi.emptyBody}>
+          <Text style={wi.emptyTxt}>
+            Log meals + weight for a few days and your first weekly review
+            will show up here — including why your calorie target changed.
+          </Text>
+        </View>
+      ) : (
+        <View style={wi.body}>
+          {deltaText && (
+            <Text style={[wi.deltaText, { color: meta.color }]}>{deltaText}</Text>
+          )}
+          <Text style={wi.reasonText}>{insight.reason}</Text>
 
-        {/* Current target card */}
-        <Animated.View entering={FadeInDown.delay(80)} style={styles.targetCard}>
-          <LinearGradient colors={[COLORS.surface, COLORS.surfaceElevated]} style={styles.gradientFill}>
-            <View style={{ padding: SPACING.lg }}>
-              <Text style={styles.targetLabel}>Current Calorie Target</Text>
-              <Text style={styles.targetValue}>{target.toLocaleString()} <Text style={styles.targetUnit}>kcal/day</Text></Text>
-              {currentPlan?.summary?.proteinTarget > 0 && (
-                <View style={styles.macroRow}>
-                  <View style={styles.macroChip}>
-                    <Text style={styles.macroChipLabel}>P</Text>
-                    <Text style={styles.macroChipValue}>{currentPlan.summary.proteinTarget}g</Text>
-                  </View>
-                  <View style={styles.macroChip}>
-                    <Text style={styles.macroChipLabel}>C</Text>
-                    <Text style={styles.macroChipValue}>{currentPlan.summary.carbTarget}g</Text>
-                  </View>
-                  <View style={styles.macroChip}>
-                    <Text style={styles.macroChipLabel}>F</Text>
-                    <Text style={styles.macroChipValue}>{currentPlan.summary.fatTarget}g</Text>
-                  </View>
-                </View>
-              )}
+          {insight.adherence !== undefined && (
+            <View style={wi.statsRow}>
+              <Stat label="Adherence"    value={`${insight.adherence}%`} />
+              <Stat label="Avg Calories" value={insight.avgCalories ?? "—"} />
+              <Stat
+                label="Weight Δ"
+                value={
+                  insight.weightChange === undefined
+                    ? "—"
+                    : `${insight.weightChange > 0 ? "+" : ""}${insight.weightChange} kg`
+                }
+              />
             </View>
-          </LinearGradient>
-        </Animated.View>
-
-        {/* Adjustment history */}
-        <Text style={styles.sectionTitle}>Weekly Adjustments</Text>
-        {insights.length === 0 ? (
-          <View style={styles.empty}>
-            <Ionicons name="trending-up-outline" size={48} color={COLORS.textTertiary} />
-            <Text style={styles.emptyTitle}>No adjustments yet</Text>
-            <Text style={styles.emptySub}>Complete your first week to see AI-powered calorie adjustments.</Text>
-          </View>
-        ) : (
-          insights.map((item, i) => <InsightCard key={item._id || i} item={item} index={i} />)
-        )}
-
-      </ScrollView>
+          )}
+        </View>
+      )}
     </View>
   );
 }
 
+function Stat({ label, value }) {
+  return (
+    <View style={wi.statBox}>
+      <Text style={wi.statValue}>{value}</Text>
+      <Text style={wi.statLabel}>{label}</Text>
+    </View>
+  );
+}
+
+// ─── Screen ─────────────────────────────────────────────────────────────────
+export default function ProgressScreen() {
+  const [insight, setInsight] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError]     = useState(null);
+
+  const load = useCallback(async () => {
+    try {
+      const data = await getWeeklyInsight();
+      setInsight(data);
+      setError(null);
+    } catch (err) {
+      setError("Couldn't load your weekly insight. Pull to retry.");
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      setLoading(true);
+      load().finally(() => setLoading(false));
+    }, [load])
+  );
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
+  };
+
+  return (
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      <Text style={styles.screenTitle}>Progress</Text>
+
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#4C2E96"]} />
+        }
+      >
+        {loading ? (
+          <ActivityIndicator size="large" color="#4C2E96" style={{ marginTop: 40 }} />
+        ) : error ? (
+          <Text style={styles.errorTxt}>{error}</Text>
+        ) : (
+          <FadeSlideIn>
+            <WeeklyInsightCard insight={insight} />
+          </FadeSlideIn>
+        )}
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+// ─── Styles ─────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  center: { alignItems: 'center', justifyContent: 'center' },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: SPACING.lg, paddingTop: 8, paddingBottom: SPACING.md,
-  },
-  backBtn: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: COLORS.surface, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: COLORS.border,
-  },
-  headerTitle: { fontSize: 17, fontWeight: '700', color: COLORS.textPrimary },
-  content: { paddingHorizontal: SPACING.lg, paddingBottom: 120 },
+  container:     { flex: 1, backgroundColor: "#fff" },
+  screenTitle:   { fontSize: 22, fontWeight: "800", color: "#1a1a1a", paddingHorizontal: 20, paddingTop: 12 },
+  scrollContent: { padding: 20, paddingBottom: 40 },
+  errorTxt:      { fontSize: 14, color: "#e53935", textAlign: "center", marginTop: 40 },
+});
 
-  targetCard: { borderRadius: RADIUS.lg, overflow: 'hidden', marginBottom: SPACING.lg, borderWidth: 1, borderColor: COLORS.border },
-  gradientFill: { flex: 1 },
-  targetLabel: { fontSize: 13, color: COLORS.textSecondary, fontWeight: '500' },
-  targetValue: { fontSize: 38, fontWeight: '800', color: COLORS.textPrimary, letterSpacing: -1, marginTop: SPACING.xs },
-  targetUnit: { fontSize: 16, fontWeight: '500', color: COLORS.textSecondary },
-  macroRow: { flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.md },
-  macroChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: '#F1F2F8',
-    borderRadius: RADIUS.sm, paddingHorizontal: SPACING.sm, paddingVertical: SPACING.xs,
+const wi = StyleSheet.create({
+  card: {
+    borderRadius: 18,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#E0E7FF",
+    overflow: "hidden",
+    shadowColor: "#4C2E96",
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
   },
-  macroChipLabel: { fontSize: 11, fontWeight: '800', color: COLORS.primary },
-  macroChipValue: { fontSize: 12, fontWeight: '600', color: COLORS.textSecondary },
-
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: COLORS.textPrimary, marginBottom: SPACING.md },
-
-  insightCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.md,
-    borderWidth: 1, borderColor: COLORS.border,
-    padding: SPACING.md,
-    marginBottom: SPACING.sm,
+  headerStrip: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E0E7FF",
   },
-  insightHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.sm },
-  insightDate: { fontSize: 12, color: COLORS.textTertiary, fontWeight: '600' },
-  insightBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: RADIUS.full, paddingHorizontal: SPACING.sm, paddingVertical: 3 },
-  insightBadgeText: { fontSize: 11, fontWeight: '700' },
-  insightMessage: { fontSize: 13, color: COLORS.textSecondary, lineHeight: 19 },
-  insightTarget: { fontSize: 12, color: COLORS.primary, fontWeight: '600', marginTop: SPACING.sm },
+  headerTitle: { fontSize: 15, fontWeight: "800", color: "#3730A3" },
+  headerSub:   { fontSize: 12, color: "#4C2E96", fontWeight: "500", marginTop: 2 },
+  badge: {
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  badgeTxt: { fontSize: 9, fontWeight: "900", letterSpacing: 0.5 },
 
-  empty: { alignItems: 'center', paddingTop: 60, gap: SPACING.sm },
-  emptyTitle: { fontSize: 16, fontWeight: '700', color: COLORS.textPrimary },
-  emptySub: { fontSize: 13, color: COLORS.textSecondary, textAlign: 'center', paddingHorizontal: SPACING.xl },
+  body:      { padding: 16 },
+  deltaText: { fontSize: 28, fontWeight: "900", marginBottom: 4 },
+  reasonText:{ fontSize: 14, color: "#1E1B4B", fontWeight: "600", lineHeight: 20 },
+
+  statsRow: { flexDirection: "row", marginTop: 16, gap: 10 },
+  statBox: {
+    flex: 1,
+    backgroundColor: "#F5F3FF",
+    borderRadius: 12,
+    paddingVertical: 10,
+    alignItems: "center",
+  },
+  statValue: { fontSize: 14, fontWeight: "800", color: "#1a1a1a" },
+  statLabel: { fontSize: 10, color: "#6B667D", fontWeight: "700", marginTop: 2 },
+
+  emptyBody: { padding: 16 },
+  emptyTxt:  { fontSize: 13, color: "#6B667D", lineHeight: 19 },
 });

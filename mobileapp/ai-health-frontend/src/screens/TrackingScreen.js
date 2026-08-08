@@ -1,121 +1,463 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, RefreshControl, KeyboardAvoidingView, Platform } from 'react-native';
-import { useState, useCallback } from 'react';
-import { useRouter, useFocusEffect } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import Animated, { FadeInDown } from 'react-native-reanimated';
-import * as Haptics from 'expo-haptics';
-import API from '../services/api';
-import { COLORS, SHADOWS, RADIUS, SPACING } from '../constants/theme';
+import { useState, useEffect, useCallback, useRef, useContext } from "react";
+import {
+  View, Text, TextInput, Pressable, StyleSheet,
+  ActivityIndicator, Animated, Dimensions, KeyboardAvoidingView,
+  Platform, ScrollView,
+} from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
+import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { SafeAreaView } from "react-native-safe-area-context";
+import API from "../services/api";
+import { AuthContext } from "../context/AuthContext";
+import { COLORS } from "../constants/theme";
 
-function StatRow({ icon, iconColor, label, value, unit, sub, delay = 0 }) {
+const { width } = Dimensions.get("window");
+
+// ── Fade slide in ─────────────────────────────────────────────────────────────
+function FadeSlideIn({ delay = 0, children }) {
+  const opacity    = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(16)).current;
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(opacity,    { toValue: 1, duration: 460, delay, useNativeDriver: true }),
+      Animated.timing(translateY, { toValue: 0, duration: 460, delay, useNativeDriver: true }),
+    ]).start();
+  }, []);
   return (
-    <Animated.View entering={FadeInDown.delay(delay).springify()} style={styles.statRow}>
-      <View style={[styles.statIcon, { backgroundColor: iconColor + '20' }]}><Ionicons name={icon} size={20} color={iconColor} /></View>
-      <View style={{ flex: 1 }}>
-        <Text style={styles.statLabel}>{label}</Text>
-        <Text style={styles.statSub}>{sub}</Text>
-      </View>
-      <Text style={styles.statValue}>{value}{unit ? <Text style={styles.statUnit}> {unit}</Text> : null}</Text>
-      <Ionicons name="chevron-forward" size={16} color={COLORS.textTertiary} />
+    <Animated.View style={{ opacity, transform: [{ translateY }] }}>
+      {children}
     </Animated.View>
   );
 }
 
-export default function TrackingScreen() {
-  const router = useRouter();
-  const [data, setData] = useState({ steps: 0, water: 0, sleep: 0 });
-  const [refreshing, setRefreshing] = useState(false);
-  const [editing, setEditing] = useState(null);
-  const [editValue, setEditValue] = useState('');
+// ── Track Input Card ──────────────────────────────────────────────────────────
+function TrackInputCard({ icon, label, unit, value, onChangeText, color, goal, placeholder }) {
+  const [focused, setFocused] = useState(false);
+  const borderAnim = useRef(new Animated.Value(0)).current;
 
-  const fetchToday = useCallback(async () => {
-    try { const res = await API.get('/track/today'); setData(res.data || { steps: 0, water: 0, sleep: 0 }); }
-    catch (e) {}
-  }, []);
-
-  useFocusEffect(useCallback(() => { fetchToday(); }, [fetchToday]));
-
-  const openEdit = (field, current) => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setEditing(field); setEditValue(current ? String(current) : ''); };
-
-  const saveField = async () => {
-    const val = parseFloat(editValue) || 0;
-    const updated = { ...data, [editing]: val };
-    try { await API.post('/track/today', updated); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); setEditing(null); fetchToday(); }
-    catch (e) {}
+  const onFocus = () => {
+    setFocused(true);
+    Animated.timing(borderAnim, { toValue: 1, duration: 200, useNativeDriver: false }).start();
+  };
+  const onBlur = () => {
+    setFocused(false);
+    Animated.timing(borderAnim, { toValue: 0, duration: 200, useNativeDriver: false }).start();
   };
 
-  const editLabel = editing === 'steps' ? 'Steps' : editing === 'water' ? 'Water (liters)' : 'Sleep (hours)';
+  const borderColor = borderAnim.interpolate({
+    inputRange: [0, 1], outputRange: [COLORS.border, color],
+  });
+
+  const numVal   = parseFloat(value) || 0;
+  const progress = Math.min(numVal / goal, 1);
+  const pct      = Math.round(progress * 100);
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Daily Tracking</Text>
-        <Text style={styles.subtitle}>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</Text>
+    <Animated.View style={[styles.trackCard, { borderColor }]}>
+      <View style={[styles.trackAccent, { backgroundColor: color }]} />
+
+      <View style={styles.trackCardInner}>
+        <View style={[styles.trackIconWrap, { backgroundColor: color + "18" }]}>
+          <Ionicons name={icon} size={22} color={color} />
+        </View>
+
+        <View style={styles.trackMid}>
+          <Text style={styles.trackLabel}>{label}</Text>
+          <TextInput
+            style={[styles.trackInput, focused && { color }]}
+            placeholder={placeholder}
+            placeholderTextColor={COLORS.textLight}
+            keyboardType="numeric"
+            value={value}
+            onChangeText={onChangeText}
+            onFocus={onFocus}
+            onBlur={onBlur}
+            accessibilityLabel={`${label}, in ${unit}`}
+          />
+        </View>
+
+        <View style={styles.trackRight}>
+          <Text style={[styles.trackUnit, { color }]}>{unit}</Text>
+          <Text style={styles.trackPct}>{pct}%</Text>
+        </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await fetchToday(); setRefreshing(false); }} tintColor={COLORS.primary} />}>
-        <TouchableOpacity activeOpacity={0.8} onPress={() => openEdit('steps', data.steps)}>
-          <StatRow icon="footsteps" iconColor={COLORS.primary} label="Steps" value={(data.steps || 0).toLocaleString()} sub="Tap to update" delay={80} />
-        </TouchableOpacity>
-        <TouchableOpacity activeOpacity={0.8} onPress={() => openEdit('water', data.water)}>
-          <StatRow icon="water" iconColor={COLORS.secondary} label="Water" value={(data.water || 0).toFixed(1)} unit="L" sub="Tap to update" delay={160} />
-        </TouchableOpacity>
-        <TouchableOpacity activeOpacity={0.8} onPress={() => openEdit('sleep', data.sleep)}>
-          <StatRow icon="moon" iconColor={COLORS.accent} label="Sleep" value={(data.sleep || 0).toFixed(1)} unit="hrs" sub="Tap to update" delay={240} />
-        </TouchableOpacity>
+      <View style={styles.trackBarBg}>
+        <Animated.View style={[
+          styles.trackBarFill,
+          { width: `${pct}%`, backgroundColor: color },
+        ]} />
+      </View>
+    </Animated.View>
+  );
+}
 
-        <Animated.View entering={FadeInDown.delay(320)} style={styles.quickRow}>
-          <TouchableOpacity style={styles.quickBtn} onPress={() => router.push('/(app)/water-tracking')}>
-            <Ionicons name="water-outline" size={18} color={COLORS.secondary} /><Text style={styles.quickText}>Water Log</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.quickBtn} onPress={() => router.navigate('/(app)/(tabs)/diet')}>
-            <Ionicons name="nutrition-outline" size={18} color={COLORS.warning} /><Text style={styles.quickText}>Meal Log</Text>
-          </TouchableOpacity>
-        </Animated.View>
-      </ScrollView>
-
-      <Modal visible={!!editing} transparent animationType="fade">
-        <KeyboardAvoidingView style={styles.modalBackdrop} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => setEditing(null)}>
-            <View style={styles.modalCard}>
-              <Text style={styles.modalTitle}>Log {editLabel}</Text>
-              <TextInput style={styles.modalInput} value={editValue} onChangeText={setEditValue}
-                keyboardType={editing === 'steps' ? 'number-pad' : 'decimal-pad'} placeholder="Enter value" placeholderTextColor={COLORS.textTertiary} autoFocus />
-              <View style={styles.modalBtns}>
-                <TouchableOpacity style={styles.cancelBtn} onPress={() => setEditing(null)}><Text style={styles.cancelText}>Cancel</Text></TouchableOpacity>
-                <TouchableOpacity style={styles.saveBtn} onPress={saveField}><Text style={styles.saveText}>Save</Text></TouchableOpacity>
-              </View>
-            </View>
-          </TouchableOpacity>
-        </KeyboardAvoidingView>
-      </Modal>
+// ── Log Stat Row ──────────────────────────────────────────────────────────────
+function LogStat({ icon, label, value, color }) {
+  return (
+    <View style={styles.logStat}>
+      <View style={[styles.logStatIcon, { backgroundColor: color + "18" }]}>
+        <Ionicons name={icon} size={18} color={color} />
+      </View>
+      <View style={styles.logStatText}>
+        <Text style={styles.logStatLabel}>{label}</Text>
+        <Text style={[styles.logStatValue, { color }]}>{value}</Text>
+      </View>
     </View>
   );
 }
 
+// ── Main Screen ───────────────────────────────────────────────────────────────
+const STEP_GOAL  = 10000;
+const WATER_GOAL = 3;
+const SLEEP_GOAL = 8;
+
+export default function TrackingScreen() {
+  const router = useRouter();
+  const { token } = useContext(AuthContext);
+  const [steps, setSteps]       = useState("");
+  const [water, setWater]       = useState("");
+  const [sleep, setSleep]       = useState("");
+  const [loading, setLoading]   = useState(true);
+  const [saving, setSaving]     = useState(false);
+  const [saved, setSaved]       = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [todayLog, setTodayLog] = useState(null);
+
+  const btnScale = useRef(new Animated.Value(1)).current;
+  const onBtnIn  = () => Animated.spring(btnScale, { toValue: 0.97, useNativeDriver: true }).start();
+  const onBtnOut = () => Animated.spring(btnScale, { toValue: 1,    useNativeDriver: true }).start();
+
+  const fetchToday = useCallback(async () => {
+    try {
+      const res = await API.get("/track/today");
+      if (res.data) {
+        setTodayLog(res.data);
+        setSteps(res.data.steps?.toString() || "");
+        setWater(res.data.water?.toString() || "");
+        setSleep(res.data.sleep?.toString() || "");
+      }
+    } catch {
+      console.log("No tracking data for today");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!token) return;
+      setLoading(true);
+      fetchToday();
+    }, [token, fetchToday])
+  );
+
+  const saveToday = async () => {
+    setErrorMsg("");
+    try {
+      setSaving(true);
+      const payload = { steps: Number(steps), water: Number(water), sleep: Number(sleep) };
+      await API.post("/track/today", payload);
+      setSaved(true);
+      setTodayLog(payload);
+      setTimeout(() => setSaved(false), 2500);
+      router.push({
+        pathname: "/(app)/home",
+        params: { updatedToday: JSON.stringify(payload) },
+      });
+    } catch (err) {
+      const backendMsg = err.response?.data?.message;
+      setErrorMsg(backendMsg || "Failed to save data. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+        <Text style={styles.loadingText}>Loading today's data…</Text>
+      </View>
+    );
+  }
+
+  // Overall progress
+  const totalPct = Math.round(
+    ((Math.min(parseFloat(steps) || 0, STEP_GOAL) / STEP_GOAL +
+      Math.min(parseFloat(water) || 0, WATER_GOAL) / WATER_GOAL +
+      Math.min(parseFloat(sleep) || 0, SLEEP_GOAL) / SLEEP_GOAL) / 3) * 100
+  );
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
+      >
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* ── HEADER ── */}
+          <FadeSlideIn delay={0}>
+            <View style={styles.headerRow}>
+              <View>
+                <Text style={styles.title}>Daily Tracking</Text>
+                <Text style={styles.subtitle}>Log your activity for today</Text>
+              </View>
+              <View style={styles.overallBadge}>
+                <Text style={styles.overallNum}>{totalPct}%</Text>
+                <Text style={styles.overallLabel}>Overall</Text>
+              </View>
+            </View>
+          </FadeSlideIn>
+
+          {/* ── HERO PROGRESS ── */}
+          <FadeSlideIn delay={80}>
+            <LinearGradient colors={["#170F36", "#29195A", "#170F36"]} style={styles.heroCard}>
+              <View style={styles.heroDecor} />
+              <View style={styles.heroBadgeRow}>
+                <Ionicons name="calendar-outline" size={12} color="#FACC15" />
+                <Text style={styles.heroBadge}>TODAY</Text>
+              </View>
+              <View style={styles.heroTitleRow}>
+                {totalPct === 100 && <Ionicons name="sparkles" size={16} color="#fff" style={{ marginRight: 6 }} />}
+                <Text style={styles.heroTitle}>
+                  {totalPct === 100 ? "All goals complete!" : `${totalPct}% of daily goals done`}
+                </Text>
+              </View>
+              <View style={styles.heroBarBg}>
+                <View style={[styles.heroBarFill, { width: `${totalPct}%` }]} />
+              </View>
+              <View style={styles.heroStats}>
+                <View style={styles.heroStatItem}>
+                  <Ionicons name="footsteps-outline" size={13} color="#B8AFD6" />
+                  <Text style={styles.heroStat}>{steps || "0"} steps</Text>
+                </View>
+                <View style={styles.heroStatItem}>
+                  <Ionicons name="water-outline" size={13} color="#B8AFD6" />
+                  <Text style={styles.heroStat}>{water || "0"} L</Text>
+                </View>
+                <View style={styles.heroStatItem}>
+                  <Ionicons name="moon-outline" size={13} color="#B8AFD6" />
+                  <Text style={styles.heroStat}>{sleep || "0"}h</Text>
+                </View>
+              </View>
+            </LinearGradient>
+          </FadeSlideIn>
+
+          {errorMsg ? (
+            <View style={styles.errorBanner}>
+              <Ionicons name="alert-circle" size={16} color={COLORS.error} />
+              <Text style={styles.errorText}>{errorMsg}</Text>
+            </View>
+          ) : null}
+
+          {/* ── INPUT CARDS ── */}
+          <FadeSlideIn delay={160}>
+            <Text style={styles.sectionLabel}>UPDATE TODAY'S DATA</Text>
+            <TrackInputCard
+              icon="footsteps-outline" label="Steps" unit="steps"
+              placeholder="e.g. 8000" value={steps}
+              onChangeText={setSteps} color="#22C55E" goal={STEP_GOAL}
+            />
+          </FadeSlideIn>
+
+          <FadeSlideIn delay={220}>
+            <TrackInputCard
+              icon="water-outline" label="Water" unit="litres"
+              placeholder="e.g. 2.5" value={water}
+              onChangeText={setWater} color="#3B82F6" goal={WATER_GOAL}
+            />
+          </FadeSlideIn>
+
+          <FadeSlideIn delay={280}>
+            <TrackInputCard
+              icon="moon-outline" label="Sleep" unit="hours"
+              placeholder="e.g. 7.5" value={sleep}
+              onChangeText={setSleep} color={COLORS.primary} goal={SLEEP_GOAL}
+            />
+          </FadeSlideIn>
+
+          {/* ── SAVE BUTTON ── */}
+          <FadeSlideIn delay={340}>
+            <Pressable onPress={saveToday} onPressIn={onBtnIn}
+              onPressOut={onBtnOut} disabled={saving}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: saving, busy: saving }}
+              accessibilityLabel="Save today's data">
+              <Animated.View style={{ transform: [{ scale: btnScale }] }}>
+                <LinearGradient
+                  colors={saved
+                    ? ["#22C55E", "#16A34A"]
+                    : saving
+                    ? [COLORS.textLight, COLORS.textLight]
+                    : [COLORS.primaryDark, COLORS.primary, COLORS.primaryLight]}
+                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                  style={styles.saveBtn}
+                >
+                  {saving
+                    ? <ActivityIndicator color="#fff" size="small" />
+                    : (
+                      <View style={styles.saveBtnRow}>
+                        <Ionicons name={saved ? "checkmark" : "save-outline"} size={18} color="#fff" />
+                        <Text style={styles.saveBtnText}>{saved ? "Saved!" : "Save Today's Data"}</Text>
+                      </View>
+                    )
+                  }
+                </LinearGradient>
+              </Animated.View>
+            </Pressable>
+          </FadeSlideIn>
+
+          {/* ── TODAY'S LOG ── */}
+          {todayLog && (
+            <FadeSlideIn delay={400}>
+              <View style={styles.logCard}>
+                <View style={styles.logHeader}>
+                  <Text style={styles.logTitle}>Today's Log</Text>
+                  <View style={styles.logDot} />
+                </View>
+                <View style={styles.logRow}>
+                  <LogStat icon="footsteps-outline" label="Steps" value={`${todayLog.steps?.toLocaleString() ?? 0}`} color="#22C55E" />
+                  <LogStat icon="water-outline" label="Water" value={`${todayLog.water ?? 0} L`} color="#3B82F6" />
+                  <LogStat icon="moon-outline" label="Sleep" value={`${todayLog.sleep ?? 0} hrs`} color={COLORS.primary} />
+                </View>
+              </View>
+            </FadeSlideIn>
+          )}
+
+          <View style={{ height: 32 }} />
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+}
+
+// ── STYLES ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  header: { paddingHorizontal: SPACING.lg, paddingTop: SPACING.md, paddingBottom: SPACING.md },
-  title: { fontSize: 24, fontWeight: '800', color: COLORS.textPrimary },
-  subtitle: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
-  content: { paddingHorizontal: SPACING.lg, paddingBottom: 130 },
-  statRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md, backgroundColor: COLORS.surface, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, padding: SPACING.md, marginBottom: SPACING.md, ...SHADOWS.sm },
-  statIcon: { width: 42, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  statLabel: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary },
-  statSub: { fontSize: 11, color: COLORS.textTertiary, marginTop: 1 },
-  statValue: { fontSize: 20, fontWeight: '800', color: COLORS.textPrimary },
-  statUnit: { fontSize: 12, fontWeight: '600', color: COLORS.textSecondary },
-  quickRow: { flexDirection: 'row', gap: SPACING.md, marginTop: SPACING.sm },
-  quickBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: SPACING.sm, backgroundColor: COLORS.surface, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, paddingVertical: SPACING.md },
-  quickText: { fontSize: 13, fontWeight: '700', color: COLORS.textPrimary },
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.75)', justifyContent: 'center', alignItems: 'center', padding: 24 },
-  modalCard: { width: '100%', backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.border, padding: SPACING.lg },
-  modalTitle: { fontSize: 17, fontWeight: '800', color: COLORS.textPrimary, marginBottom: SPACING.md },
-  modalInput: { backgroundColor: COLORS.surfaceElevated, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, padding: SPACING.md, fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, marginBottom: SPACING.md },
-  modalBtns: { flexDirection: 'row', gap: SPACING.md },
-  cancelBtn: { flex: 1, paddingVertical: 14, borderRadius: RADIUS.md, backgroundColor: COLORS.surfaceElevated, alignItems: 'center' },
-  cancelText: { fontSize: 15, fontWeight: '700', color: COLORS.textSecondary },
-  saveBtn: { flex: 1, paddingVertical: 14, borderRadius: RADIUS.md, backgroundColor: COLORS.primary, alignItems: 'center' },
-  saveText: { fontSize: 15, fontWeight: '800', color: '#fff' },
+  container:   { flex: 1, backgroundColor: COLORS.background },
+  scroll:      { padding: 20, paddingTop: 10 },
+  center:      { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: COLORS.background },
+  loadingText: { marginTop: 12, color: COLORS.textMuted, fontSize: 14, fontWeight: "500" },
+
+  // Header
+  headerRow: {
+    flexDirection: "row", justifyContent: "space-between",
+    alignItems: "center", marginBottom: 20,
+  },
+  title:    { fontSize: 26, fontWeight: "900", color: COLORS.textDark, letterSpacing: -0.6 },
+  subtitle: { fontSize: 14, color: COLORS.textMuted, marginTop: 3, fontWeight: "500" },
+  overallBadge: {
+    backgroundColor: COLORS.surface, borderRadius: 16,
+    paddingHorizontal: 14, paddingVertical: 10,
+    alignItems: "center",
+    boxShadow: "0px 2px 10px rgba(23,15,54,0.08)",
+  },
+  overallNum:   { fontSize: 20, fontWeight: "900", color: COLORS.primary, letterSpacing: -0.5 },
+  overallLabel: { fontSize: 10, color: COLORS.textMuted, fontWeight: "700", textTransform: "uppercase" },
+
+  // Hero
+  heroCard: {
+    borderRadius: 22, padding: 20,
+    marginBottom: 16, overflow: "hidden",
+    boxShadow: "0px 6px 20px rgba(23,15,54,0.3)",
+  },
+  heroDecor: {
+    position: "absolute", width: 200, height: 200, borderRadius: 100,
+    borderWidth: 40, borderColor: "rgba(255,255,255,0.03)",
+    right: -50, top: -50,
+  },
+  heroBadgeRow: { flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 8 },
+  heroBadge: { color: "#FACC15", fontSize: 11, fontWeight: "800", letterSpacing: 0.5 },
+  heroTitleRow: { flexDirection: "row", alignItems: "center", marginBottom: 14 },
+  heroTitle: { fontSize: 17, fontWeight: "800", color: "#fff", letterSpacing: -0.3 },
+  heroBarBg: {
+    height: 6, borderRadius: 3,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    marginBottom: 14, overflow: "hidden",
+  },
+  heroBarFill: { height: "100%", borderRadius: 3, backgroundColor: COLORS.primaryLight, maxWidth: "100%" },
+  heroStats:     { flexDirection: "row", gap: 16 },
+  heroStatItem:  { flexDirection: "row", alignItems: "center", gap: 5 },
+  heroStat:      { fontSize: 13, color: "#B8AFD6", fontWeight: "600" },
+
+  // Error banner
+  errorBanner: {
+    flexDirection: "row", alignItems: "center", gap: 8,
+    backgroundColor: COLORS.errorBg, borderWidth: 1, borderColor: COLORS.errorBorder,
+    borderRadius: 12, padding: 12, marginBottom: 16,
+  },
+  errorText: { color: COLORS.error, fontSize: 13, fontWeight: "600", flex: 1 },
+
+  // Section label
+  sectionLabel: {
+    fontSize: 11, fontWeight: "800", color: COLORS.textLight,
+    letterSpacing: 1.2, marginBottom: 10,
+  },
+
+  // Track input card
+  trackCard: {
+    backgroundColor: COLORS.surface, borderRadius: 20,
+    marginBottom: 12, overflow: "hidden",
+    borderWidth: 1.5,
+    boxShadow: "0px 2px 10px rgba(23,15,54,0.07)",
+  },
+  trackAccent:    { height: 3 },
+  trackCardInner: { flexDirection: "row", alignItems: "center", padding: 14, gap: 12 },
+  trackIconWrap:  {
+    width: 46, height: 46, borderRadius: 14,
+    justifyContent: "center", alignItems: "center",
+  },
+  trackMid:   { flex: 1 },
+  trackLabel: { fontSize: 11, fontWeight: "700", color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 },
+  trackInput: {
+    fontSize: 20, fontWeight: "900", color: COLORS.textDark,
+    padding: 0, letterSpacing: -0.5,
+  },
+  trackRight: { alignItems: "flex-end" },
+  trackUnit:  { fontSize: 12, fontWeight: "700", marginBottom: 2 },
+  trackPct:   { fontSize: 11, color: COLORS.textMuted, fontWeight: "600" },
+  trackBarBg: {
+    height: 4, backgroundColor: COLORS.surfaceMuted,
+    marginHorizontal: 14, marginBottom: 12, borderRadius: 2, overflow: "hidden",
+  },
+  trackBarFill: { height: "100%", borderRadius: 2, maxWidth: "100%" },
+
+  // Save button
+  saveBtn: {
+    borderRadius: 18, paddingVertical: 17,
+    alignItems: "center", justifyContent: "center",
+    marginBottom: 20,
+    boxShadow: "0px 6px 18px rgba(76,46,150,0.35)",
+  },
+  saveBtnRow:  { flexDirection: "row", alignItems: "center", gap: 8 },
+  saveBtnText: { color: "#fff", fontSize: 16, fontWeight: "900", letterSpacing: 0.3 },
+
+  // Log card
+  logCard: {
+    backgroundColor: COLORS.surface, borderRadius: 22,
+    padding: 18,
+    boxShadow: "0px 2px 12px rgba(23,15,54,0.07)",
+  },
+  logHeader: {
+    flexDirection: "row", alignItems: "center",
+    justifyContent: "space-between", marginBottom: 16,
+  },
+  logTitle: { fontSize: 16, fontWeight: "800", color: COLORS.textDark },
+  logDot:   { width: 8, height: 8, borderRadius: 4, backgroundColor: "#22C55E" },
+  logRow:   { flexDirection: "row", justifyContent: "space-between" },
+  logStat:  { flex: 1, alignItems: "center", gap: 8 },
+  logStatIcon: {
+    width: 44, height: 44, borderRadius: 14,
+    justifyContent: "center", alignItems: "center",
+    marginBottom: 6,
+  },
+  logStatText:  { alignItems: "center" },
+  logStatLabel: { fontSize: 11, color: COLORS.textMuted, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.4 },
+  logStatValue: { fontSize: 16, fontWeight: "900", marginTop: 2, letterSpacing: -0.3 },
 });

@@ -1,53 +1,105 @@
-import React, { useState, useContext } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
-import Animated, { FadeInDown } from 'react-native-reanimated';
-import AuthShell from '../components/auth/AuthShell';
-import FormField from '../components/auth/FormField';
-import PrimaryButton from '../components/auth/PrimaryButton';
-import { AuthContext } from '../context/AuthContext';
-import API from '../services/api';
-import { COLORS, SPACING } from '../constants/theme';
+import { View, Text, Pressable, StyleSheet } from "react-native";
+import { useState, useContext } from "react";
+import { useRouter, useLocalSearchParams } from "expo-router";
+import API from "../services/api";
+import { AuthContext } from "../context/AuthContext";
+import { COLORS } from "../constants/theme";
+import AuthShell from "../components/auth/AuthShell";
+import AuthHero from "../components/auth/AuthHero";
+import FormField from "../components/auth/FormField";
+import PrimaryButton from "../components/auth/PrimaryButton";
+import { Divider, Banner, FooterLink } from "../components/auth/AuthBits";
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { justReset } = useLocalSearchParams();
   const { login } = useContext(AuthContext);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [info, setInfo] = useState(justReset ? "Password reset! Sign in with your new password." : "");
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
-    if (!email || !password) { Alert.alert('Missing fields', 'Please enter email and password.'); return; }
+    if (!email || !password) {
+      setError("Please enter your email and password");
+      return;
+    }
+    setError("");
+    setInfo("");
     setLoading(true);
     try {
-      const res = await API.post('/auth/login', { email, password });
+      const res = await API.post("/auth/login", { email, password });
       await login(res.data.token);
-      router.replace('/(app)/(tabs)/home');
+      // AuthContext flips userToken -> the (auth) layout guard redirects to /(app)/home.
     } catch (err) {
-      Alert.alert('Login failed', err.response?.data?.message || 'Something went wrong.');
-    } finally { setLoading(false); }
+      setError(err.response?.data?.message || "Login failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <AuthShell title="Welcome back" subtitle="Sign in to continue your fitness journey.">
-      <FormField label="Email" icon="mail-outline" placeholder="you@example.com" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
-      <FormField label="Password" icon="lock-closed-outline" placeholder="••••••••" value={password} onChangeText={setPassword} secureTextEntry />
-      <TouchableOpacity onPress={() => router.push('/(auth)/forgot-password')} style={styles.forgotBtn}>
-        <Text style={styles.forgotText}>Forgot password?</Text>
-      </TouchableOpacity>
-      <PrimaryButton title="Sign In" onPress={handleLogin} loading={loading} />
-      <Animated.View entering={FadeInDown.delay(400)} style={styles.registerRow}>
-        <Text style={styles.registerText}>Don't have an account? </Text>
-        <TouchableOpacity onPress={() => router.push('/(auth)/register')}><Text style={styles.registerLink}>Sign Up</Text></TouchableOpacity>
-      </Animated.View>
+    <AuthShell>
+      <AuthHero icon="pulse" title="FitLip" subtitle="Your personal fitness companion" />
+
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Welcome back</Text>
+        <Text style={styles.cardSub}>Sign in to continue your journey</Text>
+
+        <Banner text={info} tone="success" />
+        <Banner text={error} />
+
+        <FormField
+          label="Email address"
+          icon="mail-outline"
+          placeholder="you@example.com"
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+        />
+        <FormField
+          label="Password"
+          icon="lock-closed-outline"
+          placeholder="Enter your password"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+        />
+
+        <Pressable onPress={() => router.push("/(auth)/forgot-password")} style={styles.forgotWrap} hitSlop={8}>
+          <Text style={styles.forgotText}>Forgot password?</Text>
+        </Pressable>
+
+        <PrimaryButton title="Sign In" onPress={handleLogin} loading={loading} />
+      </View>
+
+      <Divider />
+
+      <Pressable
+        onPress={() => router.push("/(auth)/register")}
+        style={({ pressed }) => [styles.registerCard, { opacity: pressed ? 0.9 : 1 }]}
+      >
+        <FooterLink prompt="New here?" label="Create an account" onPress={() => router.push("/(auth)/register")} />
+      </Pressable>
+
+      <View style={{ height: 24 }} />
     </AuthShell>
   );
 }
 
 const styles = StyleSheet.create({
-  forgotBtn: { alignSelf: 'flex-end', marginBottom: SPACING.lg },
-  forgotText: { fontSize: 13, color: COLORS.primary, fontWeight: '600' },
-  registerRow: { flexDirection: 'row', justifyContent: 'center', marginTop: SPACING.xl },
-  registerText: { fontSize: 14, color: COLORS.textSecondary },
-  registerLink: { fontSize: 14, color: COLORS.primary, fontWeight: '700' },
+  card: {
+    backgroundColor: COLORS.surface, borderRadius: 24,
+    padding: 24, marginBottom: 4,
+    boxShadow: "0px 4px 20px rgba(23,15,54,0.08)",
+  },
+  cardTitle: { fontSize: 22, fontWeight: "900", color: COLORS.textDark, letterSpacing: -0.5, marginBottom: 4 },
+  cardSub: { fontSize: 14, color: COLORS.textMuted, marginBottom: 20, fontWeight: "500" },
+  forgotWrap: { alignSelf: "flex-end", marginBottom: 16, minHeight: 30, justifyContent: "center" },
+  forgotText: { color: COLORS.primary, fontWeight: "700", fontSize: 13 },
+  registerCard: {
+    backgroundColor: COLORS.surface, borderRadius: 18,
+    boxShadow: "0px 2px 10px rgba(23,15,54,0.06)",
+  },
 });

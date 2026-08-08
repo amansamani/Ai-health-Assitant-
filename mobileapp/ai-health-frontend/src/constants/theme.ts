@@ -1,34 +1,85 @@
+/**
+ * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
+ * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
+ */
+
+import { Platform } from 'react-native';
+
+const tintColorLight = '#4C2E96';
+const tintColorDark = '#fff';
+
+// Fitlip brand palette — anchored on #29195A (the deep purple used in the
+// app icon / native splash) so in-app UI actually matches the brand instead
+// of the generic template green it shipped with.
+export const BRAND = {
+  900: "#170F36", // near-black purple, high-emphasis text on light bg
+  800: "#29195A", // brand anchor — icon/splash color
+  700: "#392376",
+  600: "#4C2E96", // primary interactive color (buttons, links)
+  500: "#6339B8",
+  400: "#8257D6",
+  300: "#A78BFA",
+  200: "#C9B8F7",
+  100: "#EDE9FE", // selected-state tints, chip fills
+  50: "#F5F3FF", // subtle tinted backgrounds
+};
+
 export const COLORS = {
-  background:      '#F6F7FB',
-  surface:         '#FFFFFF',
-  surfaceElevated: '#F1F2F8',
-  track:           '#ECECF4',
+  // legacy flat keys — kept so already-shipped screens keep working;
+  // values now point at the real brand instead of placeholder green/blue.
+  primary: BRAND[600],
+  secondary: BRAND[400],
+  background: "#FAF9FC",
+  card: "#FFFFFF",
+  textDark: "#1B1730",
+  textLight: "#6B667D",
+  accent: "#F59E0B",
+  border: "#E4E0F0",
 
-  textPrimary:   '#171A2B',
-  textSecondary: '#5A5F73',
-  textTertiary:  '#9AA0B4',
-
-  primary:     '#6C47FF',
-  primarySoft: '#EFEBFF',
-  heroFrom:    '#45309E',
-  heroTo:      '#201547',
-
-  secondary: '#2F80ED',
-  accent:    '#6C47FF',
-  success:   '#22C55E',
-  warning:   '#F59E0B',
-  danger:    '#EF4444',
-
-  border:       'rgba(23,26,43,0.08)',
-  borderActive: 'rgba(23,26,43,0.16)',
-  overlay:      'rgba(23,26,43,0.45)',
+  // semantic tokens for new/redesigned screens
+  primaryDark: BRAND[800],
+  primaryLight: BRAND[300],
+  onPrimary: "#FFFFFF",
+  surface: "#FFFFFF",
+  surfaceMuted: BRAND[50],
+  textMuted: "#9A94AE",
+  error: "#DC2626",
+  errorBg: "#FEF2F2",
+  errorBorder: "#FECACA",
+  success: "#16A34A",
+  warning: "#D97706",
 };
 
-export const SHADOWS = {
-  sm: { shadowColor: '#1B1F3A', shadowOffset: { width: 0, height: 2 },  shadowOpacity: 0.06, shadowRadius: 8,  elevation: 2 },
-  md: { shadowColor: '#1B1F3A', shadowOffset: { width: 0, height: 6 },  shadowOpacity: 0.08, shadowRadius: 16, elevation: 4 },
-  lg: { shadowColor: '#1B1F3A', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.12, shadowRadius: 28, elevation: 6 },
+export const SHADOW = {
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.08,
+  shadowRadius: 6,
+  elevation: 3,
 };
 
-export const RADIUS = { sm: 12, md: 16, lg: 24, xl: 28, full: 9999 };
-export const SPACING = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 };
+
+export const Fonts = Platform.select({
+  ios: {
+    /** iOS `UIFontDescriptorSystemDesignDefault` */
+    sans: 'system-ui',
+    /** iOS `UIFontDescriptorSystemDesignSerif` */
+    serif: 'ui-serif',
+    /** iOS `UIFontDescriptorSystemDesignRounded` */
+    rounded: 'ui-rounded',
+    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
+    mono: 'ui-monospace',
+  },
+  default: {
+    sans: 'normal',
+    serif: 'serif',
+    rounded: 'normal',
+    mono: 'monospace',
+  },
+  web: {
+    sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+    serif: "Georgia, 'Times New Roman', serif",
+    rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
+    mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+  },
+});

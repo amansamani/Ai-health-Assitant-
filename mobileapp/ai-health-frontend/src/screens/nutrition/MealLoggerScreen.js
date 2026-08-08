@@ -1,160 +1,446 @@
-"use strict";
-import React, { useState, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
-import * as Haptics from 'expo-haptics';
-import API from '../../services/api';
-import { COLORS, SHADOWS, RADIUS, SPACING } from '../../constants/theme';
+import React, { useState, useCallback } from "react";
+import {
+  View, Text, ScrollView, StyleSheet, TouchableOpacity,
+  ActivityIndicator, Alert, RefreshControl,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
+import {
+  getTodayLog, getMealHistory, deleteMealLog, getHealthProfile, getCurrentPlan,
+} from "../../services/nutritionService";
+import { COLORS } from "../../constants/theme";
+import { SunriseIcon, SunIcon, MoonStarIcon, AppleIcon } from "../../components/icons/MotionIcons";
+import { useReplayOnFocus } from "../../hooks/useReplayOnFocus";
 
-const FILTERS = [
-  { label: 'All', tags: [], dietType: null },
-  { label: 'High Protein', tags: ['high-protein'], dietType: null },
-  { label: 'Veg', tags: [], dietType: 'veg' },
-  { label: 'Low Carb', tags: ['low-carb'], dietType: null },
-];
+const MEAL_META = {
+  breakfast: { Icon: SunriseIcon, label: "Breakfast", color: "#FF8F00" },
+  lunch:     { Icon: SunIcon,     label: "Lunch",     color: "#43A047" },
+  dinner:    { Icon: MoonStarIcon,label: "Dinner",     color: "#1E88E5" },
+  snacks:    { Icon: AppleIcon,   label: "Snacks",     color: "#8E24AA" },
+};
 
-function FoodCard({ food, onSelect, index }) {
-  return (
-    <Animated.View entering={FadeInUp.delay(index * 50).springify()}>
-      <TouchableOpacity style={styles.foodCard} onPress={() => onSelect(food)} activeOpacity={0.8}>
-        <View style={styles.foodIcon}><Text style={{ fontSize: 22 }}>{food.emoji || '🍽️'}</Text></View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.foodName} numberOfLines={1}>{food.name}</Text>
-          <Text style={styles.foodBrand} numberOfLines={1}>{food.brand || 'Generic'}</Text>
-          <View style={styles.chipRow}>
-            <View style={styles.chip}><Text style={styles.chipText}>{food.calories} cal</Text></View>
-            <View style={[styles.chip, { backgroundColor: 'rgba(34,197,94,0.12)' }]}><Text style={[styles.chipText, { color: COLORS.success }]}>{food.protein}g P</Text></View>
-            <View style={[styles.chip, { backgroundColor: 'rgba(245,158,11,0.12)' }]}><Text style={[styles.chipText, { color: COLORS.warning }]}>{food.carbs}g C</Text></View>
-          </View>
-        </View>
-        <Ionicons name="add-circle-outline" size={24} color={COLORS.primary} />
-      </TouchableOpacity>
-    </Animated.View>
-  );
-}
-
-export default function MealLoggerScreen() {
-  const router = useRouter();
-  const params = useLocalSearchParams();
-  const mealType = params.mealType || 'breakfast';
-  const [search, setSearch] = useState('');
-  const [results, setResults] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [searched, setSearched] = useState(false);
-  const [activeFilter, setActiveFilter] = useState(0);
-  const searchTimeout = useRef(null);
-
-  const doSearch = useCallback(async (query) => {
-    if (!query.trim()) { setResults([]); setSearched(false); return; }
-    setLoading(true); setSearched(true);
-    try { const res = await API.get(`/nutrition/foods?search=${encodeURIComponent(query)}`); setResults(res.data?.data || []); }
-    catch (e) { setResults([]); }
-    finally { setLoading(false); }
-  }, []);
-
-  const handleSearch = (text) => {
-    setSearch(text);
-    clearTimeout(searchTimeout.current);
-    searchTimeout.current = setTimeout(() => doSearch(text), 400);
-  };
-
-  const handleFilter = async (index) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setActiveFilter(index);
-    const f = FILTERS[index];
-    if (!f.tags.length && !f.dietType) { doSearch(search); return; }
-    setLoading(true); setSearched(true);
-    try {
-      const p = new URLSearchParams();
-      if (f.tags.length) p.append('tags', f.tags.join(','));
-      if (f.dietType) p.append('dietType', f.dietType);
-      const res = await API.get(`/nutrition/foods?${p.toString()}`);
-      setResults(res.data?.data || []);
-    } catch (e) { setResults([]); }
-    finally { setLoading(false); }
-  };
-
-  const selectFood = (food) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    router.push({ pathname: '/(app)/nutrition/log-meal', params: { food: JSON.stringify(food), mealType } });
-  };
+function CalorieRing({ consumed, goal }) {
+  const pct       = goal > 0 ? Math.min(consumed / goal, 1) : 0;
+  const remaining = Math.max(goal - consumed, 0);
+  const over      = consumed > goal;
+  const ringColor = over ? COLORS.error : COLORS.accent;
+  const SIZE      = 170;
+  const BORDER    = 14;
 
   return (
-    <View style={styles.container}>
-      <Animated.View entering={FadeInDown.delay(0)} style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={22} color={COLORS.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Log {mealType.charAt(0).toUpperCase() + mealType.slice(1)}</Text>
-        <View style={{ width: 40 }} />
-      </Animated.View>
-
-      <Animated.View entering={FadeInDown.delay(100)} style={styles.searchWrap}>
-        <View style={styles.searchBar}>
-          <Ionicons name="search" size={18} color={COLORS.textTertiary} />
-          <TextInput style={styles.searchInput} placeholder="Search foods..." placeholderTextColor={COLORS.textTertiary}
-            value={search} onChangeText={handleSearch} autoFocus returnKeyType="search" onSubmitEditing={() => doSearch(search)} />
-          {search.length > 0 && (
-            <TouchableOpacity onPress={() => { setSearch(''); setResults([]); setSearched(false); }}>
-              <Ionicons name="close-circle" size={18} color={COLORS.textTertiary} />
-            </TouchableOpacity>
-          )}
-        </View>
-      </Animated.View>
-
-      <Animated.View entering={FadeInDown.delay(200)} style={styles.filterRow}>
-        <FlatList horizontal showsHorizontalScrollIndicator={false} data={FILTERS}
-          keyExtractor={(_, i) => String(i)}
-          contentContainerStyle={{ paddingHorizontal: SPACING.lg, gap: SPACING.sm }}
-          renderItem={({ item, index }) => (
-            <TouchableOpacity style={[styles.filterChip, activeFilter === index && styles.filterChipActive]} onPress={() => handleFilter(index)}>
-              <Text style={[styles.filterText, activeFilter === index && styles.filterTextActive]}>{item.label}</Text>
-            </TouchableOpacity>
-          )} />
-      </Animated.View>
-
-      {loading ? (
-        <View style={styles.loadingWrap}><ActivityIndicator size="large" color={COLORS.primary} /><Text style={styles.loadingText}>Searching...</Text></View>
-      ) : searched && results.length === 0 ? (
-        <View style={styles.emptyWrap}><Ionicons name="search-outline" size={48} color={COLORS.textTertiary} /><Text style={styles.emptyTitle}>No results found</Text><Text style={styles.emptySub}>Try a different search term.</Text></View>
-      ) : (
-        <FlatList data={results} keyExtractor={(item, i) => item._id || String(i)} contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}
-          renderItem={({ item, index }) => <FoodCard food={item} onSelect={selectFood} index={index} />}
-          ListEmptyComponent={!searched ? (
-            <View style={styles.promptWrap}><Ionicons name="nutrition-outline" size={48} color={COLORS.textTertiary} /><Text style={styles.emptyTitle}>Search for a food</Text><Text style={styles.emptySub}>Type above to find foods.</Text></View>
-          ) : null} />
+    <View style={{ alignSelf: "center", width: SIZE, height: SIZE, justifyContent: "center", alignItems: "center", marginVertical: 16 }}>
+      <View style={{ position: "absolute", width: SIZE, height: SIZE, borderRadius: SIZE / 2, borderWidth: BORDER, borderColor: COLORS.border }} />
+      {pct > 0 && (
+        <View style={{
+          position: "absolute", width: SIZE, height: SIZE,
+          borderRadius: SIZE / 2, borderWidth: BORDER,
+          borderColor: "transparent",
+          borderTopColor: ringColor,
+          borderRightColor: pct >= 0.5  ? ringColor : "transparent",
+          borderBottomColor: pct >= 0.75 ? ringColor : "transparent",
+          borderLeftColor: pct >= 1     ? ringColor : "transparent",
+          transform: [{ rotate: "-90deg" }],
+        }} />
       )}
+      <View style={{ alignItems: "center" }}>
+        <Text style={{ fontSize: 30, fontWeight: "800", color: over ? COLORS.error : COLORS.textDark }}>
+          {Math.round(consumed)}
+        </Text>
+        <Text style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: "500" }}>kcal eaten</Text>
+        <View style={{ width: 32, height: 1, backgroundColor: COLORS.border, marginVertical: 5 }} />
+        <Text style={{ fontSize: 20, fontWeight: "700", color: over ? COLORS.error : COLORS.accent }}>
+          {over ? `+${Math.round(consumed - goal)}` : Math.round(remaining)}
+        </Text>
+        <Text style={{ fontSize: 10, color: COLORS.textMuted, fontWeight: "500" }}>
+          {over ? "over goal" : "remaining"}
+        </Text>
+      </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+function MacroBar({ label, consumed, goal, color }) {
+  const pct  = goal > 0 ? Math.min((consumed / goal) * 100, 100) : 0;
+  const over = consumed > goal;
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 14, gap: 10 }}>
+      <Text style={{ width: 92, fontSize: 13, fontWeight: "600", color: "#444" }}>{label}</Text>
+      <View style={{ flex: 1, height: 8, backgroundColor: COLORS.border, borderRadius: 4, overflow: "hidden" }}>
+        <View style={{ width: `${pct}%`, height: "100%", backgroundColor: over ? COLORS.error : color, borderRadius: 4 }} />
+      </View>
+      <Text style={{ width: 76, fontSize: 12, textAlign: "right" }}>
+        <Text style={{ color: over ? COLORS.error : COLORS.textDark, fontWeight: "700" }}>
+          {parseFloat(consumed.toFixed(1))}
+        </Text>
+        <Text style={{ color: COLORS.textMuted }}>/{goal}g</Text>
+      </Text>
+    </View>
+  );
+}
+
+export default function MealLoggerScreen({ navigation }) {
+  const [loading, setLoading]       = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [todayLog, setTodayLog]     = useState(null);
+  const [history, setHistory]       = useState([]);
+  const [goals, setGoals]           = useState({
+    calories: 2000, protein: 120, carbs: 250, fats: 65,
+  });
+  const iconTrigger = useReplayOnFocus();
+
+  const todayDate = new Date().toLocaleDateString("en-IN", {
+    weekday: "long", day: "numeric", month: "long",
+  });
+
+  const emptyLog = {
+    grouped: { breakfast: [], lunch: [], dinner: [], snacks: [] },
+    totals:  { calories: 0, protein: 0, carbs: 0, fats: 0 },
+  };
+
+  const loadData = async () => {
+    try {
+      const [logRes, histRes, profileRes, planRes] = await Promise.allSettled([
+        getTodayLog(),
+        getMealHistory(7),
+        getHealthProfile(),
+        getCurrentPlan(),
+      ]);
+
+      if (logRes.status === "fulfilled" && logRes.value) {
+        const val = logRes.value;
+        if (val?.totals && val?.data) {
+          setTodayLog({
+            grouped: val.data,
+            totals:  val.totals,
+          });
+        } else if (val?.grouped && val?.totals) {
+          setTodayLog(val);
+        } else {
+          setTodayLog(emptyLog);
+        }
+      } else {
+        setTodayLog(emptyLog);
+      }
+
+      if (histRes.status === "fulfilled" && histRes.value) {
+        const meals = histRes.value?.data ?? histRes.value ?? [];
+        if (Array.isArray(meals)) {
+          const grouped = {};
+          const todayStr = new Date().toISOString().split("T")[0];
+          for (const meal of meals) {
+            const date = new Date(meal.loggedAt).toISOString().split("T")[0];
+            if (date === todayStr) continue;
+            if (!grouped[date]) grouped[date] = { calories: 0, protein: 0, carbs: 0, fats: 0, count: 0 };
+            grouped[date].calories += meal.food?.calories || 0;
+            grouped[date].protein  += meal.food?.protein  || 0;
+            grouped[date].carbs    += meal.food?.carbs    || 0;
+            grouped[date].fats     += meal.food?.fats     || 0;
+            grouped[date].count    += 1;
+          }
+          setHistory(Object.entries(grouped).slice(0, 6).map(([date, d]) => ({ date, ...d })));
+        }
+      }
+
+      let goalsSet = false;
+
+      if (planRes.status === "fulfilled" && planRes.value) {
+        const p = planRes.value?.data ?? planRes.value;
+        if (p?.targetCalories) {
+          setGoals({
+            calories: p.targetCalories                                         || 2000,
+            protein:  p.summary?.macroTargets?.proteinG ?? p.macroSplit?.protein ?? 120,
+            carbs:    p.summary?.macroTargets?.carbsG   ?? p.macroSplit?.carbs   ?? 250,
+            fats:     p.summary?.macroTargets?.fatsG    ?? p.macroSplit?.fats    ??  65,
+          });
+          goalsSet = true;
+        }
+      }
+
+      if (!goalsSet && profileRes.status === "fulfilled" && profileRes.value) {
+        const p = profileRes.value?.data ?? profileRes.value;
+        if (p?.targetCalories) {
+          setGoals({
+            calories: p.targetCalories || 2000,
+            protein:  p.proteinTarget  || 120,
+            carbs:    p.carbTarget     || 250,
+            fats:     p.fatTarget      || 65,
+          });
+        }
+      }
+
+    } catch (e) {
+      console.error("MealLogger loadData error:", e.message);
+      setTodayLog(emptyLog);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useFocusEffect(useCallback(() => {
+    setLoading(true);
+    loadData();
+  }, []));
+
+  const handleRefresh = () => { setRefreshing(true); loadData(); };
+
+  const handleDelete = (mealId, mealName) => {
+    Alert.alert("Delete?", `Remove "${mealName}" from today's log?`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete", style: "destructive",
+        onPress: async () => {
+          try {
+            await deleteMealLog(mealId);
+            loadData();
+          } catch {
+            Alert.alert("Error", "Could not delete meal.");
+          }
+        },
+      },
+    ]);
+  };
+
+  const formatDate = (dateStr) => {
+    const d    = new Date(dateStr);
+    const diff = Math.floor((new Date() - d) / 86400000);
+    if (diff === 1) return "Yesterday";
+    if (diff <= 6)  return d.toLocaleDateString("en-IN", { weekday: "long" });
+    return d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+  };
+
+  if (loading) {
+    return (
+      <View style={s.center}>
+        <ActivityIndicator size="large" color={COLORS.accent} />
+        <Text style={{ marginTop: 12, color: COLORS.textLight, fontSize: 14 }}>Loading...</Text>
+      </View>
+    );
+  }
+
+  const totals  = todayLog?.totals  || { calories: 0, protein: 0, carbs: 0, fats: 0 };
+  const grouped = todayLog?.grouped || { breakfast: [], lunch: [], dinner: [], snacks: [] };
+
+  return (
+    <ScrollView
+      style={s.container}
+      contentContainerStyle={s.content}
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={[COLORS.accent]} />
+      }
+    >
+      <View style={s.header}>
+        <Text style={s.title}>Log Meal 🍛</Text>
+        <Text style={s.date}>{todayDate}</Text>
+      </View>
+
+      <View style={s.card}>
+        <Text style={s.cardLabel}>CALORIES</Text>
+        <CalorieRing consumed={Math.round(totals.calories)} goal={goals.calories} />
+        <View style={s.statRow}>
+          <View style={s.statBox}>
+            <Text style={s.statVal}>{goals.calories}</Text>
+            <Text style={s.statLbl}>Goal</Text>
+          </View>
+          <View style={s.statDivider} />
+          <View style={s.statBox}>
+            <Text style={[s.statVal, { color: COLORS.accent }]}>{Math.round(totals.calories)}</Text>
+            <Text style={s.statLbl}>Eaten</Text>
+          </View>
+          <View style={s.statDivider} />
+          <View style={s.statBox}>
+            <Text style={[s.statVal, { color: Math.round(totals.calories) > goals.calories ? COLORS.error : "#43A047" }]}>
+              {Math.max(goals.calories - Math.round(totals.calories), 0)}
+            </Text>
+            <Text style={s.statLbl}>Left</Text>
+          </View>
+        </View>
+      </View>
+
+      <View style={s.card}>
+        <Text style={s.cardLabel}>MACROS</Text>
+        <View style={{ marginTop: 12 }}>
+          <MacroBar label="💪 Protein" consumed={totals.protein || 0} goal={goals.protein} color="#1E88E5" />
+          <MacroBar label="🌾 Carbs"   consumed={totals.carbs   || 0} goal={goals.carbs}   color="#8E24AA" />
+          <MacroBar label="🥑 Fats"    consumed={totals.fats    || 0} goal={goals.fats}    color="#FF8F00" />
+        </View>
+      </View>
+
+      <TouchableOpacity
+        style={s.photoEntryCard}
+        onPress={() => navigation.navigate("LogMealPhoto")}
+        activeOpacity={0.85}
+      >
+        <Ionicons name="camera-outline" size={22} color="#4C2E96" />
+        <View style={{ flex: 1, marginLeft: 12 }}>
+          <Text style={s.photoEntryTitle}>Snap a Photo</Text>
+          <Text style={s.photoEntrySub}>Let AI estimate your meal's calories</Text>
+        </View>
+        <Ionicons name="arrow-forward" size={18} color="#4C2E96" />
+      </TouchableOpacity>
+
+      <Text style={s.sectionTitle}>Today's Meals</Text>
+      {Object.entries(MEAL_META).map(([key, meta]) => {
+        const items   = grouped[key] || [];
+        const mealCal = items.reduce((sum, m) => sum + (m.food?.calories || 0), 0);
+
+        return (
+          <View key={key} style={s.mealCard}>
+            <View style={s.mealHeader}>
+              <View style={s.mealLeft}>
+                <View style={[s.mealIconBox, { backgroundColor: meta.color + "20" }]}>
+                  <meta.Icon trigger={iconTrigger} size={22} color={meta.color} />
+                </View>
+                <View>
+                  <Text style={s.mealLabel}>{meta.label}</Text>
+                  <Text style={s.mealCal}>
+                    {mealCal > 0 ? `${Math.round(mealCal)} kcal` : "Nothing logged yet"}
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                style={[s.addBtn, { backgroundColor: meta.color }]}
+                onPress={() => navigation.navigate("LogMeal", { mealType: key })}
+                activeOpacity={0.8}
+              >
+                <Text style={s.addBtnText}>+ Add</Text>
+              </TouchableOpacity>
+            </View>
+
+            {items.length > 0 && (
+              <View style={s.foodList}>
+                {items.map((item, idx) => (
+                  <View key={item._id || idx} style={s.foodRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.foodName} numberOfLines={1}>
+                        {item.food?.name
+                          ? item.food.name.charAt(0).toUpperCase() + item.food.name.slice(1).toLowerCase()
+                          : "Unknown"}
+                      </Text>
+                      <Text style={s.foodMeta}>
+                        {item.food?.quantity}g{"  ·  "}
+                        P {parseFloat(item.food?.protein || 0).toFixed(1)}g{"  ·  "}
+                        C {parseFloat(item.food?.carbs   || 0).toFixed(1)}g{"  ·  "}
+                        F {parseFloat(item.food?.fats    || 0).toFixed(1)}g
+                      </Text>
+                    </View>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                      <Text style={[s.foodCal, { color: meta.color }]}>
+                        {Math.round(item.food?.calories || 0)} kcal
+                      </Text>
+                      <TouchableOpacity
+                        style={s.delBtn}
+                        onPress={() => handleDelete(item._id, item.food?.name)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Delete ${item.food?.name ?? "item"}`}
+                      >
+                        <Ionicons name="trash-outline" size={13} color={COLORS.error} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        );
+      })}
+
+      {history.length > 0 && (
+        <>
+          <Text style={s.sectionTitle}>Past Days</Text>
+          <View style={s.histCard}>
+            {history.map((day, idx) => {
+              const pct  = goals.calories > 0 ? Math.min((day.calories / goals.calories) * 100, 100) : 0;
+              const over = day.calories > goals.calories;
+              return (
+                <View
+                  key={day.date}
+                  style={[s.histRow, idx < history.length - 1 && { borderBottomWidth: 1, borderBottomColor: COLORS.border }]}
+                >
+                  <View>
+                    <Text style={s.histDate}>{formatDate(day.date)}</Text>
+                    <Text style={s.histCount}>{day.count} items logged</Text>
+                  </View>
+                  <View style={{ flex: 1, marginLeft: 16 }}>
+                    <View style={s.histBarBg}>
+                      <View style={[s.histBarFill, { width: `${pct}%`, backgroundColor: over ? COLORS.error : COLORS.accent }]} />
+                    </View>
+                    <Text style={[s.histCal, { color: over ? COLORS.error : "#555" }]}>
+                      {Math.round(day.calories)} kcal
+                    </Text>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        </>
+      )}
+
+      <View style={{ height: 40 }} />
+    </ScrollView>
+  );
+}
+
+const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: SPACING.lg, paddingTop: SPACING.md, paddingBottom: SPACING.sm },
-  backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border },
-  headerTitle: { fontSize: 17, fontWeight: '700', color: COLORS.textPrimary },
-  searchWrap: { paddingHorizontal: SPACING.lg, marginBottom: SPACING.md },
-  searchBar: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, backgroundColor: COLORS.surface, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, paddingHorizontal: SPACING.md, height: 52 },
-  searchInput: { flex: 1, fontSize: 15, color: COLORS.textPrimary, fontWeight: '500' },
-  filterRow: { marginBottom: SPACING.md },
-  filterChip: { paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, borderRadius: RADIUS.full, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border },
-  filterChipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  filterText: { fontSize: 13, fontWeight: '600', color: COLORS.textSecondary },
-  filterTextActive: { color: '#fff' },
-  list: { paddingHorizontal: SPACING.lg, paddingBottom: 120 },
-  foodCard: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md, backgroundColor: COLORS.surface, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, padding: SPACING.md, marginBottom: SPACING.sm, ...SHADOWS.sm },
-  foodIcon: { width: 48, height: 48, borderRadius: 12, backgroundColor: COLORS.surfaceElevated, alignItems: 'center', justifyContent: 'center' },
-  foodName: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary },
-  foodBrand: { fontSize: 12, color: COLORS.textTertiary, marginTop: 1 },
-  chipRow: { flexDirection: 'row', gap: 4, marginTop: 6 },
-  chip: { backgroundColor: COLORS.surfaceElevated, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 },
-  chipText: { fontSize: 10, fontWeight: '600', color: COLORS.textSecondary },
-  loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: SPACING.md },
-  loadingText: { fontSize: 14, color: COLORS.textSecondary },
-  emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: SPACING.sm },
-  promptWrap: { alignItems: 'center', paddingTop: 60, gap: SPACING.sm },
-  emptyTitle: { fontSize: 16, fontWeight: '700', color: COLORS.textPrimary },
-  emptySub: { fontSize: 13, color: COLORS.textSecondary },
+  content:   { padding: 16, paddingBottom: 40 },
+  center:    { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: COLORS.background },
+
+  header: { marginBottom: 20 },
+  title:  { fontSize: 26, fontWeight: "800", color: COLORS.textDark },
+  date:   { fontSize: 13, color: COLORS.textLight, marginTop: 3 },
+
+  card: {
+    backgroundColor: COLORS.surface, borderRadius: 16, padding: 16, marginBottom: 14,
+    elevation: 2, shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06, shadowRadius: 8,
+  },
+  cardLabel:   { fontSize: 11, fontWeight: "700", color: COLORS.textMuted, letterSpacing: 1.2, textTransform: "uppercase" },
+  statRow:     { flexDirection: "row", justifyContent: "space-around", marginTop: 4 },
+  statBox:     { alignItems: "center" },
+  statVal:     { fontSize: 20, fontWeight: "800", color: COLORS.textDark },
+  statLbl:     { fontSize: 11, color: COLORS.textMuted, marginTop: 2, fontWeight: "500" },
+  statDivider: { width: 1, backgroundColor: COLORS.border },
+
+  sectionTitle: { fontSize: 12, fontWeight: "700", color: COLORS.textLight, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10, marginTop: 4 },
+  photoEntryCard: {
+    flexDirection: "row", alignItems: "center",
+    backgroundColor: "#EDE9FE", borderRadius: 18,
+    borderWidth: 1.5, borderColor: "#A78BFA",
+    paddingVertical: 14, paddingHorizontal: 16,
+    marginBottom: 20,
+  },
+  photoEntryTitle: { fontSize: 14, fontWeight: "800", color: "#1B1730" },
+  photoEntrySub: { fontSize: 12, color: "#6B667D", marginTop: 1 },
+  photoEntryArrow: { fontSize: 18, color: "#4C2E96", fontWeight: "700" },
+
+  mealCard: {
+    backgroundColor: COLORS.surface, borderRadius: 16, padding: 14, marginBottom: 12,
+    elevation: 2, shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06, shadowRadius: 8,
+  },
+  mealHeader:  { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  mealLeft:    { flexDirection: "row", alignItems: "center", gap: 10 },
+  mealIconBox: { width: 42, height: 42, borderRadius: 11, justifyContent: "center", alignItems: "center" },
+  mealLabel:   { fontSize: 15, fontWeight: "700", color: COLORS.textDark },
+  mealCal:     { fontSize: 12, color: COLORS.textMuted, marginTop: 1 },
+  addBtn:      { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
+  addBtnText:  { color: COLORS.surface, fontWeight: "700", fontSize: 13 },
+
+  foodList:   { marginTop: 12, borderTopWidth: 1, borderTopColor: COLORS.border, paddingTop: 10, gap: 10 },
+  foodRow:    { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  foodName:   { fontSize: 14, fontWeight: "600", color: COLORS.textDark },
+  foodMeta:   { fontSize: 11, color: COLORS.textMuted, marginTop: 2 },
+  foodCal:    { fontSize: 13, fontWeight: "700" },
+  delBtn:     { width: 24, height: 24, borderRadius: 12, backgroundColor: "#fce4ec", justifyContent: "center", alignItems: "center" },
+  delBtnText: { fontSize: 10, color: COLORS.error, fontWeight: "700" },
+
+  histCard:    { backgroundColor: COLORS.surface, borderRadius: 16, padding: 4, marginBottom: 14, elevation: 2, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8 },
+  histRow:     { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 12 },
+  histDate:    { fontSize: 14, fontWeight: "700", color: COLORS.textDark },
+  histCount:   { fontSize: 11, color: COLORS.textMuted, marginTop: 1 },
+  histBarBg:   { height: 6, backgroundColor: COLORS.border, borderRadius: 3, overflow: "hidden", marginBottom: 4 },
+  histBarFill: { height: "100%", borderRadius: 3 },
+  histCal:     { fontSize: 12, fontWeight: "700", textAlign: "right" },
 });

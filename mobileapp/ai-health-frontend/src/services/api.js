@@ -30,7 +30,11 @@ if (!API_URL && __DEV__) {
 
 const API = axios.create({
   baseURL: API_URL || "http://localhost:5000/api",
-  timeout: 15000,
+  // 45s, not 15s — Render's free tier spins the backend down after idle,
+  // and waking it back up (boot + reconnect to MongoDB) can take 30-60s.
+  // 15s guaranteed a timeout on every cold-start request; this just tolerates
+  // the wake-up instead of giving up right as the backend is booting.
+  timeout: 45000,
 });
 
 API.interceptors.request.use(

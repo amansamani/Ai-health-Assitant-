@@ -1,43 +1,98 @@
-import React, { useEffect } from 'react';
-import { View } from 'react-native';
-import Animated, { useSharedValue, useAnimatedProps, withTiming, Easing } from 'react-native-reanimated';
-import Svg, { Circle } from 'react-native-svg';
+import React, { useEffect, useRef } from "react";
+import { View, Text, StyleSheet, Animated } from "react-native";
+import Svg, { Circle } from "react-native-svg";
+import { Ionicons } from "@expo/vector-icons";
+import { COLORS } from "../constants/theme";
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 export default function CircularProgressRing({
-  progress = 0, size = 96, strokeWidth = 8,
-  color = '#22C55E', trackColor = '#ECECF4', children,
+  size = 110,
+  strokeWidth = 10,
+  progress = 0,       // 0 → 1
+  icon = null,        // Ionicons name — takes priority over valueText when set
+  renderIcon = null,  // custom node (e.g. an animated SVG icon) — takes priority over `icon`
+  valueText = "",
+  label = "",
+  color = COLORS.primary,
 }) {
-  const clamped = Math.max(0, Math.min(1, progress));
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
 
-  const animated = useSharedValue(0);
-  useEffect(() => {
-    animated.value = withTiming(clamped, { duration: 900, easing: Easing.out(Easing.cubic) });
-  }, [clamped]);
+  const animatedProgress = useRef(new Animated.Value(0)).current;
 
-  const animatedProps = useAnimatedProps(() => ({
-    strokeDashoffset: circumference * (1 - animated.value),
-  }));
+  useEffect(() => {
+    Animated.timing(animatedProgress, {
+      toValue: progress,
+      duration: 800,
+      useNativeDriver: false,
+    }).start();
+  }, [progress]);
+
+  const strokeDashoffset = animatedProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [circumference, 0],
+  });
 
   return (
-    <View style={{ width: size, height: size }}>
+    <View style={styles.container}>
       <Svg width={size} height={size}>
-        <Circle cx={size/2} cy={size/2} r={radius} stroke={trackColor} strokeWidth={strokeWidth} fill="none" />
+        {/* Background ring */}
+        <Circle
+          stroke={COLORS.border}
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          strokeWidth={strokeWidth}
+          fill="none"
+        />
+
+        {/* Progress ring */}
         <AnimatedCircle
-          cx={size/2} cy={size/2} r={radius} stroke={color} strokeWidth={strokeWidth}
-          fill="none" strokeLinecap="round" strokeDasharray={circumference}
-          animatedProps={animatedProps}
-          transform={`rotate(-90 ${size/2} ${size/2})`}
+          stroke={color}
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          strokeWidth={strokeWidth}
+          fill="none"
+          strokeDasharray={`${circumference} ${circumference}`}
+          strokeDashoffset={strokeDashoffset}
+          strokeLinecap="round"
+          rotation="-90"
+          origin={`${size / 2}, ${size / 2}`}
         />
       </Svg>
-      {children && (
-        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' }}>
-          {children}
-        </View>
-      )}
+
+      {/* Center text */}
+      <View style={styles.center}>
+        {renderIcon
+          ? renderIcon
+          : icon
+          ? <Ionicons name={icon} size={22} color={color} />
+          : <Text style={styles.value}>{valueText}</Text>}
+        <Text style={styles.label}>{label}</Text>
+      </View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  center: {
+    position: "absolute",
+    alignItems: "center",
+  },
+  value: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: COLORS.textDark,
+  },
+  label: {
+    fontSize: 12,
+    color: COLORS.textLight,
+    marginTop: 2,
+  },
+});
