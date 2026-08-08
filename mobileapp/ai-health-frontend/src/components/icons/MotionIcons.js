@@ -62,23 +62,29 @@ function IconFrame({ size, children }) {
 }
 
 // ── Steps ────────────────────────────────────────────────────────────────────
+// The two footprint shapes sit a little below/right of true center by design
+// (a diagonal stride reads more naturally that way), so every Svg here uses a
+// shifted viewBox to recenter the *visual* content in its frame instead of
+// literally centering the coordinate origin.
+const STEPS_VB = "0.25 1 32 32";
+
 export function StepsIcon({ trigger, size = 24, color = "#22C55E" }) {
   return (
     <IconFrame size={size}>
       <Piece trigger={trigger} delay={0} size={size}>
-        <Svg width={size} height={size} viewBox="0 0 32 32">
-          <Ellipse cx="11" cy="21" rx="4" ry="6" fill={color} transform="rotate(-12 11 21)" />
-          <Circle cx="9" cy="14.5" r="1.3" fill={color} />
-          <Circle cx="11.6" cy="13.6" r="1.3" fill={color} />
-          <Circle cx="13.8" cy="14.6" r="1.1" fill={color} />
+        <Svg width={size} height={size} viewBox={STEPS_VB}>
+          <Ellipse cx="11" cy="19" rx="4" ry="6" fill={color} transform="rotate(-12 11 19)" />
+          <Circle cx="9" cy="12.5" r="1.3" fill={color} />
+          <Circle cx="11.6" cy="11.6" r="1.3" fill={color} />
+          <Circle cx="13.8" cy="12.6" r="1.1" fill={color} />
         </Svg>
       </Piece>
       <Piece trigger={trigger} delay={130} size={size}>
-        <Svg width={size} height={size} viewBox="0 0 32 32">
-          <Ellipse cx="21.5" cy="17" rx="4" ry="6" fill={color} transform="rotate(10 21.5 17)" />
-          <Circle cx="19.6" cy="10" r="1.1" fill={color} />
-          <Circle cx="21.8" cy="9.3" r="1.3" fill={color} />
-          <Circle cx="24" cy="10.2" r="1.3" fill={color} />
+        <Svg width={size} height={size} viewBox={STEPS_VB}>
+          <Ellipse cx="21.5" cy="15" rx="4" ry="6" fill={color} transform="rotate(10 21.5 15)" />
+          <Circle cx="19.6" cy="8" r="1.1" fill={color} />
+          <Circle cx="21.8" cy="7.3" r="1.3" fill={color} />
+          <Circle cx="24" cy="8.2" r="1.3" fill={color} />
         </Svg>
       </Piece>
     </IconFrame>
@@ -123,23 +129,24 @@ function CrescentShape({ color, size = 20, cutDx = 5, cutDy = -4, maskId }) {
 }
 
 export function SleepIcon({ trigger, size = 24, color = "#4C2E96" }) {
+  const SLEEP_VB = "-2 -1 32 32";
   return (
     <IconFrame size={size}>
       <Piece trigger={trigger} delay={0} size={size}>
-        <Svg width={size} height={size} viewBox="0 0 32 32">
-          <G transform="translate(3,3)">
+        <Svg width={size} height={size} viewBox={SLEEP_VB}>
+          <G transform="translate(3,5)">
             <CrescentShape color={color} size={20} cutDx={6} cutDy={-4} maskId="sleepCrescent" />
           </G>
         </Svg>
       </Piece>
       <Piece trigger={trigger} delay={210} size={size}>
-        <Svg width={size} height={size} viewBox="0 0 32 32">
-          <Circle cx="24" cy="9" r="1.5" fill={color} />
+        <Svg width={size} height={size} viewBox={SLEEP_VB}>
+          <Circle cx="23" cy="11" r="1.5" fill={color} />
         </Svg>
       </Piece>
       <Piece trigger={trigger} delay={330} size={size}>
-        <Svg width={size} height={size} viewBox="0 0 32 32">
-          <Circle cx="27" cy="15" r="1" fill={color} />
+        <Svg width={size} height={size} viewBox={SLEEP_VB}>
+          <Circle cx="25" cy="17" r="1" fill={color} />
         </Svg>
       </Piece>
     </IconFrame>

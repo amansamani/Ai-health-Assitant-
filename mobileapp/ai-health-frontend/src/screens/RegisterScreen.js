@@ -1,157 +1,54 @@
-import { View, Text, Pressable, StyleSheet, Animated } from "react-native";
-import { useState, useRef, useContext } from "react";
-import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
-import { AuthContext } from "../context/AuthContext";
-import API from "../services/api";
-import { COLORS } from "../constants/theme";
-import AuthShell from "../components/auth/AuthShell";
-import AuthHero from "../components/auth/AuthHero";
-import FormField from "../components/auth/FormField";
-import PrimaryButton from "../components/auth/PrimaryButton";
-import { Divider, Banner, FooterLink } from "../components/auth/AuthBits";
-import GoogleSignInButton from "../components/GoogleSignInButton";
-
-const GOALS = [
-  { key: "bulk", label: "Bulk", icon: "barbell-outline", desc: "Build mass", color: COLORS.warning },
-  { key: "lean", label: "Lean", icon: "flame-outline", desc: "Cut fat", color: COLORS.error },
-  { key: "fit", label: "Fit", icon: "flash-outline", desc: "Stay healthy", color: COLORS.success },
-];
-
-function GoalCard({ goal, selected, onPress }) {
-  const scale = useRef(new Animated.Value(1)).current;
-  const onIn = () => Animated.spring(scale, { toValue: 0.95, useNativeDriver: true, speed: 40 }).start();
-  const onOut = () => Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 40 }).start();
-  return (
-    <Pressable
-      onPress={onPress}
-      onPressIn={onIn}
-      onPressOut={onOut}
-      style={{ flex: 1 }}
-      accessibilityRole="button"
-      accessibilityState={{ selected }}
-      accessibilityLabel={`${goal.label}: ${goal.desc}`}
-    >
-      <Animated.View
-        style={[
-          styles.goalCard,
-          selected && { borderColor: goal.color, backgroundColor: goal.color + "12" },
-          { transform: [{ scale }] },
-        ]}
-      >
-        <Ionicons name={goal.icon} size={22} color={selected ? goal.color : COLORS.textMuted} />
-        <Text style={[styles.goalLabel, selected && { color: goal.color }]}>{goal.label}</Text>
-        <Text style={styles.goalDesc}>{goal.desc}</Text>
-      </Animated.View>
-    </Pressable>
-  );
-}
+import React, { useState, useContext } from 'react';
+import { Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { useRouter } from 'expo-router';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import AuthShell from '../components/auth/AuthShell';
+import FormField from '../components/auth/FormField';
+import PrimaryButton from '../components/auth/PrimaryButton';
+import { AuthContext } from '../context/AuthContext';
+import API from '../services/api';
+import { COLORS, SPACING } from '../constants/theme';
 
 export default function RegisterScreen() {
   const router = useRouter();
   const { login } = useContext(AuthContext);
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [goal, setGoal] = useState("lean");
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
 
   const handleRegister = async () => {
-    if (!name || !email || !password) {
-      setError("Please fill in all fields");
-      return;
-    }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      setError("Please enter a valid email");
-      return;
-    }
-    setError("");
+    if (!name || !email || !password) { Alert.alert('Missing fields', 'Please fill in all fields.'); return; }
+    if (password !== confirm) { Alert.alert('Mismatch', 'Passwords do not match.'); return; }
+    if (password.length < 6) { Alert.alert('Weak password', 'Password must be at least 6 characters.'); return; }
     setLoading(true);
     try {
-      const { data } = await API.post("/auth/register", { name, email, password, goal });
-      router.push({
-        pathname: "/(auth)/health-profile",
-        params: { name, email, password, token: data.token, workoutGoal: goal },
-      });
+      const res = await API.post('/auth/register', { name, email, password });
+      await login(res.data.token);
+      router.replace('/(auth)/health-profile');
     } catch (err) {
-      setError(err.response?.data?.message || err.message);
-    } finally {
-      setLoading(false);
-    }
+      Alert.alert('Registration failed', err.response?.data?.message || 'Something went wrong.');
+    } finally { setLoading(false); }
   };
 
   return (
-    <AuthShell>
-      <AuthHero icon="person-add-outline" title="Create account" subtitle="Start your fitness journey today" size="compact" />
-
-      <Banner text={error} />
-
-      <View style={styles.card}>
-        <FormField
-          label="Full name"
-          icon="person-outline"
-          placeholder="Jane Doe"
-          value={name}
-          onChangeText={setName}
-          autoCapitalize="words"
-        />
-        <FormField
-          label="Email address"
-          icon="mail-outline"
-          placeholder="you@example.com"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-        />
-        <FormField
-          label="Password"
-          icon="lock-closed-outline"
-          placeholder="At least 6 characters"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.cardLabel}>Fitness goal</Text>
-        <View style={styles.goalRow}>
-          {GOALS.map((g) => (
-            <GoalCard key={g.key} goal={g} selected={goal === g.key} onPress={() => setGoal(g.key)} />
-          ))}
-        </View>
-      </View>
-
-      <PrimaryButton title="Continue" onPress={handleRegister} loading={loading} />
-
-      <Divider />
-
-      <GoogleSignInButton onSuccess={(user) => login(user.token)} />
-
-      <View style={{ height: 16 }} />
-
-      <FooterLink prompt="Already have an account?" label="Sign in" onPress={() => router.back()} />
-
-      <View style={{ height: 24 }} />
+    <AuthShell title="Create account" subtitle="Start your transformation today.">
+      <FormField label="Full Name" icon="person-outline" placeholder="John Doe" value={name} onChangeText={setName} />
+      <FormField label="Email" icon="mail-outline" placeholder="you@example.com" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+      <FormField label="Password" icon="lock-closed-outline" placeholder="Min 6 characters" value={password} onChangeText={setPassword} secureTextEntry />
+      <FormField label="Confirm Password" icon="lock-closed-outline" placeholder="Repeat password" value={confirm} onChangeText={setConfirm} secureTextEntry />
+      <PrimaryButton title="Create Account" onPress={handleRegister} loading={loading} style={{ marginTop: SPACING.sm }} />
+      <Animated.View entering={FadeInDown.delay(400)} style={styles.loginRow}>
+        <Text style={styles.loginText}>Already have an account? </Text>
+        <TouchableOpacity onPress={() => router.push('/(auth)/login')}><Text style={styles.loginLink}>Sign In</Text></TouchableOpacity>
+      </Animated.View>
     </AuthShell>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: COLORS.surface, borderRadius: 24,
-    padding: 20, marginBottom: 16,
-    boxShadow: "0px 4px 20px rgba(23,15,54,0.08)",
-  },
-  cardLabel: { fontSize: 13, fontWeight: "800", color: COLORS.textDark, letterSpacing: 0.2, marginBottom: 14 },
-  goalRow: { flexDirection: "row", gap: 10 },
-  goalCard: {
-    flex: 1, backgroundColor: COLORS.surfaceMuted,
-    borderRadius: 16, paddingVertical: 14, gap: 5,
-    alignItems: "center", borderWidth: 1.5, borderColor: COLORS.border,
-  },
-  goalLabel: { fontSize: 13, fontWeight: "800", color: COLORS.textDark },
-  goalDesc: { fontSize: 10, color: COLORS.textMuted, textAlign: "center", fontWeight: "500" },
+  loginRow: { flexDirection: 'row', justifyContent: 'center', marginTop: SPACING.xl },
+  loginText: { fontSize: 14, color: COLORS.textSecondary },
+  loginLink: { fontSize: 14, color: COLORS.primary, fontWeight: '700' },
 });

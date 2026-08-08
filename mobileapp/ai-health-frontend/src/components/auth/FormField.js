@@ -1,109 +1,45 @@
-import { View, Text, TextInput, Pressable, Animated, StyleSheet } from "react-native";
-import { useRef, useState } from "react";
-import { Ionicons } from "@expo/vector-icons";
-import { COLORS } from "../../constants/theme";
+import React, { useState } from 'react';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { COLORS, RADIUS, SPACING } from '../../constants/theme';
 
-// A visible label (not placeholder-only, per WCAG/form UX guidance) plus a
-// vector icon (not emoji) and an animated focus border. Reused across every
-// auth-flow input so they all look and behave identically.
-export default function FormField({
-  label,
-  icon,
-  placeholder,
-  value,
-  onChangeText,
-  secureTextEntry,
-  keyboardType,
-  autoCapitalize = "none",
-  error,
-  maxLength,
-  helperText,
-  onBlur: onBlurProp,
-}) {
+export default function FormField({ label, icon, secureTextEntry = false, error, ...props }) {
   const [focused, setFocused] = useState(false);
-  const [reveal, setReveal] = useState(false);
-  const borderAnim = useRef(new Animated.Value(0)).current;
-
-  const handleFocus = () => {
-    setFocused(true);
-    Animated.timing(borderAnim, { toValue: 1, duration: 180, useNativeDriver: false }).start();
-  };
-  const handleBlur = () => {
-    setFocused(false);
-    Animated.timing(borderAnim, { toValue: 0, duration: 180, useNativeDriver: false }).start();
-    onBlurProp?.();
-  };
-
-  const borderColor = error
-    ? COLORS.error
-    : borderAnim.interpolate({ inputRange: [0, 1], outputRange: [COLORS.border, COLORS.primary] });
-
-  const isPassword = !!secureTextEntry;
-
+  const [showPassword, setShowPassword] = useState(false);
   return (
-    <View style={styles.wrap}>
-      {label ? <Text style={styles.label}>{label}</Text> : null}
-      <Animated.View style={[styles.inputWrap, { borderColor }]}>
-        {icon ? (
-          <Ionicons
-            name={icon}
-            size={18}
-            color={focused ? COLORS.primary : COLORS.textMuted}
-            style={styles.icon}
-          />
-        ) : null}
+    <View style={styles.wrapper}>
+      {label && <Text style={styles.label}>{label}</Text>}
+      <View style={[styles.inputWrap, focused && { borderColor: COLORS.primary, backgroundColor: COLORS.surfaceElevated }]}>
+        {icon && <Ionicons name={icon} size={18} color={focused ? COLORS.primary : COLORS.textTertiary} style={styles.icon} />}
         <TextInput
+          {...props}
           style={styles.input}
-          placeholder={placeholder}
-          placeholderTextColor={COLORS.textMuted}
-          value={value}
-          onChangeText={onChangeText}
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-          secureTextEntry={isPassword && !reveal}
-          keyboardType={keyboardType ?? "default"}
-          autoCapitalize={autoCapitalize}
-          maxLength={maxLength}
-          autoComplete={isPassword ? "password" : keyboardType === "email-address" ? "email" : undefined}
-          textContentType={isPassword ? "password" : keyboardType === "email-address" ? "emailAddress" : undefined}
-          accessibilityLabel={label ?? placeholder}
+          placeholderTextColor={COLORS.textTertiary}
+          secureTextEntry={secureTextEntry && !showPassword}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
         />
-        {isPassword ? (
-          <Pressable
-            onPress={() => setReveal((r) => !r)}
-            hitSlop={10}
-            style={styles.toggle}
-            accessibilityRole="button"
-            accessibilityLabel={reveal ? "Hide password" : "Show password"}
-          >
-            <Ionicons name={reveal ? "eye-off-outline" : "eye-outline"} size={18} color={COLORS.textMuted} />
-          </Pressable>
-        ) : null}
-      </Animated.View>
-      {error ? (
-        <Text style={styles.errorText}>{error}</Text>
-      ) : helperText ? (
-        <Text style={styles.helperText}>{helperText}</Text>
-      ) : null}
+        {secureTextEntry && (
+          <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
+            <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={18} color={COLORS.textTertiary} />
+          </TouchableOpacity>
+        )}
+      </View>
+      {error && <Text style={styles.error}>{error}</Text>}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { marginBottom: 14 },
-  label: { fontSize: 13, fontWeight: "700", color: COLORS.textDark, marginBottom: 6, letterSpacing: 0.1 },
+  wrapper: { marginBottom: SPACING.md },
+  label: { fontSize: 13, fontWeight: '600', color: COLORS.textSecondary, marginBottom: SPACING.sm },
   inputWrap: {
-    flexDirection: "row", alignItems: "center",
-    backgroundColor: COLORS.surfaceMuted, borderRadius: 14,
-    borderWidth: 1.5, paddingHorizontal: 14,
-    minHeight: 50,
+    flexDirection: 'row', alignItems: 'center', borderRadius: RADIUS.md,
+    borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.surface,
+    paddingHorizontal: SPACING.md, height: 52,
   },
-  icon: { marginRight: 10 },
-  input: {
-    flex: 1, paddingVertical: 13,
-    fontSize: 15, color: COLORS.textDark, fontWeight: "500",
-  },
-  toggle: { padding: 6, marginLeft: 4, minWidth: 30, minHeight: 30, alignItems: "center", justifyContent: "center" },
-  errorText: { color: COLORS.error, fontSize: 12, fontWeight: "600", marginTop: 6 },
-  helperText: { color: COLORS.textMuted, fontSize: 12, fontWeight: "500", marginTop: 6 },
+  icon: { marginRight: SPACING.sm },
+  input: { flex: 1, fontSize: 15, color: COLORS.textPrimary, fontWeight: '500' },
+  eyeBtn: { padding: SPACING.xs },
+  error: { fontSize: 12, color: COLORS.danger, marginTop: SPACING.xs },
 });

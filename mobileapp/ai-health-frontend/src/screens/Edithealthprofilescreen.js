@@ -1,497 +1,148 @@
-import React, { useState, useRef, useEffect, useContext } from "react";
-import {
-  View, Text, TextInput, StyleSheet, ScrollView,
-  Pressable, ActivityIndicator, Animated, KeyboardAvoidingView,
-  Platform, Alert,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
-import { Ionicons } from "@expo/vector-icons";
-import { AuthContext } from "../context/AuthContext";
-import API from "../services/api";
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
+import API from '../services/api';
+import { COLORS, SHADOWS, RADIUS, SPACING } from '../constants/theme';
 
-const parseList = (str) =>
-  str.split(",").map(s => s.trim()).filter(Boolean);
+function SelectChip({ label, selected, onPress, color = COLORS.primary }) {
+  return (
+    <TouchableOpacity style={[styles.chip, selected && { backgroundColor: color, borderColor: color }]} onPress={onPress}>
+      <Text style={[styles.chipText, selected && { color: '#fff' }]}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
 
-const listToString = (arr) =>
-  Array.isArray(arr) ? arr.join(", ") : "";
-
-// ── Animated Input ────────────────────────────────────────────────────────────
-function AnimatedInput({ icon, label, placeholder, value, onChangeText, keyboardType }) {
+function EditInput({ label, icon, value, onChangeText, keyboardType = 'numeric', placeholder, unit }) {
   const [focused, setFocused] = useState(false);
-  const borderAnim = useRef(new Animated.Value(0)).current;
-
-  const onFocus = () => {
-    setFocused(true);
-    Animated.timing(borderAnim, { toValue: 1, duration: 180, useNativeDriver: false }).start();
-  };
-  const onBlur = () => {
-    setFocused(false);
-    Animated.timing(borderAnim, { toValue: 0, duration: 180, useNativeDriver: false }).start();
-  };
-
-  const borderColor = borderAnim.interpolate({
-    inputRange: [0, 1], outputRange: ["#E4E0F0", "#4C2E96"],
-  });
-
   return (
     <View style={styles.inputGroup}>
-      {label ? <Text style={styles.inputLabel}>{label}</Text> : null}
-      <Animated.View style={[styles.inputWrap, { borderColor }]}>
-        <Text style={[styles.inputIcon, { opacity: focused ? 1 : 0.5 }]}>{icon}</Text>
-        <TextInput
-          style={styles.input}
-          placeholder={placeholder}
-          placeholderTextColor="#E4E0F0"
-          value={value}
-          onChangeText={onChangeText}
-          onFocus={onFocus}
-          onBlur={onBlur}
-          keyboardType={keyboardType ?? "default"}
-          autoCapitalize="none"
-        />
-      </Animated.View>
+      <Text style={styles.inputLabel}>{label}</Text>
+      <View style={[styles.inputWrap, focused && { borderColor: COLORS.primary }]}>
+        <Ionicons name={icon} size={18} color={focused ? COLORS.primary : COLORS.textTertiary} />
+        <TextInput style={styles.input} value={value} onChangeText={onChangeText} keyboardType={keyboardType} placeholder={placeholder} placeholderTextColor={COLORS.textTertiary} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} />
+        {unit && <Text style={styles.unit}>{unit}</Text>}
+      </View>
     </View>
   );
 }
 
-// ── Selector Card ─────────────────────────────────────────────────────────────
-function SelectorCard({ option, selected, color, onPress }) {
-  const scale = useRef(new Animated.Value(1)).current;
-  const onIn  = () => Animated.spring(scale, { toValue: 0.95, useNativeDriver: true }).start();
-  const onOut = () => Animated.spring(scale, { toValue: 1,    useNativeDriver: true }).start();
-
-  return (
-    <Pressable onPress={onPress} onPressIn={onIn} onPressOut={onOut} style={{ flex: 1 }}>
-      <Animated.View style={[
-        styles.selectorCard,
-        selected && { borderColor: color, borderWidth: 2, backgroundColor: color + "12" },
-        { transform: [{ scale }] },
-      ]}>
-        {selected && <View style={[styles.selDot, { backgroundColor: color }]} />}
-        <Text style={styles.selEmoji}>{option.emoji}</Text>
-        <Text style={[styles.selLabel, selected && { color }]}>{option.label}</Text>
-        {option.desc ? <Text style={styles.selDesc}>{option.desc}</Text> : null}
-      </Animated.View>
-    </Pressable>
-  );
-}
-
-// ── Chip ──────────────────────────────────────────────────────────────────────
-function Chip({ option, selected, color, onPress }) {
-  return (
-    <Pressable onPress={onPress}>
-      <View style={[
-        styles.chip,
-        selected && { borderColor: color, borderWidth: 2, backgroundColor: color + "14" },
-      ]}>
-        <Text style={styles.chipEmoji}>{option.emoji}</Text>
-        <Text style={[styles.chipText, selected && { color, fontWeight: "800" }]}>
-          {option.label}
-        </Text>
-      </View>
-    </Pressable>
-  );
-}
-
-// ── Section ───────────────────────────────────────────────────────────────────
-function Section({ icon, title, children, delay }) {
-  const opacity    = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(16)).current;
+export default function EditHealthProfileScreen() {
+  const router = useRouter();
+  const [form, setForm] = useState({ age: '', gender: '', height: '', weight: '', activityLevel: '', goal: '', dietType: '', diseases: '', allergies: '' });
+  const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(opacity,    { toValue: 1, duration: 450, delay, useNativeDriver: true }),
-      Animated.timing(translateY, { toValue: 0, duration: 450, delay, useNativeDriver: true }),
-    ]).start();
+    const load = async () => {
+      try {
+        const res = await API.get('/health');
+        const p = res.data;
+        if (p) setForm({ age: String(p.age || ''), gender: p.gender || '', height: String(p.height || ''), weight: String(p.weight || ''), activityLevel: p.activityLevel || '', goal: p.goal || '', dietType: p.dietType || '', diseases: (p.diseases || []).join(', '), allergies: (p.allergies || []).join(', ') });
+      } catch (e) {}
+      finally { setFetching(false); }
+    };
+    load();
   }, []);
 
-  return (
-    <Animated.View style={[styles.section, { opacity, transform: [{ translateY }] }]}>
-      <View style={styles.sectionHeader}>
-        <View style={styles.sectionIconWrap}>
-          <Text style={styles.sectionIcon}>{icon}</Text>
-        </View>
-        <Text style={styles.sectionTitle}>{title}</Text>
-      </View>
-      {children}
-    </Animated.View>
-  );
-}
+  const set = (key, val) => setForm(prev => ({ ...prev, [key]: val }));
 
-// ── Constants ─────────────────────────────────────────────────────────────────
-const GENDER_OPTIONS = [
-  { key: "male",   label: "Male",   emoji: "👨" },
-  { key: "female", label: "Female", emoji: "👩" },
-];
-
-const ACTIVITY_OPTIONS = [
-  { key: "sedentary", label: "Sedentary", emoji: "🛋️", desc: "Little movement",  color: "#9A94AE" },
-  { key: "moderate",  label: "Moderate",  emoji: "🚶", desc: "Light exercise",    color: "#F59E0B" },
-  { key: "active",    label: "Active",    emoji: "🏃", desc: "Regular training",  color: "#22C55E" },
-];
-
-const GOAL_OPTIONS = [
-  { key: "lose",     label: "Lose",     emoji: "🔥", desc: "Cut fat",      color: "#EF4444" },
-  { key: "maintain", label: "Maintain", emoji: "⚖️", desc: "Stay healthy", color: "#4C2E96" },
-  { key: "gain",     label: "Gain",     emoji: "💪", desc: "Build mass",   color: "#F59E0B" },
-];
-
-const DIET_OPTIONS = [
-  { key: "veg",     label: "Veg",     emoji: "🥦" },
-  { key: "non-veg", label: "Non-Veg", emoji: "🍗" },
-  { key: "vegan",   label: "Vegan",   emoji: "🌱" },
-];
-
-// ── Main Screen ───────────────────────────────────────────────────────────────
-export default function EditHealthProfileScreen({ navigation }) {
-  const { fetchUserGoal } = useContext(AuthContext);
-
-  const [form, setForm] = useState({
-    age: "", gender: "male", height: "", weight: "",
-    activityLevel: "moderate", goal: "maintain", dietType: "non-veg",
-    diseases: "", allergies: "",
-  });
-  const [loading, setLoading]           = useState(true);
-  const [saving, setSaving]             = useState(false);
-  const [saved, setSaved]               = useState(false);
-  const [regenerating, setRegenerating] = useState(false);
-
-  const headerOpacity = useRef(new Animated.Value(0)).current;
-  const headerY       = useRef(new Animated.Value(-10)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(headerOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
-      Animated.timing(headerY,       { toValue: 0, duration: 500, useNativeDriver: true }),
-    ]).start();
-    fetchCurrentProfile();
-  }, []);
-
-  const fetchCurrentProfile = async () => {
+  const handleSave = async () => {
+    const { age, gender, height, weight, activityLevel, goal, dietType } = form;
+    if (!age || !gender || !height || !weight || !activityLevel || !goal || !dietType) { Alert.alert('Missing fields', 'Please fill in all required fields.'); return; }
+    setLoading(true);
     try {
-      const res = await API.get("/health");
-      const d = res.data ?? {};
-      setForm({
-        age:           String(d.age           ?? ""),
-        gender:        d.gender        ?? "male",
-        height:        String(d.height  ?? ""),
-        weight:        String(d.weight  ?? ""),
-        activityLevel: d.activityLevel ?? "moderate",
-        goal:          d.goal          ?? "maintain",
-        dietType:      d.dietType      ?? "non-veg",
-        diseases:      listToString(d.diseases),
-        allergies:     listToString(d.allergies),
-      });
+      await API.post('/health', { age: parseInt(age), gender, height: parseFloat(height), weight: parseFloat(weight), activityLevel, goal, dietType, diseases: form.diseases ? form.diseases.split(',').map(s => s.trim()).filter(Boolean) : [], allergies: form.allergies ? form.allergies.split(',').map(s => s.trim()).filter(Boolean) : [] });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert('Updated! ✅', 'Your health profile has been saved.', [{ text: 'OK', onPress: () => router.back() }]);
     } catch (err) {
-      console.log("Fetch health profile error:", err.message);
-    } finally {
-      setLoading(false);
-    }
+      Alert.alert('Error', err.response?.data?.message || 'Could not save profile.');
+    } finally { setLoading(false); }
   };
 
-  const handleChange = (key, val) => setForm((prev) => ({ ...prev, [key]: val }));
-
-  const saveProfile = async () => {
-    if (!form.age || !form.height || !form.weight) {
-      Alert.alert("Missing Fields", "Please fill in Age, Height, and Weight.");
-      return;
-    }
-    try {
-      setSaving(true);
-      await API.put("/health", {
-        age:           Number(form.age),
-        gender:        form.gender,
-        height:        Number(form.height),
-        weight:        Number(form.weight),
-        activityLevel: form.activityLevel,
-        goal:          form.goal,
-        dietType:      form.dietType,
-        diseases:      parseList(form.diseases),
-        allergies:     parseList(form.allergies),
-      });
-      const GOAL_TO_USER = { lose: "lean", maintain: "fit", gain: "bulk" };
-      await API.put("/user/goal", { goal: GOAL_TO_USER[form.goal] ?? "fit" });
-      await fetchUserGoal();
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2500);
-    } catch (err) {
-      Alert.alert("Error", err.response?.data?.message || "Failed to save profile.");
-      return;
-    } finally {
-      setSaving(false);
-    }
-
-    // save succeeded — now regenerate
-    try {
-      setRegenerating(true);
-      await API.post("/nutrition/generate");
-      Alert.alert("✅ Done!", "Diet plan updated with your new profile.", [
-        { text: "View Plan", onPress: () => navigation?.navigate("NutritionDashboard") },
-        { text: "OK" },
-      ]);
-    } catch {
-      Alert.alert("⚠️ Saved", "Profile saved but plan regeneration failed. Try again later.");
-    } finally {
-      setRegenerating(false);
-    }
-  };
-
-  const regeneratePlan = async () => {
-    try {
-      setRegenerating(true);
-      await API.post("/nutrition/generate");
-      Alert.alert("✅ Done!", "Diet plan updated with your new profile.", [
-        { text: "View Plan", onPress: () => navigation?.navigate("NutritionDashboard") },
-        { text: "OK" },
-      ]);
-    } catch {
-      Alert.alert("Error", "Could not regenerate plan. Try again.");
-    } finally {
-      setRegenerating(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#4C2E96" />
-        <Text style={styles.loadingText}>Loading your profile…</Text>
-      </View>
-    );
-  }
+  if (fetching) return <View style={[styles.container, styles.center]}><ActivityIndicator size="large" color={COLORS.primary} /></View>;
 
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={{ flex: 1 }}
-      >
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scroll}
-          keyboardShouldPersistTaps="handled"
-        >
-          {/* ── HEADER ── */}
-          <Animated.View style={[styles.headerRow, { opacity: headerOpacity, transform: [{ translateY: headerY }] }]}>
-            <Pressable onPress={() => navigation?.goBack()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Go back">
-              <Ionicons name="chevron-back" size={20} color="#1B1730" />
-            </Pressable>
-            <View>
-              <Text style={styles.headerTitle}>Health Profile</Text>
-              <Text style={styles.headerSub}>Update your body stats</Text>
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+          <Ionicons name="chevron-back" size={22} color={COLORS.textPrimary} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Edit Health Profile</Text>
+        <View style={{ width: 40 }} />
+      </View>
+
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+          <Animated.View entering={FadeInDown.delay(80)} style={styles.card}>
+            <View style={styles.row2}>
+              <EditInput label="Age" icon="calendar-outline" value={form.age} onChangeText={v => set('age', v)} placeholder="25" unit="yrs" />
+              <EditInput label="Height" icon="resize-outline" value={form.height} onChangeText={v => set('height', v)} placeholder="170" unit="cm" />
             </View>
-            <View style={{ width: 40 }} />
+            <EditInput label="Weight" icon="scale-outline" value={form.weight} onChangeText={v => set('weight', v)} placeholder="70" unit="kg" />
+            <Text style={styles.inputLabel}>Gender</Text>
+            <View style={styles.chipRow}>
+              <SelectChip label="Male" selected={form.gender === 'male'} onPress={() => set('gender', 'male')} />
+              <SelectChip label="Female" selected={form.gender === 'female'} onPress={() => set('gender', 'female')} />
+            </View>
           </Animated.View>
 
-          {/* ── BODY METRICS ── */}
-          <Section icon="📏" title="Body Metrics" delay={60}>
-            <View style={styles.row}>
-              <View style={{ flex: 1 }}>
-                <AnimatedInput
-                  icon="🎂" label="Age" placeholder="Years"
-                  value={form.age} onChangeText={(v) => handleChange("age", v)}
-                  keyboardType="numeric"
-                />
-              </View>
-              <View style={{ width: 12 }} />
-              <View style={{ flex: 1 }}>
-                <AnimatedInput
-                  icon="📐" label="Height (cm)" placeholder="cm"
-                  value={form.height} onChangeText={(v) => handleChange("height", v)}
-                  keyboardType="numeric"
-                />
-              </View>
-            </View>
-            <AnimatedInput
-              icon="⚖️" label="Weight (kg)" placeholder="kg"
-              value={form.weight} onChangeText={(v) => handleChange("weight", v)}
-              keyboardType="numeric"
-            />
-          </Section>
-
-          {/* ── GENDER ── */}
-          <Section icon="👤" title="Gender" delay={120}>
+          <Animated.View entering={FadeInDown.delay(160)} style={styles.card}>
+            <Text style={styles.inputLabel}>Activity Level</Text>
             <View style={styles.chipRow}>
-              {GENDER_OPTIONS.map((g) => (
-                <Chip
-                  key={g.key} option={g}
-                  selected={form.gender === g.key}
-                  color="#4C2E96"
-                  onPress={() => handleChange("gender", g.key)}
-                />
+              {['sedentary', 'light', 'moderate', 'active'].map(a => (
+                <SelectChip key={a} label={a.charAt(0).toUpperCase() + a.slice(1)} selected={form.activityLevel === a} onPress={() => set('activityLevel', a)} color={COLORS.secondary} />
               ))}
             </View>
-          </Section>
-
-          {/* ── ACTIVITY ── */}
-          <Section icon="🏃" title="Activity Level" delay={180}>
-            <View style={styles.selectorRow}>
-              {ACTIVITY_OPTIONS.map((a) => (
-                <SelectorCard
-                  key={a.key} option={a}
-                  selected={form.activityLevel === a.key}
-                  color={a.color}
-                  onPress={() => handleChange("activityLevel", a.key)}
-                />
-              ))}
-            </View>
-          </Section>
-
-          {/* ── GOAL ── */}
-          <Section icon="🎯" title="Fitness Goal" delay={240}>
-            <View style={styles.selectorRow}>
-              {GOAL_OPTIONS.map((g) => (
-                <SelectorCard
-                  key={g.key} option={g}
-                  selected={form.goal === g.key}
-                  color={g.color}
-                  onPress={() => handleChange("goal", g.key)}
-                />
-              ))}
-            </View>
-          </Section>
-
-          {/* ── DIET ── */}
-          <Section icon="🥗" title="Diet Preference" delay={300}>
+            <Text style={styles.inputLabel}>Goal</Text>
             <View style={styles.chipRow}>
-              {DIET_OPTIONS.map((d) => (
-                <Chip
-                  key={d.key} option={d}
-                  selected={form.dietType === d.key}
-                  color="#10B981"
-                  onPress={() => handleChange("dietType", d.key)}
-                />
+              {[{ l: 'Lose Fat', v: 'lose' }, { l: 'Maintain', v: 'maintain' }, { l: 'Gain Muscle', v: 'gain' }].map(g => (
+                <SelectChip key={g.v} label={g.l} selected={form.goal === g.v} onPress={() => set('goal', g.v)} color={COLORS.warning} />
               ))}
             </View>
-          </Section>
+            <Text style={styles.inputLabel}>Diet Type</Text>
+            <View style={styles.chipRow}>
+              {[{ l: 'Veg', v: 'veg' }, { l: 'Non-Veg', v: 'non-veg' }, { l: 'Vegan', v: 'vegan' }].map(d => (
+                <SelectChip key={d.v} label={d.l} selected={form.dietType === d.v} onPress={() => set('dietType', d.v)} color={COLORS.accent} />
+              ))}
+            </View>
+          </Animated.View>
 
-          {/* ── HEALTH CONDITIONS ── */}
-          <Section icon="🏥" title="Health Conditions" delay={340}>
-            <AnimatedInput
-              icon="💊"
-              label="Diseases / Conditions (comma separated)"
-              placeholder="e.g. diabetes, hypertension"
-              value={form.diseases}
-              onChangeText={(v) => handleChange("diseases", v)}
-            />
-            <AnimatedInput
-              icon="⚠️"
-              label="Allergies (comma separated)"
-              placeholder="e.g. peanuts, gluten, dairy"
-              value={form.allergies}
-              onChangeText={(v) => handleChange("allergies", v)}
-            />
-          </Section>
+          <Animated.View entering={FadeInDown.delay(240)} style={styles.card}>
+            <EditInput label="Diseases (comma separated)" icon="medkit-outline" value={form.diseases} onChangeText={v => set('diseases', v)} keyboardType="default" placeholder="diabetes, hypertension" />
+            <EditInput label="Allergies (comma separated)" icon="warning-outline" value={form.allergies} onChangeText={v => set('allergies', v)} keyboardType="default" placeholder="peanuts, lactose" />
+          </Animated.View>
 
-          {/* ── SAVE BUTTON ── */}
-          <Pressable
-            onPress={saveProfile}
-            disabled={saving || regenerating}
-            style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1, marginTop: 8 }]}
-          >
-            <LinearGradient
-              colors={saved ? ["#22C55E", "#16A34A"] : ["#4C2E96", "#6339B8"]}
-              start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-              style={styles.saveBtn}
-            >
-              {(saving || regenerating)
-                ? <ActivityIndicator color="#fff" size="small" />
-                : <View style={{ flexDirection: "row", alignItems: "center" }}>
-                    {saved && <Ionicons name="checkmark" size={17} color="#fff" style={{ marginRight: 6 }} />}
-                    <Text style={styles.saveBtnText}>{saved ? "Saved!" : "Save Changes"}</Text>
-                  </View>
-              }
-            </LinearGradient>
-          </Pressable>
-
-          <View style={{ height: 40 }} />
+          <TouchableOpacity style={[styles.saveBtn, loading && { opacity: 0.6 }]} onPress={handleSave} disabled={loading}>
+            {loading ? <ActivityIndicator color="#fff" size="small" /> : (
+              <><Ionicons name="save-outline" size={20} color="#fff" /><Text style={styles.saveText}>Save Changes</Text></>
+            )}
+          </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
-// ── STYLES ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container:   { flex: 1, backgroundColor: "#F5F3FF" },
-  scroll:      { padding: 20, paddingTop: 8 },
-  center:      { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#F5F3FF" },
-  loadingText: { marginTop: 12, color: "#9A94AE", fontSize: 14, fontWeight: "500" },
-
-  headerRow: {
-    flexDirection: "row", alignItems: "center",
-    justifyContent: "space-between", marginBottom: 20,
-  },
-  backBtn: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: "#fff", justifyContent: "center", alignItems: "center",
-    shadowColor: "#1B1730", shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08, shadowRadius: 8, elevation: 3,
-  },
-  backIcon:    { fontSize: 20, color: "#1B1730", fontWeight: "700" },
-  headerTitle: { fontSize: 18, fontWeight: "800", color: "#1B1730", letterSpacing: -0.3, textAlign: "center" },
-  headerSub:   { fontSize: 12, color: "#9A94AE", fontWeight: "500", textAlign: "center", marginTop: 2 },
-
-  section: {
-    backgroundColor: "#fff", borderRadius: 22,
-    padding: 18, marginBottom: 14,
-    shadowColor: "#1B1730", shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07, shadowRadius: 12, elevation: 3,
-  },
-  sectionHeader: { flexDirection: "row", alignItems: "center", marginBottom: 16 },
-  sectionIconWrap: {
-    width: 34, height: 34, borderRadius: 10,
-    backgroundColor: "#EDE9FE",
-    justifyContent: "center", alignItems: "center", marginRight: 10,
-  },
-  sectionIcon:  { fontSize: 16 },
-  sectionTitle: { fontSize: 15, fontWeight: "800", color: "#1B1730" },
-
-  row:        { flexDirection: "row", marginBottom: 0 },
-  inputGroup: { marginBottom: 12 },
-  inputLabel: { fontSize: 11, fontWeight: "700", color: "#6B667D", marginBottom: 6, letterSpacing: 0.3, textTransform: "uppercase" },
-  inputWrap: {
-    flexDirection: "row", alignItems: "center",
-    backgroundColor: "#F5F3FF", borderRadius: 14,
-    borderWidth: 1.5, paddingHorizontal: 12,
-  },
-  inputIcon: { fontSize: 15, marginRight: 8 },
-  input: {
-    flex: 1, paddingVertical: 13,
-    fontSize: 15, color: "#1B1730", fontWeight: "600",
-  },
-
-  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  chip: {
-    flexDirection: "row", alignItems: "center",
-    backgroundColor: "#F5F3FF", borderRadius: 24,
-    borderWidth: 1.5, borderColor: "#E4E0F0",
-    paddingVertical: 10, paddingHorizontal: 18, gap: 6,
-  },
-  chipEmoji: { fontSize: 16 },
-  chipText:  { fontSize: 13, color: "#6B667D", fontWeight: "600" },
-
-  selectorRow: { flexDirection: "row", gap: 8 },
-  selectorCard: {
-    flex: 1, backgroundColor: "#F5F3FF",
-    borderRadius: 16, padding: 12,
-    alignItems: "center", borderWidth: 2,
-    borderColor: "#EDE9FE", position: "relative",
-  },
-  selDot: {
-    position: "absolute", top: 7, right: 7,
-    width: 7, height: 7, borderRadius: 4,
-  },
-  selEmoji: { fontSize: 22, marginBottom: 5 },
-  selLabel: { fontSize: 12, fontWeight: "800", color: "#1B1730", marginBottom: 2 },
-  selDesc:  { fontSize: 10, color: "#9A94AE", textAlign: "center", fontWeight: "500" },
-
-  saveBtn: {
-    borderRadius: 18, paddingVertical: 17,
-    alignItems: "center", justifyContent: "center",
-    shadowColor: "#4C2E96", shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35, shadowRadius: 16, elevation: 8,
-  },
-  saveBtnText: { color: "#fff", fontSize: 16, fontWeight: "900", letterSpacing: 0.3 },
+  container: { flex: 1, backgroundColor: COLORS.background },
+  center: { alignItems: 'center', justifyContent: 'center' },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: SPACING.lg, paddingTop: SPACING.md, paddingBottom: SPACING.md },
+  backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border },
+  headerTitle: { fontSize: 17, fontWeight: '700', color: COLORS.textPrimary },
+  content: { paddingHorizontal: SPACING.lg, paddingBottom: 60 },
+  card: { backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.border, padding: SPACING.lg, marginBottom: SPACING.md, ...SHADOWS.sm },
+  row2: { flexDirection: 'row', gap: SPACING.md },
+  inputGroup: { flex: 1, marginBottom: SPACING.sm },
+  inputLabel: { fontSize: 12, fontWeight: '600', color: COLORS.textSecondary, marginBottom: SPACING.xs, marginTop: SPACING.xs },
+  inputWrap: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, backgroundColor: COLORS.surfaceElevated, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, paddingHorizontal: SPACING.md, height: 50 },
+  input: { flex: 1, fontSize: 15, color: COLORS.textPrimary, fontWeight: '500' },
+  unit: { fontSize: 13, color: COLORS.textTertiary, fontWeight: '500' },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: SPACING.sm },
+  chip: { paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, borderRadius: RADIUS.full, backgroundColor: COLORS.surfaceElevated, borderWidth: 1, borderColor: COLORS.border, marginRight: SPACING.sm, marginBottom: SPACING.sm },
+  chipText: { fontSize: 13, fontWeight: '600', color: COLORS.textSecondary },
+  saveBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: SPACING.sm, backgroundColor: COLORS.primary, borderRadius: RADIUS.md, paddingVertical: SPACING.md, marginTop: SPACING.sm },
+  saveText: { fontSize: 16, fontWeight: '700', color: '#fff' },
 });

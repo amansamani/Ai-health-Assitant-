@@ -1,100 +1,69 @@
-import { Text, Pressable, TextInput, StyleSheet } from "react-native";
-import { useState } from "react";
-import { useRouter, useLocalSearchParams } from "expo-router";
-import API from "../services/api";
-import { COLORS } from "../constants/theme";
-import AuthShell from "../components/auth/AuthShell";
-import AuthHero from "../components/auth/AuthHero";
-import PrimaryButton from "../components/auth/PrimaryButton";
-import { Banner, BackLink } from "../components/auth/AuthBits";
+import React, { useState, useRef } from 'react';
+import { Text, StyleSheet, TextInput, Alert, TouchableOpacity, View } from 'react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
+import AuthShell from '../components/auth/AuthShell';
+import PrimaryButton from '../components/auth/PrimaryButton';
+import API from '../services/api';
+import { COLORS, SPACING, RADIUS } from '../constants/theme';
+
+const OTP_LENGTH = 6;
 
 export default function VerifyOtp() {
   const router = useRouter();
-  const { email } = useLocalSearchParams();
-  const [otp, setOtp] = useState("");
-  const [focused, setFocused] = useState(false);
-  const [error, setError] = useState("");
-  const [info, setInfo] = useState("");
+  const params = useLocalSearchParams();
+  const email = params.email || '';
+  const [otp, setOtp] = useState(Array(OTP_LENGTH).fill(''));
   const [loading, setLoading] = useState(false);
-  const [resending, setResending] = useState(false);
+  const inputRefs = useRef([]);
 
-  const handleVerify = async () => {
-    if (!otp || otp.length !== 6) {
-      setError("Please enter the 6-digit code");
-      return;
-    }
-    setError("");
-    setLoading(true);
-    try {
-      await API.post("/auth/verify-otp", { email, otp });
-      router.push({ pathname: "/(auth)/reset-password", params: { email } });
-    } catch (err) {
-      setError(err?.response?.data?.message || "Invalid or expired code");
-    } finally {
-      setLoading(false);
-    }
+  const handleChange = (index, value) => {
+    if (!/^\d*$/.test(value)) return;
+    const newOtp = [...otp];
+    newOtp[index] = value;
+    setOtp(newOtp);
+    if (value && index < OTP_LENGTH - 1) inputRefs.current[index + 1]?.focus();
   };
 
-  const handleResend = async () => {
-    setResending(true);
-    setError("");
-    setInfo("");
+  const otpString = otp.join('');
+
+  const handleVerify = async () => {
+    if (otpString.length < OTP_LENGTH) { Alert.alert('Incomplete OTP', 'Please enter all 6 digits.'); return; }
+    setLoading(true);
     try {
-      await API.post("/auth/forgot-password", { email });
-      setInfo("New code sent to your email");
-    } catch {
-      setError("Could not resend code");
-    } finally {
-      setResending(false);
-    }
+      await API.post('/auth/verify-otp', { email, otp: otpString });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.push({ pathname: '/(auth)/reset-password', params: { email } });
+    } catch (err) {
+      Alert.alert('Invalid OTP', err.response?.data?.message || 'The OTP is incorrect or expired.');
+    } finally { setLoading(false); }
   };
 
   return (
-    <AuthShell>
-      <BackLink onPress={() => router.back()} />
-      <AuthHero
-        icon="mail-open-outline"
-        title="Enter code"
-        subtitle={`We sent a 6-digit code to ${email ?? "your email"}`}
-        size="compact"
-      />
-
-      <Banner text={error} />
-      <Banner text={info} tone="success" />
-
-      <TextInput
-        style={[styles.otpInput, focused && styles.otpInputFocused]}
-        placeholder="------"
-        placeholderTextColor={COLORS.textMuted}
-        value={otp}
-        onChangeText={(v) => setOtp(v.replace(/[^0-9]/g, ""))}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        keyboardType="number-pad"
-        maxLength={6}
-        textAlign="center"
-        accessibilityLabel="6-digit verification code"
-      />
-
-      <PrimaryButton title="Verify code" onPress={handleVerify} loading={loading} icon="checkmark" />
-
-      <Pressable onPress={handleResend} disabled={resending} style={styles.resendWrap} hitSlop={10} accessibilityRole="button">
-        <Text style={styles.resendText}>
-          Didn't get it? <Text style={styles.resendLink}>{resending ? "Resending…" : "Resend code"}</Text>
-        </Text>
-      </Pressable>
+    <AuthShell title="Verify OTP" subtitle={`We sent a 6-digit code to ${email || 'your email'}.`}>
+      <Animated.View entering={FadeInDown.delay(100)} style={styles.otpRow}>
+        {otp.map((digit, i) => (
+          <TextInput
+            key={i}
+            ref={el => (inputRefs.current[i] = el)}
+            style={[styles.otpBox, digit && styles.otpBoxFilled]}
+            value={digit}
+            onChangeText={v => handleChange(i, v)}
+            keyboardType="number-pad"
+            maxLength={1}
+            textAlign="center"
+            selectionColor={COLORS.primary}
+          />
+        ))}
+      </Animated.View>
+      <PrimaryButton title="Verify OTP" onPress={handleVerify} loading={loading} style={{ marginTop: SPACING.lg }} />
     </AuthShell>
   );
 }
 
 const styles = StyleSheet.create({
-  otpInput: {
-    borderWidth: 1.5, borderColor: COLORS.border, backgroundColor: COLORS.surfaceMuted,
-    borderRadius: 16, paddingVertical: 16, marginBottom: 20,
-    fontSize: 26, fontWeight: "800", color: COLORS.textDark, letterSpacing: 10,
-  },
-  otpInputFocused: { borderColor: COLORS.primary },
-  resendWrap: { alignItems: "center", minHeight: 44, justifyContent: "center" },
-  resendText: { fontSize: 14, color: COLORS.textMuted, fontWeight: "500" },
-  resendLink: { color: COLORS.primary, fontWeight: "800" },
+  otpRow: { flexDirection: 'row', justifyContent: 'space-between', gap: SPACING.sm },
+  otpBox: { flex: 1, height: 56, borderRadius: RADIUS.md, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, fontSize: 22, fontWeight: '800', color: COLORS.textPrimary },
+  otpBoxFilled: { borderColor: COLORS.primary, backgroundColor: COLORS.surfaceElevated },
 });

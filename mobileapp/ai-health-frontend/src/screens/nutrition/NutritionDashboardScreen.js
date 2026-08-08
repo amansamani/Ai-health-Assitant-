@@ -1,771 +1,196 @@
 "use strict";
-import React, { useEffect, useState, useCallback, useContext, useRef } from "react";
-import {
-  View, Text, ActivityIndicator, ScrollView, StyleSheet,
-  TouchableOpacity, RefreshControl, Modal, FlatList, Alert, Animated,
-} from "react-native";
+import React, { useState, useCallback, useContext } from "react";
+import { View, Text, ActivityIndicator, ScrollView, StyleSheet, TouchableOpacity, RefreshControl, Alert } from "react-native";
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from "@expo/vector-icons";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
+import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, withSpring } from "react-native-reanimated";
+import * as Haptics from "expo-haptics";
 import API from "../../services/api";
 import { AuthContext } from "../../context/AuthContext";
-import MealCompletionCard from "../../components/MealCompletionCard";
+import { COLORS, SHADOWS, RADIUS, SPACING } from "../../constants/theme";
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const MEAL_META = {
-  breakfast: { icon: "🌅", color: "#FF8F00", bg: "#FFF8E1", label: "Breakfast" },
-  lunch:     { icon: "☀️",  color: "#43A047", bg: "#E8F5E9", label: "Lunch"     },
-  dinner:    { icon: "🌙",  color: "#1E88E5", bg: "#E3F2FD", label: "Dinner"    },
-  snack:     { icon: "🍎",  color: "#8E24AA", bg: "#F3E5F5", label: "Snack"     },
-};
-
-const MEAL_ORDER = ["breakfast", "lunch", "dinner", "snack"];
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const formatQty = (item) => {
-  if (!item.amount && !item.unit) return "";
-  return item.unit ? `${item.amount} ${item.unit}` : `${item.amount}`;
-};
-
-const pct = (val, total) =>
-  total > 0 ? Math.min(Math.round((val / total) * 100), 100) : 0;
-
-// ─── AI Advice Banner ─────────────────────────────────────────────────────────
-
-function AiAdviceBanner({ advice, warnings }) {
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(-8)).current;
-  const [expanded, setExpanded] = useState(false);
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim,  { toValue: 1, duration: 500, delay: 200, useNativeDriver: true }),
-      Animated.timing(slideAnim, { toValue: 0, duration: 500, delay: 200, useNativeDriver: true }),
-    ]).start();
-  }, []);
-
-  if (!advice) return null;
-
+function MacroBar({ label, value, target, color, delay = 0 }) {
+  const pct = target > 0 ? Math.min(value / target, 1) : 0;
   return (
-    <Animated.View style={[ai.wrap, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-      {/* Header row */}
-      <View style={ai.headerRow}>
-        <View style={ai.iconWrap}>
-          <Ionicons name="sparkles" size={18} color="#4C2E96" />
-        </View>
-        <View style={{ flex: 1 }}>
-          <View style={ai.titleRow}>
-            <Text style={ai.title}>AI Personalised Plan</Text>
-            <View style={ai.badge}>
-              <Text style={ai.badgeTxt}>GEMINI</Text>
-            </View>
-          </View>
-          <Text style={ai.sub}>Adapted for your health conditions</Text>
-        </View>
-        <TouchableOpacity onPress={() => setExpanded((p) => !p)} style={ai.expandBtn}>
-          <Text style={ai.expandIcon}>{expanded ? "▲" : "▼"}</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Advice text — always visible, truncated unless expanded */}
-      <Text
-        style={ai.adviceText}
-        numberOfLines={expanded ? undefined : 3}
-      >
-        {advice}
-      </Text>
-
-      {!expanded && (
-        <TouchableOpacity onPress={() => setExpanded(true)}>
-          <Text style={ai.readMore}>Read more ›</Text>
-        </TouchableOpacity>
-      )}
-
-      {/* Warnings */}
-      {warnings?.length > 0 && (
-        <View style={ai.warningsWrap}>
-          {warnings.map((w, i) => (
-            <View key={i} style={ai.warningChip}>
-              <Ionicons name="warning" size={13} color="#D97706" style={{ marginRight: 4 }} />
-              <Text style={ai.warningTxt}>{w}</Text>
-            </View>))}
-        </View>
-      )}
+    <Animated.View entering={FadeInDown.delay(delay).springify()} style={styles.macroRow}>
+      <Text style={styles.macroLabel}>{label}</Text>
+      <View style={styles.macroTrack}><View style={[styles.macroFill, { width: `${pct * 100}%`, backgroundColor: color }]} /></View>
+      <Text style={styles.macroValue}>{Math.round(value)}<Text style={styles.macroTarget}>/{Math.round(target)}g</Text></Text>
     </Animated.View>
   );
 }
 
-// ─── Source Badge (shown in title row when source = template) ─────────────────
-
-function SourceBadge({ source }) {
-  if (source === "ai") return null; // AI banner handles this already
-  return (
-    <View style={sb.wrap}>
-      <Text style={sb.txt}>📋 Standard Plan</Text>
-    </View>
-  );
-}
-
-const sb = StyleSheet.create({
-  wrap: {
-    backgroundColor: "#EDE9FE", borderRadius: 10,
-    paddingHorizontal: 10, paddingVertical: 4, alignSelf: "flex-start",
-    marginBottom: 14,
-  },
-  txt: { fontSize: 11, fontWeight: "700", color: "#6B667D" },
-});
-
-// ─── MacroBar ─────────────────────────────────────────────────────────────────
-
-function MacroBar({ label, actual, target, color }) {
-  const ratio = pct(actual, target);
-  const over  = actual > target;
-  return (
-    <View style={mb.row}>
-      <View style={mb.labelRow}>
-        <Text style={mb.label}>{label}</Text>
-        <Text style={[mb.value, over && { color: "#e53935" }]}>
-          {actual}g <Text style={mb.target}>/ {target}g</Text>
-        </Text>
-      </View>
-      <View style={mb.track}>
-        <View style={[mb.fill, { width: `${ratio}%`, backgroundColor: over ? "#e53935" : color }]} />
-      </View>
-    </View>
-  );
-}
-const mb = StyleSheet.create({
-  row:      { marginBottom: 10 },
-  labelRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 4 },
-  label:    { fontSize: 12, fontWeight: "700", color: "#555" },
-  value:    { fontSize: 12, fontWeight: "700", color: "#1a1a1a" },
-  target:   { fontWeight: "400", color: "#aaa" },
-  track:    { height: 8, backgroundColor: "#f0f0f0", borderRadius: 4, overflow: "hidden" },
-  fill:     { height: "100%", borderRadius: 4 },
-});
-
-// ─── SwapModal ────────────────────────────────────────────────────────────────
-
-function SwapModal({ visible, mealType, combo, onClose, onSwapped }) {
-  const [options, setOptions]   = useState([]);
-  const [loading, setLoading]   = useState(false);
-  const [swapping, setSwapping] = useState(null);
-  const meta = MEAL_META[mealType] || MEAL_META.lunch;
-
-  useEffect(() => {
-    if (!visible || !combo) return;
-    setOptions([]);
-    setLoading(true);
-    API.get(`/nutrition/swap-options?mealType=${mealType}&excludeId=${combo.templateId || ""}`)
-      .then(res => setOptions(res.data?.data || []))
-      .catch(() => setOptions([]))
-      .finally(() => setLoading(false));
-  }, [visible, combo, mealType]);
-
-  const handleSwap = async (newMeal) => {
-    setSwapping(newMeal.id);
-    try {
-      await API.post("/nutrition/swap", { mealType, newMealId: newMeal.id });
-      onSwapped();
-      onClose();
-    } catch {
-      Alert.alert("Swap Failed", "Could not swap meal. Please try again.");
-    } finally {
-      setSwapping(null);
-    }
+function MealCard({ meal, planned, completed, onToggle, delay = 0 }) {
+  const scale = useSharedValue(1);
+  const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  const META = {
+    breakfast: { icon: '🌅', bg: 'rgba(255,143,0,0.12)' },
+    lunch: { icon: '☀️', bg: 'rgba(67,160,71,0.12)' },
+    dinner: { icon: '🌙', bg: 'rgba(30,136,229,0.12)' },
+    snack: { icon: '🍎', bg: 'rgba(142,36,170,0.12)' },
   };
-
+  const meta = META[meal] || META.snack;
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={sw.overlay}>
-        <View style={sw.sheet}>
-          <View style={sw.header}>
-            <View>
-              <Text style={sw.title}>Swap "{combo?.mealName}"</Text>
-              <Text style={sw.sub}>{meta.label} alternatives</Text>
+    <Animated.View entering={FadeInDown.delay(delay).springify()}>
+      <Animated.View style={[styles.mealCard, animatedStyle]}>
+        <TouchableOpacity activeOpacity={0.85} onPress={onToggle}
+          onPressIn={() => { scale.value = withSpring(0.97); }} onPressOut={() => { scale.value = withSpring(1); }}>
+          <View style={styles.mealInner}>
+            <View style={[styles.mealIcon, { backgroundColor: meta.bg }]}><Text style={{ fontSize: 20 }}>{meta.icon}</Text></View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.mealName}>{meal.charAt(0).toUpperCase() + meal.slice(1)}</Text>
+              <Text style={styles.mealCals}>{completed ? planned : 0} / {planned} kcal</Text>
             </View>
-            <TouchableOpacity onPress={onClose} style={sw.closeBtn} accessibilityRole="button" accessibilityLabel="Close">
-              <Ionicons name="close" size={14} color="#777" />
-            </TouchableOpacity>
+            <View style={[styles.toggle, { backgroundColor: completed ? COLORS.primary : COLORS.surfaceElevated }]}>
+              <Ionicons name={completed ? 'checkmark' : 'add'} size={16} color={completed ? '#fff' : COLORS.textSecondary} />
+            </View>
           </View>
-
-          {loading ? (
-            <ActivityIndicator size="large" color={meta.color} style={{ marginTop: 32 }} />
-          ) : options.length === 0 ? (
-            <Text style={sw.empty}>No alternatives found for this category.</Text>
-          ) : (
-            <FlatList
-              data={options}
-              keyExtractor={item => item.id}
-              contentContainerStyle={{ paddingBottom: 24 }}
-              renderItem={({ item }) => {
-                const busy = swapping === item.id;
-                const [minCal, maxCal]   = item.macroRange?.calories || [0, 0];
-                const [minPro, maxPro]   = item.macroRange?.protein  || [0, 0];
-                const [minCarb, maxCarb] = item.macroRange?.carbs    || [0, 0];
-                const [minFat, maxFat]   = item.macroRange?.fats     || [0, 0];
-                const midCal  = Math.round((minCal + maxCal) / 2);
-                const midPro  = ((minPro  + maxPro)  / 2).toFixed(1);
-                const midCarb = ((minCarb + maxCarb) / 2).toFixed(1);
-                const midFat  = ((minFat  + maxFat)  / 2).toFixed(1);
-
-                return (
-                  <TouchableOpacity
-                    style={sw.row}
-                    onPress={() => handleSwap(item)}
-                    disabled={!!swapping}
-                    activeOpacity={0.7}
-                  >
-                    <View style={[sw.iconBox, { backgroundColor: meta.bg }]}>
-                      <Text style={{ fontSize: 20 }}>{meta.icon}</Text>
-                    </View>
-                    <View style={sw.info}>
-                      <Text style={sw.name}>{item.name}</Text>
-                      <Text style={sw.macroLine}>
-                        ~{midCal} kcal · P {midPro}g · C {midCarb}g · F {midFat}g
-                      </Text>
-                      {item.cuisine && (
-                        <Text style={sw.servingLine}>{item.cuisine} · {item.difficulty}</Text>
-                      )}
-                      {item.dietType && (
-                        <View style={[sw.badge, { backgroundColor: item.dietType === "veg" ? "#e8f5e9" : "#fce4ec" }]}>
-                          <Text style={[sw.badgeText, { color: item.dietType === "veg" ? "#2e7d32" : "#c62828" }]}>
-                            {item.dietType === "veg" ? "🌱 Veg" : item.dietType === "eggetarian" ? "🥚 Eggetarian" : "🍗 Non-veg"}
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-                    <TouchableOpacity
-                      style={[sw.swapBtn, { backgroundColor: busy ? "#eee" : meta.color }]}
-                      onPress={() => handleSwap(item)}
-                      disabled={!!swapping}
-                    >
-                      <Text style={[sw.swapBtnTxt, { color: busy ? "#999" : "#fff" }]}>
-                        {busy ? "..." : "Swap"}
-                      </Text>
-                    </TouchableOpacity>
-                  </TouchableOpacity>
-                );
-              }}
-            />
-          )}
-        </View>
-      </View>
-    </Modal>
+        </TouchableOpacity>
+      </Animated.View>
+    </Animated.View>
   );
 }
 
-// ─── MealCard ─────────────────────────────────────────────────────────────────
-
-function MealCard({ mealType, combos, meta, onSwap, onRegenerate }) {
-  const totalCal     = combos.reduce((s, c) => s + (c.calories ?? 0), 0);
-  const totalProtein = combos.reduce((s, c) => s + (c.protein  ?? 0), 0);
-
-  return (
-    <View style={[s.mealCard, { borderLeftColor: meta.color }]}>
-      <View style={s.mealHeader}>
-        <View style={[s.mealIconBox, { backgroundColor: meta.bg }]}>
-          <Text style={{ fontSize: 22 }}>{meta.icon}</Text>
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={s.mealTitle}>{meta.label}</Text>
-          {totalCal > 0 && (
-            <Text style={[s.mealSub, { color: meta.color }]}>
-              {totalCal} kcal · {totalProtein.toFixed(1)}g protein
-            </Text>
-          )}
-        </View>
-        <View style={[s.badge, { backgroundColor: meta.bg }]}>
-          <Text style={[s.badgeTxt, { color: meta.color }]}>
-            {combos.length} combo{combos.length !== 1 ? "s" : ""}
-          </Text>
-        </View>
-      </View>
-
-      {combos.length > 0 ? (
-        <View style={s.foodList}>
-          {combos.map((combo, ci) => (
-            <View key={ci} style={[s.comboBlock, ci < combos.length - 1 && s.foodDivider]}>
-              <View style={s.comboNameRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.comboName}>{combo.mealName}</Text>
-                  {(combo.cuisine || combo.prepTime) && (
-                    <Text style={s.comboMeta}>
-                      {[combo.cuisine, combo.prepTime ? `${combo.prepTime} min` : null]
-                        .filter(Boolean).join(" · ")}
-                    </Text>
-                  )}
-                </View>
-                <View style={s.macroPill}>
-                  <View style={[s.calChip, { backgroundColor: meta.bg, flexDirection: "row", alignItems: "center" }]}>
-                    <Ionicons name="flame" size={12} color={meta.color} style={{ marginRight: 3 }} />
-                    <Text style={[s.calChipTxt, { color: meta.color }]}>{combo.calories} kcal</Text>
-                  </View>
-                </View>
-                <TouchableOpacity
-                  style={[s.swapChip, { borderColor: meta.color, flexDirection: "row", alignItems: "center" }]}
-                  onPress={() => onSwap(mealType, combo)}
-                  activeOpacity={0.7}
-                  accessibilityRole="button"
-                  accessibilityLabel="Swap meal"
-                >
-                  <Ionicons name="swap-horizontal" size={13} color={meta.color} style={{ marginRight: 3 }} />
-                  <Text style={[s.swapChipTxt, { color: meta.color }]}>Swap</Text>
-                </TouchableOpacity>
-              </View>
-
-              <Text style={s.macroTxt}>
-                P {combo.protein ?? 0}g · C {combo.carbs ?? 0}g · F {combo.fats ?? 0}g
-                {combo.fiber ? ` · Fiber ${combo.fiber}g` : ""}
-              </Text>
-
-              {combo.items?.length > 0 && (
-                <View style={s.itemsList}>
-                  {combo.items.map((item, ii) => (
-                    <View key={ii} style={s.itemRow}>
-                      <View style={[s.dot, { backgroundColor: meta.color }]} />
-                      <Text style={s.itemName}>{item.name}</Text>
-                      <View style={[s.qtyBadge, { backgroundColor: meta.bg }]}>
-                        <Text style={[s.qtyTxt, { color: meta.color }]}>
-                          {formatQty(item)}
-                        </Text>
-                      </View>
-                    </View>
-                  ))}
-                </View>
-              )}
-            </View>
-          ))}
-        </View>
-      ) : (
-        <View style={s.emptyMeal}>
-          <Text style={s.emptyMealTxt}>No foods planned for this meal</Text>
-          <TouchableOpacity style={[s.regenSmall, { borderColor: meta.color, flexDirection: "row", alignItems: "center", justifyContent: "center" }]} onPress={onRegenerate} accessibilityRole="button" accessibilityLabel="Regenerate plan">
-            <Ionicons name="refresh" size={13} color={meta.color} style={{ marginRight: 4 }} />
-            <Text style={[s.regenSmallTxt, { color: meta.color }]}>Regenerate Plan</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-    </View>
-  );
-}
-
-// ─── Main Screen ──────────────────────────────────────────────────────────────
-
-export default function NutritionDashboardScreen({ navigation }) {
-  const [plan, setPlan]             = useState(null);
-  const [loading, setLoading]       = useState(true);
+export default function NutritionDashboardScreen() {
+  const router = useRouter();
+  const [plan, setPlan] = useState(null);
+  const [todayLog, setTodayLog] = useState(null);
+  const [hasPlan, setHasPlan] = useState(true);
+  const [generating, setGenerating] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const { userGoal }                = useContext(AuthContext);
-  const [swapState, setSwapState]   = useState({ visible: false, mealType: null, combo: null });
 
-  const fetchPlan = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     try {
-      const res = await API.get("/nutrition/current");
-      if (res.data?.meals && res.data?.summary) {
-        setPlan(res.data);
-      } else {
-        setPlan(null);
-      }
-    } catch (err) {
-      console.warn("Diet fetch error:", err.response?.data || err.message);
-      setPlan(null);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
+      const [planRes, logRes] = await Promise.all([
+        API.get('/nutrition/current'),
+        API.get('/nutrition/log'),
+      ]);
+      if (!planRes.data || !planRes.data.meals) setHasPlan(false);
+      else { setHasPlan(true); setPlan(planRes.data); }
+      setTodayLog(logRes.data);
+    } catch (e) { setHasPlan(false); }
+    finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { fetchPlan(); }, [fetchPlan]);
+  useFocusEffect(useCallback(() => { setLoading(true); fetchData(); }, [fetchData]));
 
-  const prevGoalRef = useRef(null);
-  useEffect(() => {
-    if (prevGoalRef.current && prevGoalRef.current !== userGoal) {
-      handleGenerate();
-    }
-    prevGoalRef.current = userGoal;
-  }, [userGoal]);
-
-  const handleGenerate = async () => {
-    setLoading(true);
+  const generatePlan = async () => {
+    setGenerating(true);
     try {
-      await API.post("/nutrition/generate");
-      await fetchPlan();
+      await API.post('/nutrition/generate');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      await fetchData();
     } catch (err) {
-      console.error("Generate plan error:", err.response?.data || err.message);
-      Alert.alert("Error", "Could not generate plan. Please try again.");
-      setLoading(false);
-    }
+      Alert.alert('Error', err.response?.data?.message || 'Could not generate plan.');
+    } finally { setGenerating(false); }
   };
 
-  const handleRegenerate = () => {
-    Alert.alert(
-      "Regenerate Plan",
-      "This will create a new diet plan for today. Continue?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Regenerate",
-          onPress: async () => {
-            setLoading(true);
-            try {
-              await API.post("/nutrition/generate");
-              await fetchPlan();
-            } catch {
-              Alert.alert("Error", "Could not regenerate plan. Try again.");
-              setLoading(false);
-            }
-          },
-        },
-      ]
-    );
+  const toggleMeal = async (mealType) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const current = todayLog?.log?.mealsCompleted || {};
+    const updated = { ...current, [mealType]: !current[mealType] };
+    try { await API.post('/nutrition/log', { mealsCompleted: updated }); fetchData(); }
+    catch (e) { Alert.alert('Error', 'Could not update meal log.'); }
   };
 
-  if (loading) {
-    return (
-      <SafeAreaView style={s.center} edges={["top"]}>
-        <ActivityIndicator size="large" color="#4C2E96" />
-        <Text style={s.loadingTxt}>Loading your plan…</Text>
-      </SafeAreaView>
-    );
-  }
+  if (loading) return <View style={[styles.container, styles.center]}><ActivityIndicator size="large" color={COLORS.primary} /></View>;
 
-  if (!plan) {
-    return (
-      <SafeAreaView style={s.center} edges={["top"]}>
-        <Text style={{ fontSize: 52, marginBottom: 14 }}>🥗</Text>
-        <Text style={s.emptyTitle}>No Diet Plan Found</Text>
-        <Text style={s.emptySub}>Generate your personalised plan to get started</Text>
-        <TouchableOpacity style={s.genBtn} onPress={handleGenerate}>
-          <Text style={s.genBtnTxt}>Generate My Plan</Text>
-        </TouchableOpacity>
-      </SafeAreaView>
-    );
-  }
-
-  const { meals, summary } = plan;
-  const {
-    targetCalories,
-    plannedCalories,
-    macroTargets,
-    actualMacros,
-    macroAchievement,
-    profileSnapshot,
-    source,
-    aiAdvice,
-    warnings,
-  } = summary;
-
-  const targets = {
-    protein: macroTargets?.proteinG ?? macroTargets?.protein ?? 0,
-    carbs:   macroTargets?.carbsG   ?? macroTargets?.carbs   ?? 0,
-    fats:    macroTargets?.fatsG    ?? macroTargets?.fats    ?? 0,
-  };
-  const actual = {
-    protein: actualMacros?.proteinG ?? actualMacros?.protein ?? 0,
-    carbs:   actualMacros?.carbsG   ?? actualMacros?.carbs   ?? 0,
-    fats:    actualMacros?.fatsG    ?? actualMacros?.fats    ?? 0,
-    fiber:   actualMacros?.fiberG   ?? actualMacros?.fiber   ?? 0,
-    sugar:   actualMacros?.sugarG   ?? actualMacros?.sugar   ?? 0,
-  };
-
-  const calPct       = pct(plannedCalories, targetCalories);
-  const calDiff      = plannedCalories - targetCalories;
-  const calDiffLabel = calDiff > 0 ? `+${calDiff}` : `${calDiff}`;
-  const calDiffColor = Math.abs(calDiff) < 100 ? "#4CAF50" : calDiff > 0 ? "#FF8F00" : "#1E88E5";
+  const target = plan?.summary?.targetCalories || plan?.targetCalories || 2000;
+  const consumed = todayLog?.log?.caloriesConsumed || 0;
+  const caloriesPct = Math.min(consumed / target, 1);
+  const mealsCompleted = todayLog?.log?.mealsCompleted || {};
+  const mealContext = todayLog?.plan?.mealContext || {};
 
   return (
-    <SafeAreaView style={s.container} edges={["top"]}>
-      <ScrollView
-        contentContainerStyle={s.content}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => { setRefreshing(true); fetchPlan(); }}
-            colors={["#4C2E96"]}
-            tintColor="#4C2E96"
-          />
-        }
-      >
-        {/* ── Screen header ── */}
-        <View style={s.screenHeader}>
-          <Text style={s.screenTitle}>Diet</Text>
-          <View style={s.headerIconWrap}>
-            <Ionicons name="restaurant-outline" size={18} color="#4C2E96" />
-          </View>
-        </View>
+    <View style={styles.container}>
+      <Animated.View entering={FadeInDown.delay(0)} style={styles.header}>
+        <Text style={styles.title}>Nutrition</Text>
+        <TouchableOpacity style={styles.addMealBtn} onPress={() => router.push('/(app)/nutrition/meal-logger')}>
+          <Ionicons name="add" size={20} color="#fff" />
+        </TouchableOpacity>
+      </Animated.View>
 
-        {/* ── Title row ── */}
-        <View style={s.titleRow}>
-          <View>
-            <Text style={s.title}>Today's Plan</Text>
-            {profileSnapshot && (
-              <Text style={s.titleSub}>
-                {profileSnapshot.goal?.toUpperCase()} · {profileSnapshot.dietType?.toUpperCase()}
-              </Text>
-            )}
-          </View>
-          <TouchableOpacity style={s.regenBtn} onPress={handleRegenerate} accessibilityRole="button" accessibilityLabel="Regenerate plan">
-            <Ionicons name="refresh" size={16} color="#4C2E96" />
-          </TouchableOpacity>
-        </View>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await fetchData(); setRefreshing(false); }} tintColor={COLORS.primary} />}>
 
-        {/* ── AI Advice Banner (only when source === "ai") ── */}
-        {source === "ai" && (
-          <AiAdviceBanner advice={aiAdvice} warnings={warnings} />
+        {!hasPlan ? (
+          <Animated.View entering={FadeInDown.delay(80)} style={styles.ctaCard}>
+            <LinearGradient colors={[COLORS.heroFrom, COLORS.heroTo]} style={styles.ctaGradient}>
+              <Ionicons name="nutrition" size={28} color="#fff" />
+              <Text style={styles.ctaTitle}>No Diet Plan Yet</Text>
+              <Text style={styles.ctaSub}>Let AI build a personalized meal plan from your health profile.</Text>
+              <TouchableOpacity style={styles.ctaBtn} onPress={generatePlan} disabled={generating}>
+                {generating ? <ActivityIndicator color={COLORS.primary} size="small" /> : (
+                  <><Ionicons name="sparkles" size={18} color={COLORS.primary} /><Text style={styles.ctaBtnText}>Generate My Plan</Text></>
+                )}
+              </TouchableOpacity>
+            </LinearGradient>
+          </Animated.View>
+        ) : (
+          <>
+            <Animated.View entering={FadeInDown.delay(80)} style={styles.calorieCard}>
+              <View style={{ padding: SPACING.lg }}>
+                <Text style={styles.calorieLabel}>Today's Calories</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: SPACING.sm, marginTop: SPACING.sm }}>
+                  <Text style={styles.calorieBig}>{consumed.toLocaleString()}</Text>
+                  <Text style={styles.calorieOf}>/ {target.toLocaleString()} kcal</Text>
+                </View>
+                <View style={styles.calorieTrack}><View style={[styles.calorieFill, { width: `${caloriesPct * 100}%` }]} /></View>
+              </View>
+            </Animated.View>
+
+            <Animated.View entering={FadeInDown.delay(160)} style={styles.macrosCard}>
+              <Text style={styles.sectionTitle}>Macros</Text>
+              <MacroBar label="Protein" value={0} target={plan?.summary?.proteinTarget || 120} color={COLORS.primary} delay={200} />
+              <MacroBar label="Carbs" value={0} target={plan?.summary?.carbTarget || 200} color={COLORS.warning} delay={260} />
+              <MacroBar label="Fats" value={0} target={plan?.summary?.fatTarget || 60} color={COLORS.danger} delay={320} />
+            </Animated.View>
+
+            <Text style={[styles.sectionTitle, { marginTop: SPACING.lg, marginBottom: SPACING.md }]}>Today's Meals</Text>
+            {['breakfast', 'lunch', 'dinner', 'snack'].map((meal, i) => (
+              <MealCard key={meal} meal={meal} planned={mealContext[meal]?.plannedCalories || 0}
+                completed={!!mealsCompleted[meal]} onToggle={() => toggleMeal(meal)} delay={400 + i * 80} />
+            ))}
+          </>
         )}
-
-        {/* ── Standard Plan Badge (only when source === "template") ── */}
-        {source === "template" && <SourceBadge source={source} />}
-
-        {/* ── Calorie summary card ── */}
-        <View style={s.card}>
-          <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 4 }}>
-            <Ionicons name="flag" size={13} color="#4C2E96" style={{ marginRight: 5 }} />
-            <Text style={s.cardHeading}>CALORIE BUDGET</Text>
-          </View>
-          <View style={s.calRow}>
-            <View style={s.calBlock}>
-              <Text style={s.calBig}>{plannedCalories}</Text>
-              <Text style={s.calLbl}>planned</Text>
-            </View>
-            <View style={s.calDivider} />
-            <View style={s.calBlock}>
-              <Text style={[s.calBig, { color: "#4CAF50" }]}>{targetCalories}</Text>
-              <Text style={s.calLbl}>target</Text>
-            </View>
-            <View style={s.calDivider} />
-            <View style={s.calBlock}>
-              <Text style={[s.calBig, { color: calDiffColor }]}>{calDiffLabel}</Text>
-              <Text style={s.calLbl}>difference</Text>
-            </View>
-          </View>
-
-          <View style={s.calBar}>
-            <View style={[s.calBarFill, {
-              width: `${calPct}%`,
-              backgroundColor: calPct > 105 ? "#e53935" : calPct > 95 ? "#4CAF50" : "#FF8F00",
-            }]} />
-          </View>
-          <Text style={s.calPctTxt}>{calPct}% of daily goal</Text>
-        </View>
-
-        {/* ── Macro breakdown card ── */}
-        <View style={s.card}>
-          <Text style={s.cardHeading}>💪 MACRO BREAKDOWN</Text>
-
-          <MacroBar label="Protein"       actual={actual.protein} target={targets.protein} color="#1E88E5" />
-          <MacroBar label="Carbohydrates" actual={actual.carbs}   target={targets.carbs}   color="#43A047" />
-          <MacroBar label="Fats"          actual={actual.fats}    target={targets.fats}    color="#FF8F00" />
-
-          {macroAchievement && (
-            <View style={s.achRow}>
-              {["protein", "carbs", "fats"].map((k) => {
-                const val = macroAchievement[k];
-                if (val == null) return null;
-                const ok    = val >= 80 && val <= 115;
-                const color = ok ? "#4CAF50" : val > 115 ? "#e53935" : "#FF8F00";
-                return (
-                  <View key={k} style={[s.achChip, { backgroundColor: ok ? "#e8f5e9" : "#fff3e0" }]}>
-                    <Text style={[s.achVal, { color }]}>{val}%</Text>
-                    <Text style={s.achLbl}>{k}</Text>
-                  </View>
-                );
-              })}
-            </View>
-          )}
-
-          {(actual.fiber > 0 || actual.sugar > 0) && (
-            <View style={s.extraRow}>
-              {actual.fiber > 0 && <Text style={s.extraTxt}>🌾 Fiber: {actual.fiber}g</Text>}
-              {actual.sugar > 0 && <Text style={s.extraTxt}>🍬 Sugar: {actual.sugar}g</Text>}
-            </View>
-          )}
-        </View>
-        
-        <MealCompletionCard plan={plan} />
-
-
-
-        {/* ── Meal Cards ── */}
-        {MEAL_ORDER.map((mealType) => (
-          <MealCard
-            key={mealType}
-            mealType={mealType}
-            combos={meals[mealType] ?? []}
-            meta={MEAL_META[mealType]}
-            onSwap={(mt, combo) => setSwapState({ visible: true, mealType: mt, combo })}
-            onRegenerate={handleRegenerate}
-          />
-        ))}
-
-        <View style={{ height: 30 }} />
       </ScrollView>
-
-      {/* ── Swap Modal ── */}
-      <SwapModal
-        visible={swapState.visible}
-        mealType={swapState.mealType}
-        combo={swapState.combo}
-        onClose={() => setSwapState({ visible: false, mealType: null, combo: null })}
-        onSwapped={fetchPlan}
-      />
-    </SafeAreaView>
+    </View>
   );
 }
 
-// ─── AI Banner Styles ─────────────────────────────────────────────────────────
-
-const ai = StyleSheet.create({
-  wrap: {
-    backgroundColor: "#F0F4FF",
-    borderRadius: 18,
-    padding: 16,
-    marginBottom: 14,
-    borderWidth: 1.5,
-    borderColor: "#A78BFA",
-  },
-  headerRow:  { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 10 },
-  iconWrap: {
-    width: 40, height: 40, borderRadius: 12,
-    backgroundColor: "#E0E7FF",
-    justifyContent: "center", alignItems: "center",
-  },
-  icon:       { fontSize: 20 },
-  titleRow:   { flexDirection: "row", alignItems: "center", gap: 8 },
-  title:      { fontSize: 14, fontWeight: "800", color: "#3730A3" },
-  sub:        { fontSize: 11, color: "#4C2E96", fontWeight: "500", marginTop: 2 },
-  badge: {
-    backgroundColor: "#4C2E96", borderRadius: 8,
-    paddingHorizontal: 7, paddingVertical: 2,
-  },
-  badgeTxt:   { fontSize: 9, fontWeight: "900", color: "#fff", letterSpacing: 0.5 },
-  expandBtn:  { width: 28, height: 28, borderRadius: 14, backgroundColor: "#E0E7FF", justifyContent: "center", alignItems: "center" },
-  expandIcon: { fontSize: 10, color: "#4C2E96", fontWeight: "800" },
-  adviceText: { fontSize: 13, color: "#1E1B4B", lineHeight: 20, fontWeight: "500" },
-  readMore:   { fontSize: 12, color: "#4C2E96", fontWeight: "700", marginTop: 4 },
-  warningsWrap: { marginTop: 12, gap: 6 },
-  warningChip: {
-    flexDirection: "row", alignItems: "center", gap: 6,
-    backgroundColor: "#FFF7ED", borderRadius: 10,
-    paddingHorizontal: 10, paddingVertical: 6,
-    borderWidth: 1, borderColor: "#FED7AA",
-  },
-  warningIcon: { fontSize: 13 },
-  warningTxt:  { fontSize: 12, color: "#92400E", fontWeight: "600", flex: 1 },
-});
-
-// ─── Swap Modal Styles ────────────────────────────────────────────────────────
-
-const sw = StyleSheet.create({
-  overlay:     { flex: 1, backgroundColor: "rgba(0,0,0,0.55)", justifyContent: "flex-end" },
-  sheet:       { backgroundColor: "#fff", borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: "80%" },
-  header:      { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18 },
-  title:       { fontSize: 18, fontWeight: "800", color: "#1a1a1a" },
-  sub:         { fontSize: 13, color: "#999", marginTop: 2 },
-  closeBtn:    { width: 32, height: 32, borderRadius: 16, backgroundColor: "#f5f5f5", justifyContent: "center", alignItems: "center" },
-  closeX:      { fontSize: 14, color: "#777" },
-  empty:       { textAlign: "center", color: "#aaa", fontSize: 14, marginTop: 32 },
-  row:         { flexDirection: "row", alignItems: "center", paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: "#f5f5f5", gap: 10 },
-  iconBox:     { width: 42, height: 42, borderRadius: 11, justifyContent: "center", alignItems: "center" },
-  info:        { flex: 1 },
-  name:        { fontSize: 14, fontWeight: "700", color: "#1a1a1a" },
-  macroLine:   { fontSize: 11, color: "#888", marginTop: 2 },
-  servingLine: { fontSize: 11, color: "#aaa", marginTop: 1 },
-  badge:       { alignSelf: "flex-start", paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6, marginTop: 4 },
-  badgeText:   { fontSize: 10, fontWeight: "700" },
-  swapBtn:     { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20 },
-  swapBtnTxt:  { fontWeight: "700", fontSize: 13 },
-});
-
-// ─── Main Styles ──────────────────────────────────────────────────────────────
-
-const s = StyleSheet.create({
-  container:   { flex: 1, backgroundColor: "#FAF9FC" },
-  content:     { padding: 16, paddingTop: 4 },
-  center:      { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#FAF9FC", padding: 24 },
-  loadingTxt:  { marginTop: 12, color: "#9A94AE", fontSize: 14 },
-  emptyTitle:  { fontSize: 22, fontWeight: "800", color: "#1B1730", marginBottom: 6 },
-  emptySub:    { fontSize: 14, color: "#9A94AE", textAlign: "center", marginBottom: 24 },
-  genBtn:      { backgroundColor: "#4C2E96", paddingHorizontal: 28, paddingVertical: 14, borderRadius: 14 },
-  genBtnTxt:   { color: "#fff", fontWeight: "800", fontSize: 15 },
-
-  screenHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 },
-  screenTitle:  { fontSize: 22, fontWeight: "800", color: "#1B1730", letterSpacing: -0.5 },
-  headerIconWrap: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: "#EDE9FE", justifyContent: "center", alignItems: "center",
-  },
-
-  titleRow:    { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 14, marginBottom: 16 },
-  title:       { fontSize: 20, fontWeight: "800", color: "#1B1730" },
-  titleSub:    { fontSize: 12, color: "#9A94AE", fontWeight: "600", marginTop: 2, letterSpacing: 0.6 },
-  regenBtn:    { width: 40, height: 40, borderRadius: 20, backgroundColor: "#fff", justifyContent: "center", alignItems: "center", elevation: 2, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 3 },
-  regenBtnTxt: { fontSize: 18 },
-
-  card: {
-    backgroundColor: "#fff", borderRadius: 16, padding: 16, marginBottom: 14,
-    elevation: 3, shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07, shadowRadius: 6,
-  },
-  cardHeading: { fontSize: 11, fontWeight: "800", color: "#aaa", marginBottom: 14, textTransform: "uppercase", letterSpacing: 1 },
-
-  calRow:     { flexDirection: "row", justifyContent: "space-around", alignItems: "center", marginBottom: 14 },
-  calBlock:   { alignItems: "center" },
-  calBig:     { fontSize: 26, fontWeight: "900", color: "#1a1a1a" },
-  calLbl:     { fontSize: 11, color: "#aaa", marginTop: 2, fontWeight: "600" },
-  calDivider: { width: 1, height: 36, backgroundColor: "#f0f0f0" },
-  calBar:     { height: 8, backgroundColor: "#f0f0f0", borderRadius: 4, overflow: "hidden", marginBottom: 6 },
-  calBarFill: { height: "100%", borderRadius: 4 },
-  calPctTxt:  { fontSize: 11, color: "#aaa", textAlign: "right", fontWeight: "600" },
-
-  achRow:     { flexDirection: "row", gap: 8, marginTop: 12 },
-  achChip:    { flex: 1, borderRadius: 10, paddingVertical: 8, alignItems: "center" },
-  achVal:     { fontSize: 16, fontWeight: "800" },
-  achLbl:     { fontSize: 10, color: "#888", marginTop: 2, fontWeight: "600" },
-
-  extraRow:   { flexDirection: "row", gap: 12, marginTop: 10, borderTopWidth: 1, borderTopColor: "#f5f5f5", paddingTop: 10 },
-  extraTxt:   { fontSize: 12, color: "#888", fontWeight: "600" },
-
-  mealCard: {
-    backgroundColor: "#fff", borderRadius: 16, padding: 14, marginBottom: 12,
-    borderLeftWidth: 4, elevation: 3, shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 6,
-  },
-  mealHeader:  { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 4 },
-  mealIconBox: { width: 44, height: 44, borderRadius: 12, justifyContent: "center", alignItems: "center" },
-  mealTitle:   { fontSize: 16, fontWeight: "800", color: "#1a1a1a" },
-  mealSub:     { fontSize: 12, fontWeight: "600", marginTop: 1 },
-  badge:       { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
-  badgeTxt:    { fontSize: 11, fontWeight: "700" },
-
-  foodList:    { marginTop: 10, borderTopWidth: 1, borderTopColor: "#f5f5f5", paddingTop: 8 },
-  comboBlock:   { paddingVertical: 10 },
-  comboNameRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 },
-  comboName:    { fontSize: 14, fontWeight: "700", color: "#1a1a1a", flex: 1 },
-  comboMeta:    { fontSize: 11, color: "#aaa", marginTop: 1 },
-  macroPill:    { flexDirection: "row", gap: 4 },
-  foodDivider:  { borderBottomWidth: 1, borderBottomColor: "#f9f9f9" },
-  dot:          { width: 7, height: 7, borderRadius: 4, marginTop: 5 },
-  itemsList:    { marginTop: 8, gap: 4 },
-  itemRow:      { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 3 },
-  itemName:     { fontSize: 13, color: "#333", flex: 1 },
-  qtyBadge:     { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
-  qtyTxt:       { fontSize: 12, fontWeight: "700" },
-  calChip:      { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
-  calChipTxt:   { fontSize: 12, fontWeight: "700" },
-  macroTxt:     { fontSize: 11, color: "#aaa", marginBottom: 6 },
-  swapChip:     { borderWidth: 1.5, borderRadius: 16, paddingHorizontal: 10, paddingVertical: 5 },
-  swapChipTxt:  { fontSize: 11, fontWeight: "700" },
-  emptyMeal:    { paddingVertical: 16, alignItems: "center" },
-  emptyMealTxt: { fontSize: 13, color: "#ccc", fontStyle: "italic", marginBottom: 8 },
-  regenSmall:   { borderWidth: 1.5, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6 },
-  regenSmallTxt:{ fontSize: 12, fontWeight: "700" },
-  foodTop:      { flexDirection: "row", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 6 },
-  foodName:     { fontSize: 14, fontWeight: "600", color: "#1a1a1a", flex: 1 },
-  foodMacroRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 5, flexWrap: "wrap" },
-  btn:          { padding: 15, borderRadius: 12, alignItems: "center", marginBottom: 12, elevation: 2 },
-  btnTxt:       { color: "#fff", fontWeight: "800", fontSize: 15 },
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: COLORS.background },
+  center: { alignItems: 'center', justifyContent: 'center' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.lg, paddingTop: 8, paddingBottom: SPACING.md },
+  title: { fontSize: 26, fontWeight: '800', color: COLORS.textPrimary, letterSpacing: -0.5 },
+  addMealBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center', ...SHADOWS.sm },
+  content: { paddingHorizontal: SPACING.lg, paddingBottom: 120 },
+  ctaCard: { borderRadius: RADIUS.lg, overflow: 'hidden', marginBottom: SPACING.lg, ...SHADOWS.md },
+  ctaGradient: { padding: SPACING.lg, alignItems: 'center' },
+  ctaTitle: { fontSize: 18, fontWeight: '800', color: '#fff', marginTop: SPACING.sm },
+  ctaSub: { fontSize: 13, color: 'rgba(255,255,255,0.8)', textAlign: 'center', marginTop: 4, lineHeight: 19 },
+  ctaBtn: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, backgroundColor: '#fff', borderRadius: RADIUS.md, paddingHorizontal: SPACING.lg, paddingVertical: 12, marginTop: SPACING.md },
+  ctaBtnText: { fontSize: 15, fontWeight: '800', color: COLORS.primary },
+  calorieCard: { backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, marginBottom: SPACING.md, borderWidth: 1, borderColor: COLORS.border, ...SHADOWS.sm },
+  calorieLabel: { fontSize: 13, color: COLORS.textSecondary, fontWeight: '500' },
+  calorieBig: { fontSize: 42, fontWeight: '800', color: COLORS.textPrimary, letterSpacing: -2 },
+  calorieOf: { fontSize: 16, color: COLORS.textSecondary, marginBottom: 4 },
+  calorieTrack: { height: 8, backgroundColor: COLORS.track, borderRadius: 4, marginTop: SPACING.md },
+  calorieFill: { height: '100%', backgroundColor: COLORS.primary, borderRadius: 4 },
+  macrosCard: { backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.border, padding: SPACING.lg, marginBottom: SPACING.md, ...SHADOWS.sm },
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: COLORS.textPrimary, marginBottom: SPACING.sm },
+  macroRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginBottom: SPACING.sm },
+  macroLabel: { width: 56, fontSize: 12, color: COLORS.textSecondary, fontWeight: '600' },
+  macroTrack: { flex: 1, height: 6, backgroundColor: COLORS.track, borderRadius: 3 },
+  macroFill: { height: '100%', borderRadius: 3 },
+  macroValue: { width: 72, fontSize: 12, color: COLORS.textPrimary, fontWeight: '600', textAlign: 'right' },
+  macroTarget: { color: COLORS.textTertiary },
+  mealCard: { backgroundColor: COLORS.surface, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, marginBottom: SPACING.sm, overflow: 'hidden', ...SHADOWS.sm },
+  mealInner: { flexDirection: 'row', alignItems: 'center', padding: SPACING.md, gap: SPACING.md },
+  mealIcon: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  mealName: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary },
+  mealCals: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
+  toggle: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
 });

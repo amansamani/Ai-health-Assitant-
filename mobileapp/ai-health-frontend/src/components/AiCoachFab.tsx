@@ -1,136 +1,72 @@
-import { useEffect } from "react";
-import { View, Pressable, StyleSheet, Platform } from "react-native";
-import { useRouter, usePathname } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
-import * as Haptics from "expo-haptics";
-import { LinearGradient } from "expo-linear-gradient";
+// src/components/AiCoachFab.tsx
+import React from 'react';
+import { TouchableOpacity, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import Animated, {
-  Easing,
-  runOnJS,
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withSequence,
-  withSpring,
-  withTiming,
-} from "react-native-reanimated";
-import { COLORS } from "@/src/constants/theme";
+  useSharedValue, useAnimatedStyle, withSpring,
+  withRepeat, withSequence, withTiming, Easing,
+} from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
+import { COLORS, SHADOWS } from '@/src/constants/theme';
 
-// Floating chat-bubble entry point into the AI Coach. Lives in the tabs
-// layout (above <Tabs>) so it stays put on top of every root tab screen.
-//
-// Two things this fixes vs. the first version:
-//  1. The bubble now hides itself once the coach screen is actually the
-//     active route (via usePathname) — previously it kept rendering
-//     underneath/over the pushed screen, which is why it looked like the
-//     logo "appeared after" the chat opened instead of disappearing before it.
-//  2. Tapping now plays an expand + fade "opening" animation on the bubble
-//     itself, and only pushes the coach route once that animation finishes —
-//     so the sequence is bubble opens → bubble disappears → chat appears,
-//     not chat appears → bubble shows up on top.
 export default function AiCoachFab() {
   const router = useRouter();
-  const pathname = usePathname();
-  const insets = useSafeAreaInsets();
+  const scale = useSharedValue(1);
 
-  const press = useSharedValue(1);
+  // Subtle breathing animation
   const pulse = useSharedValue(0);
-  const expand = useSharedValue(0); // 0 = idle bubble, 1 = fully opened
-
-  useEffect(() => {
+  React.useEffect(() => {
     pulse.value = withRepeat(
       withSequence(
-        withTiming(1, { duration: 1400 }),
-        withTiming(0, { duration: 1400 })
+        withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
       ),
-      -1
+      -1, false
     );
   }, []);
 
-  const openCoach = () => {
-    router.push("/(app)/coach");
-    // Reset so the next time this mounts visible again it's a fresh bubble,
-    // not the tail end of the previous expand animation.
-    expand.value = 0;
-    press.value = 1;
-  };
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+    shadowOpacity: 0.3 + pulse.value * 0.2,
+  }));
 
   const handlePress = () => {
-    if (Platform.OS === "ios") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    expand.value = withTiming(
-      1,
-      { duration: 260, easing: Easing.out(Easing.cubic) },
-      () => runOnJS(openCoach)()
-    );
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    router.push('/(app)/coach');
   };
 
-  const buttonStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: press.value * (1 + expand.value * 5) }],
-    opacity: 1 - expand.value,
-  }));
-
-  const ringStyle = useAnimatedStyle(() => ({
-    opacity: (0.32 - pulse.value * 0.24) * (1 - expand.value),
-    transform: [{ scale: 1 + pulse.value * 0.3 }],
-  }));
-
-  // The coach screen is the active route — hide the bubble entirely instead
-  // of letting it linger underneath/over the chat screen.
-  if (pathname === "/coach") return null;
-
   return (
-    <View
-      pointerEvents="box-none"
-      style={[styles.wrap, { bottom: insets.bottom + 88 }]}
-    >
-      <Animated.View style={[styles.ring, ringStyle]} />
-      <Pressable
+    <Animated.View style={[styles.wrapper, animatedStyle]}>
+      <TouchableOpacity
+        activeOpacity={0.85}
         onPress={handlePress}
-        onPressIn={() => {
-          press.value = withSpring(0.92);
-        }}
-        onPressOut={() => {
-          press.value = withSpring(1);
-        }}
-        accessibilityRole="button"
-        accessibilityLabel="Open AI Coach chat"
+        onPressIn={() => { scale.value = withSpring(0.9); }}
+        onPressOut={() => { scale.value = withSpring(1); }}
+        style={styles.fab}
       >
-        <Animated.View style={buttonStyle}>
-          <LinearGradient
-            colors={[COLORS.primaryLight, COLORS.primary, COLORS.primaryDark]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.fab}
-          >
-            <Ionicons name="chatbubble-ellipses" size={26} color="#fff" />
-          </LinearGradient>
-        </Animated.View>
-      </Pressable>
-    </View>
+        <Ionicons name="sparkles" size={24} color="#fff" />
+      </TouchableOpacity>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: {
-    position: "absolute",
-    right: 18,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  ring: {
-    position: "absolute",
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: COLORS.primary,
+  wrapper: {
+    position: 'absolute',
+    bottom: 100,
+    right: 20,
+    zIndex: 99,
+    ...SHADOWS.lg,
   },
   fab: {
     width: 56,
     height: 56,
     borderRadius: 28,
-    justifyContent: "center",
-    alignItems: "center",
-    boxShadow: "0px 8px 20px rgba(76, 46, 150, 0.45)",
+    backgroundColor: COLORS.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
 });

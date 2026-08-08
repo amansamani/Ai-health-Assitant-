@@ -1,196 +1,55 @@
-import { useEffect } from "react";
-import { View, Pressable, StyleSheet, Platform } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
-import * as Haptics from "expo-haptics";
-import { LinearGradient } from "expo-linear-gradient";
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withTiming,
-} from "react-native-reanimated";
-import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
-import { COLORS } from "@/src/constants/theme";
+import React from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import * as Haptics from 'expo-haptics';
+import { COLORS, SHADOWS } from '@/src/constants/theme';
 
-// ─── Tab config ─────────────────────────────────────────────────────────────
-// Keyed by the file-based route name (app/(app)/(tabs)/<name>.tsx).
-// "camera" is handled separately below — it renders as a raised, oversized
-// button instead of a normal tab, since food-logging is the primary action.
-type IconName = keyof typeof Ionicons.glyphMap;
-
-const TAB_META: Record<string, { label: string; icon: IconName; iconOutline: IconName }> = {
-  home:     { label: "Home",     icon: "home",          iconOutline: "home-outline" },
-  workout:  { label: "Exercise", icon: "barbell",        iconOutline: "barbell-outline" },
-  diet:     { label: "Diet",     icon: "nutrition",      iconOutline: "nutrition-outline" },
-  tracking: { label: "Track",    icon: "bar-chart",      iconOutline: "bar-chart-outline" },
+const TAB_ICONS: Record<string, { active: any; inactive: any }> = {
+  home:     { active: 'home',    inactive: 'home-outline' },
+  workout:  { active: 'barbell', inactive: 'barbell-outline' },
+  camera:   { active: 'camera',  inactive: 'camera' },
+  diet:     { active: 'nutrition', inactive: 'nutrition-outline' },
+  tracking: { active: 'stats-chart', inactive: 'stats-chart-outline' },
+};
+const TAB_LABELS: Record<string, string> = {
+  home: 'Home', workout: 'Exercise', camera: '', diet: 'Diet', tracking: 'Track',
 };
 
-function TabButton({
-  focused,
-  meta,
-  onPress,
-  onLongPress,
-  accessibilityLabel,
-}: {
-  focused: boolean;
-  meta: { label: string; icon: IconName; iconOutline: IconName };
-  onPress: () => void;
-  onLongPress: () => void;
-  accessibilityLabel: string;
-}) {
-  const progress = useSharedValue(focused ? 1 : 0);
-  const press = useSharedValue(1);
-
-  useEffect(() => {
-    progress.value = withSpring(focused ? 1 : 0, { damping: 16, stiffness: 220 });
-  }, [focused]);
-
-  const chipStyle = useAnimatedStyle(() => ({
-    backgroundColor: focused ? COLORS.primary : "transparent",
-    transform: [
-      { scale: press.value },
-      { translateY: progress.value * -2 },
-    ],
-  }));
-
-  const labelStyle = useAnimatedStyle(() => ({
-    opacity: 0.55 + progress.value * 0.45,
-  }));
-
-  return (
-    <Pressable
-      onPress={onPress}
-      onLongPress={onLongPress}
-      onPressIn={() => {
-        press.value = withTiming(0.9, { duration: 90 });
-        if (Platform.OS === "ios") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      }}
-      onPressOut={() => {
-        press.value = withTiming(1, { duration: 120 });
-      }}
-      hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
-      accessibilityRole="tab"
-      accessibilityState={{ selected: focused }}
-      accessibilityLabel={accessibilityLabel}
-      style={styles.tabButton}
-    >
-      <Animated.View style={[styles.chip, chipStyle]}>
-        <Ionicons
-          name={focused ? meta.icon : meta.iconOutline}
-          size={20}
-          color={focused ? COLORS.onPrimary : COLORS.textMuted}
-        />
-      </Animated.View>
-      <Animated.Text
-        numberOfLines={1}
-        style={[styles.label, labelStyle, { color: focused ? COLORS.primary : COLORS.textMuted }]}
-      >
-        {meta.label}
-      </Animated.Text>
-    </Pressable>
-  );
-}
-
-// ─── Camera tab — raised, oversized center button ──────────────────────────
-function CameraTabButton({
-  focused,
-  onPress,
-  onLongPress,
-}: {
-  focused: boolean;
-  onPress: () => void;
-  onLongPress: () => void;
-}) {
-  const press = useSharedValue(1);
-
-  const buttonStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: press.value }],
-  }));
-
-  return (
-    <View style={styles.cameraSlot}>
-      <Pressable
-        onPress={onPress}
-        onLongPress={onLongPress}
-        onPressIn={() => {
-          press.value = withTiming(0.92, { duration: 90 });
-          if (Platform.OS === "ios") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        }}
-        onPressOut={() => {
-          press.value = withTiming(1, { duration: 120 });
-        }}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        accessibilityRole="tab"
-        accessibilityState={{ selected: focused }}
-        accessibilityLabel="Log meal with camera"
-      >
-        <Animated.View style={[styles.cameraButton, buttonStyle]}>
-          <LinearGradient
-            colors={[COLORS.primaryLight, COLORS.primary, COLORS.primaryDark]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.cameraGradient}
-          >
-            <Ionicons name="camera" size={26} color="#fff" />
-          </LinearGradient>
-        </Animated.View>
-      </Pressable>
-    </View>
-  );
-}
-
-export default function AppTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+export default function AppTabBar({ state, descriptors, navigation }: any) {
   const insets = useSafeAreaInsets();
-
   return (
-    <View style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+    <View style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, 8) }]}>
       <View style={styles.bar}>
-        {state.routes.map((route, index) => {
-          const { options } = descriptors[route.key];
-          const focused = state.index === index;
-
+        {state.routes.map((route: any, index: number) => {
+          const isFocused = state.index === index;
+          const isCenter = route.name === 'camera';
+          const icons = TAB_ICONS[route.name] || { active: 'ellipse', inactive: 'ellipse' };
           const onPress = () => {
-            const event = navigation.emit({
-              type: "tabPress",
-              target: route.key,
-              canPreventDefault: true,
-            });
-            if (!focused && !event.defaultPrevented) {
-              navigation.navigate(route.name);
-            }
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+            if (!isFocused && !event.defaultPrevented) navigation.navigate(route.name, route.params);
           };
-
-          const onLongPress = () => {
-            navigation.emit({ type: "tabLongPress", target: route.key });
-          };
-
-          if (route.name === "camera") {
+          if (isCenter) {
             return (
-              <CameraTabButton
-                key={route.key}
-                focused={focused}
-                onPress={onPress}
-                onLongPress={onLongPress}
-              />
+              <TouchableOpacity key={route.key} onPress={onPress} style={styles.centerWrap}>
+                <LinearGradient colors={['#8B6CFF', '#5B3DF5']} style={styles.centerBtn}>
+                  <Ionicons name="camera" size={26} color="#fff" />
+                </LinearGradient>
+              </TouchableOpacity>
             );
           }
-
-          const meta = TAB_META[route.name] ?? {
-            label: options.title ?? route.name,
-            icon: "ellipse" as IconName,
-            iconOutline: "ellipse-outline" as IconName,
-          };
-
           return (
-            <TabButton
-              key={route.key}
-              focused={focused}
-              meta={meta}
-              onPress={onPress}
-              onLongPress={onLongPress}
-              accessibilityLabel={`${meta.label} tab`}
-            />
+            <TouchableOpacity key={route.key} onPress={onPress} style={styles.tab}>
+              <View style={[styles.pill, isFocused && styles.pillActive]}>
+                <Ionicons name={isFocused ? icons.active : icons.inactive} size={20}
+                  color={isFocused ? '#fff' : COLORS.textTertiary} />
+              </View>
+              <Text style={[styles.label, { color: isFocused ? COLORS.primary : COLORS.textTertiary }]}>
+                {TAB_LABELS[route.name]}
+              </Text>
+            </TouchableOpacity>
           );
         })}
       </View>
@@ -199,56 +58,19 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
 }
 
 const styles = StyleSheet.create({
-  wrap: {
-    backgroundColor: COLORS.surface,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    paddingTop: 10,
-    boxShadow: "0px -6px 24px rgba(23, 15, 54, 0.10)",
-  },
+  wrap: { position: 'absolute', bottom: 0, left: 0, right: 0 },
   bar: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row', backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    paddingTop: 10, paddingHorizontal: 8, ...SHADOWS.lg,
   },
-  tabButton: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 48,
-    gap: 4,
-  },
-  chip: {
-    width: 46,
-    height: 30,
-    borderRadius: 15,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  label: {
-    fontSize: 10.5,
-    fontWeight: "700",
-    letterSpacing: 0.1,
-  },
-
-  // Camera — raised above the bar line, bigger than the other tab chips.
-  cameraSlot: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "flex-start",
-  },
-  cameraButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    marginTop: -28,
-    borderWidth: 4,
-    borderColor: COLORS.background,
-    overflow: "hidden",
-    boxShadow: "0px 6px 16px rgba(76, 46, 150, 0.45)",
-  },
-  cameraGradient: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+  tab: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 4 },
+  pill: { height: 34, minWidth: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 14 },
+  pillActive: { backgroundColor: COLORS.primary },
+  label: { fontSize: 11, fontWeight: '700', marginTop: 3 },
+  centerWrap: { flex: 1, alignItems: 'center' },
+  centerBtn: {
+    width: 62, height: 62, borderRadius: 31, alignItems: 'center', justifyContent: 'center',
+    marginTop: -30, borderWidth: 5, borderColor: '#FFFFFF', ...SHADOWS.lg,
   },
 });

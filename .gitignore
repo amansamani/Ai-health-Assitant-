@@ -15,3 +15,18 @@ ios/
 
 # ===== Temp =====
 .tmp.driveupload/
+
+# Build outputs
+mobileapp/ai-health-frontend/dist/
+mobileapp/ai-health-frontend/node_modules/
+
+# Expo
+mobileapp/ai-health-frontend/.expo/
+mobileapp/ai-health-frontend/.expo-shared/
+
+# Environment
+mobileapp/ai-health-frontend/.env
+mobileapp/ai-health-frontend/.env.local
+
+# Babel typo
+bable.config.js
