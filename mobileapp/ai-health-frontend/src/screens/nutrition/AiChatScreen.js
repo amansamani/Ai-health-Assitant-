@@ -52,7 +52,7 @@ function TypingDots() {
 
 const td = StyleSheet.create({
   wrap: { flexDirection: "row", alignItems: "center", gap: 4, paddingVertical: 6 },
-  dot:  { width: 7, height: 7, borderRadius: 4, backgroundColor: "#4C2E96" },
+  dot:  { width: 7, height: 7, borderRadius: 4, backgroundColor: "#6E3482" },
 });
 
 // ─── Message Bubble ───────────────────────────────────────────────────────────
@@ -77,7 +77,7 @@ function MessageBubble({ message }) {
     ]}>
       {!isUser && (
         <View style={mb.avatar}>
-          <Ionicons name="sparkles" size={14} color="#4C2E96" />
+          <Ionicons name="sparkles" size={14} color="#6E3482" />
         </View>
       )}
       <View style={[mb.bubble, isUser ? mb.bubbleUser : mb.bubbleAi]}>
@@ -106,7 +106,7 @@ const mb = StyleSheet.create({
     maxWidth: "78%", borderRadius: 18, paddingHorizontal: 14, paddingVertical: 10,
   },
   bubbleUser: {
-    backgroundColor: "#4C2E96",
+    backgroundColor: "#6E3482",
     borderBottomRightRadius: 4,
   },
   bubbleAi: {
@@ -117,7 +117,7 @@ const mb = StyleSheet.create({
   },
   text:     { fontSize: 14, lineHeight: 21 },
   textUser: { color: "#fff", fontWeight: "500" },
-  textAi:   { color: "#29195A", fontWeight: "400" },
+  textAi:   { color: "#49225B", fontWeight: "400" },
   time:     { fontSize: 10, marginTop: 4 },
   timeUser: { color: "rgba(255,255,255,0.6)", textAlign: "right" },
   timeAi:   { color: "#9A94AE" },
@@ -204,10 +204,11 @@ export default function AiChatScreen({ navigation }) {
       };
       setMessages((prev) => [...prev, aiMsg]);
     } catch (err) {
+      const backendMsg = err.response?.data?.message;
       const errMsg = {
         id:      Date.now().toString() + "_err",
         role:    "assistant",
-        content: "Sorry, something went wrong. Please try again.",
+        content: backendMsg || "Sorry, something went wrong. Please try again.",
         time:    formatTime(new Date()),
       };
       setMessages((prev) => [...prev, errMsg]);
@@ -230,7 +231,7 @@ export default function AiChatScreen({ navigation }) {
         <View style={s.header}>
           <View style={s.headerCenter}>
             <View style={s.headerIconWrap}>
-              <Ionicons name="sparkles" size={18} color="#4C2E96" />
+              <Ionicons name="sparkles" size={18} color="#6E3482" />
             </View>
             <View>
               <Text style={s.headerTitle}>AI Nutrition Coach</Text>
@@ -252,7 +253,7 @@ export default function AiChatScreen({ navigation }) {
             loading ? (
               <View style={s.typingRow}>
                 <View style={mb.avatar}>
-                  <Ionicons name="sparkles" size={14} color="#4C2E96" />
+                  <Ionicons name="sparkles" size={14} color="#6E3482" />
                 </View>
                 <View style={[mb.bubbleAi, { paddingHorizontal: 14 }]}>
                   <TypingDots />
@@ -344,7 +345,7 @@ const s = StyleSheet.create({
   },
   headerIcon:  { fontSize: 20 },
   headerTitle: { fontSize: 15, fontWeight: "800", color: "#1B1730" },
-  headerSub:   { fontSize: 11, color: "#4C2E96", fontWeight: "500", marginTop: 1 },
+  headerSub:   { fontSize: 11, color: "#6E3482", fontWeight: "500", marginTop: 1 },
 
   messageList: { padding: 16, paddingBottom: 8 },
   typingRow:   { flexDirection: "row", alignItems: "flex-end", gap: 8, paddingHorizontal: 16, marginBottom: 8 },
@@ -354,7 +355,7 @@ const s = StyleSheet.create({
   quickChip: {
     backgroundColor: "#fff", borderRadius: 20,
     paddingHorizontal: 14, paddingVertical: 9,
-    borderWidth: 1.5, borderColor: "#E4E0F0",
+    borderWidth: 1.5, borderColor: "#E7DBEF",
     shadowColor: "#000", shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04, shadowRadius: 3, elevation: 1,
   },
@@ -369,16 +370,16 @@ const s = StyleSheet.create({
   },
   input: {
     flex: 1, backgroundColor: "#F5F3FF",
-    borderRadius: 22, borderWidth: 1.5, borderColor: "#E4E0F0",
+    borderRadius: 22, borderWidth: 1.5, borderColor: "#E7DBEF",
     paddingHorizontal: 16, paddingVertical: 10,
     fontSize: 14, color: "#1B1730", fontWeight: "500",
     maxHeight: 100,
   },
   sendBtn: {
     width: 44, height: 44, borderRadius: 22,
-    backgroundColor: "#4C2E96",
+    backgroundColor: "#6E3482",
     justifyContent: "center", alignItems: "center",
   },
-  sendBtnDisabled: { backgroundColor: "#A78BFA" },
+  sendBtnDisabled: { backgroundColor: "#A56ABD" },
   sendIcon:        { fontSize: 16, color: "#fff", fontWeight: "800" },
 });

@@ -652,7 +652,7 @@ export default function LogMealScreen({ route, navigation }) {
                 accessibilityRole="button"
                 accessibilityLabel="Filters"
               >
-                <Ionicons name="options-outline" size={16} color={hasActiveFilters ? "#CC5800" : "#4C2E96"} />
+                <Ionicons name="options-outline" size={16} color={hasActiveFilters ? "#CC5800" : "#6E3482"} />
                 {hasActiveFilters && <View style={s.filterDot} />}
               </TouchableOpacity>
               <TouchableOpacity

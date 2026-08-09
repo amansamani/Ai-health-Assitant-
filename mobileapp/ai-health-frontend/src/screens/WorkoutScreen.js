@@ -212,7 +212,7 @@ export default function WorkoutScreen() {
 
             {/* Stats bar */}
             <FadeSlideIn delay={80}>
-              <LinearGradient colors={["#170F36", "#29195A"]} style={[styles.statsBar, shadow(8)]}>
+              <LinearGradient colors={["#170F36", "#49225B"]} style={[styles.statsBar, shadow(8)]}>
                 <View style={styles.statItem}>
                   <Text style={styles.statNum}>{workouts.length}</Text>
                   <Text style={styles.statLabel}>Days</Text>

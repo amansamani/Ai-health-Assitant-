@@ -42,14 +42,14 @@ function AnimatedInput({ icon, placeholder, value, onChangeText, keyboardType })
     setFocused(false);
     Animated.timing(borderAnim, { toValue: 0, duration: 200, useNativeDriver: false }).start();
   };
-  const borderColor = borderAnim.interpolate({ inputRange: [0, 1], outputRange: ["#E4E0F0", "#4C2E96"] });
+  const borderColor = borderAnim.interpolate({ inputRange: [0, 1], outputRange: ["#E7DBEF", "#6E3482"] });
   return (
     <Animated.View style={[styles.inputWrap, { borderColor }]}>
       <Text style={[styles.inputIcon, { opacity: focused ? 1 : 0.45 }]}>{icon}</Text>
       <TextInput
         style={styles.input}
         placeholder={placeholder}
-        placeholderTextColor="#E4E0F0"
+        placeholderTextColor="#E7DBEF"
         value={value}
         onChangeText={onChangeText}
         onFocus={onFocus}
@@ -62,7 +62,7 @@ function AnimatedInput({ icon, placeholder, value, onChangeText, keyboardType })
 }
 
 // ── Option Chip ───────────────────────────────────────────────────────────────
-function OptionChip({ label, emoji, selected, color = "#4C2E96", onPress }) {
+function OptionChip({ label, emoji, selected, color = "#6E3482", onPress }) {
   const scale = useRef(new Animated.Value(1)).current;
   const onIn  = () => Animated.spring(scale, { toValue: 0.94, useNativeDriver: true }).start();
   const onOut = () => Animated.spring(scale, { toValue: 1,    useNativeDriver: true }).start();
@@ -117,7 +117,7 @@ const ACTIVITY_OPTIONS = [
 
 const GOAL_OPTIONS = [
   { key: "lose",     label: "Lose",     emoji: "🔥", color: "#EF4444", desc: "Cut fat"      },
-  { key: "maintain", label: "Maintain", emoji: "⚖️", color: "#4C2E96", desc: "Stay healthy" },
+  { key: "maintain", label: "Maintain", emoji: "⚖️", color: "#6E3482", desc: "Stay healthy" },
   { key: "gain",     label: "Gain",     emoji: "💪", color: "#F59E0B", desc: "Build mass"   },
 ];
 
@@ -199,7 +199,7 @@ export default function HealthProfileScreen({ navigation, route }) {
             <View style={styles.stepRow}>
               <View style={styles.stepDone}><Text style={styles.stepDoneText}>✓</Text></View>
               <View style={styles.stepLine} />
-              <LinearGradient colors={["#4C2E96", "#6339B8"]} style={styles.stepActive}>
+              <LinearGradient colors={["#6E3482", "#6339B8"]} style={styles.stepActive}>
                 <Text style={styles.stepActiveText}>2</Text>
               </LinearGradient>
             </View>
@@ -237,7 +237,7 @@ export default function HealthProfileScreen({ navigation, route }) {
             <View style={styles.chipRow}>
               {GENDER_OPTIONS.map((g) => (
                 <OptionChip key={g.key} label={g.label} emoji={g.emoji}
-                  selected={form.gender === g.key} color="#4C2E96"
+                  selected={form.gender === g.key} color="#6E3482"
                   onPress={() => handleChange("gender", g.key)} />
               ))}
             </View>
@@ -350,7 +350,7 @@ export default function HealthProfileScreen({ navigation, route }) {
             accessibilityLabel="Create my plan">
             <Animated.View style={{ transform: [{ scale: btnScale }] }}>
               <LinearGradient
-                colors={submitting ? ["#9A94AE", "#9A94AE"] : ["#4C2E96", "#6339B8", "#8257D6"]}
+                colors={submitting ? ["#9A94AE", "#9A94AE"] : ["#6E3482", "#6339B8", "#8257D6"]}
                 start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                 style={styles.submitBtn}
               >
@@ -380,7 +380,7 @@ const styles = StyleSheet.create({
   blobTop: {
     position: "absolute", top: -80, right: -70,
     width: 220, height: 220, borderRadius: 110,
-    backgroundColor: "#4C2E9610",
+    backgroundColor: "#6E348210",
   },
   blobBottom: {
     position: "absolute", bottom: 100, left: -60,
@@ -396,7 +396,7 @@ const styles = StyleSheet.create({
     justifyContent: "center", alignItems: "center",
   },
   stepDoneText:  { color: "#fff", fontSize: 14, fontWeight: "800" },
-  stepLine:      { width: 36, height: 2, backgroundColor: "#4C2E96", marginHorizontal: 6 },
+  stepLine:      { width: 36, height: 2, backgroundColor: "#6E3482", marginHorizontal: 6 },
   stepActive: {
     width: 32, height: 32, borderRadius: 16,
     justifyContent: "center", alignItems: "center",
@@ -438,7 +438,7 @@ const styles = StyleSheet.create({
   chip: {
     flexDirection: "row", alignItems: "center",
     backgroundColor: "#F5F3FF", borderRadius: 24,
-    borderWidth: 1.5, borderColor: "#E4E0F0",
+    borderWidth: 1.5, borderColor: "#E7DBEF",
     paddingVertical: 10, paddingHorizontal: 18, gap: 6,
   },
   chipEmoji: { fontSize: 16 },

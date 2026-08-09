@@ -28,7 +28,7 @@ const TYPE_CONFIG = {
   },
   sleep: {
     label: "Sleep", icon: "moon-outline", unit: "h", goal: 8,
-    color: COLORS.primary, gradient: ["#170F36", "#29195A", "#4C2E96"],
+    color: COLORS.primary, gradient: ["#170F36", "#49225B", "#6E3482"],
     tip: "8 hours of sleep fuels peak performance",
   },
 };

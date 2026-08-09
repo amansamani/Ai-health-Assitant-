@@ -238,7 +238,7 @@ export default function LogMealPhotoScreen({ navigation, route }) {
         {photos.length === 0 && (
           <View style={s.captureCard}>
             <View style={s.captureIconWrap}>
-              <Ionicons name="camera-outline" size={36} color="#4C2E96" />
+              <Ionicons name="camera-outline" size={36} color="#6E3482" />
             </View>
             <Text style={s.captureTitle}>Snap your meal</Text>
             <Text style={s.captureSub}>AI will estimate what's on your plate — you confirm before it's logged.</Text>
@@ -249,7 +249,7 @@ export default function LogMealPhotoScreen({ navigation, route }) {
             </TouchableOpacity>
 
             <TouchableOpacity style={s.secondaryBtn} onPress={pickFromGallery} activeOpacity={0.85} accessibilityRole="button" accessibilityLabel="Choose from gallery">
-              <Ionicons name="images-outline" size={16} color="#4C2E96" style={{ marginRight: 8 }} />
+              <Ionicons name="images-outline" size={16} color="#6E3482" style={{ marginRight: 8 }} />
               <Text style={s.secondaryBtnText}>Choose from Gallery</Text>
             </TouchableOpacity>
           </View>
@@ -270,7 +270,7 @@ export default function LogMealPhotoScreen({ navigation, route }) {
 
             {analyzing ? (
               <View style={s.analyzingRow}>
-                <ActivityIndicator color="#4C2E96" />
+                <ActivityIndicator color="#6E3482" />
                 <Text style={s.analyzingText}>Analyzing your meal...</Text>
               </View>
             ) : (
@@ -278,7 +278,7 @@ export default function LogMealPhotoScreen({ navigation, route }) {
                 {photos.length < MAX_ANGLES && (
                   <TouchableOpacity style={s.angleBtn} onPress={pickFromCamera} activeOpacity={0.85} accessibilityRole="button" accessibilityLabel="Add another angle">
                     <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center" }}>
-                      <Ionicons name="add" size={15} color="#4C2E96" style={{ marginRight: 4 }} />
+                      <Ionicons name="add" size={15} color="#6E3482" style={{ marginRight: 4 }} />
                       <Text style={s.angleBtnText}>Add another angle (improves portion accuracy)</Text>
                     </View>
                   </TouchableOpacity>
@@ -413,7 +413,7 @@ const s = StyleSheet.create({
   tab: {
     flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
     gap: 6, paddingVertical: 10, borderRadius: 14,
-    borderWidth: 1.5, borderColor: "#E4E0F0", backgroundColor: "#fff",
+    borderWidth: 1.5, borderColor: "#E7DBEF", backgroundColor: "#fff",
   },
   tabTxt: { fontSize: 12, fontWeight: "600", color: "#6B667D" },
 
@@ -448,7 +448,7 @@ const s = StyleSheet.create({
     backgroundColor: "#EDE9FE", borderRadius: 14, paddingVertical: 12,
     alignItems: "center", marginBottom: 10,
   },
-  angleBtnText: { color: "#4C2E96", fontSize: 13, fontWeight: "700" },
+  angleBtnText: { color: "#6E3482", fontSize: 13, fontWeight: "700" },
 
   referenceRow: {
     flexDirection: "row", alignItems: "center", gap: 10,
@@ -457,14 +457,14 @@ const s = StyleSheet.create({
   referenceText: { flex: 1, fontSize: 12, color: "#6B667D", fontWeight: "600", lineHeight: 17 },
 
   analyzingRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, paddingVertical: 16 },
-  analyzingText: { fontSize: 14, fontWeight: "600", color: "#4C2E96" },
+  analyzingText: { fontSize: 14, fontWeight: "600", color: "#6E3482" },
 
   primaryBtn: {
-    backgroundColor: "#4C2E96", borderRadius: 16, paddingVertical: 16,
+    backgroundColor: "#6E3482", borderRadius: 16, paddingVertical: 16,
     flexDirection: "row", alignItems: "center", justifyContent: "center", marginBottom: 10,
     boxShadow: "0px 4px 12px rgba(76, 46, 150, 0.28)",
   },
-  primaryBtnDisabled: { backgroundColor: "#E4E0F0", boxShadow: "none" },
+  primaryBtnDisabled: { backgroundColor: "#E7DBEF", boxShadow: "none" },
   primaryBtnText: { color: "#fff", fontSize: 15, fontWeight: "800" },
 
   secondaryBtn: {
@@ -475,7 +475,7 @@ const s = StyleSheet.create({
   secondaryBtnText: { color: "#1B1730", fontSize: 15, fontWeight: "700" },
 
   retakeBtn: { alignItems: "center", paddingVertical: 10 },
-  retakeBtnText: { color: "#4C2E96", fontSize: 13, fontWeight: "700" },
+  retakeBtnText: { color: "#6E3482", fontSize: 13, fontWeight: "700" },
 
   sectionTitle: { fontSize: 13, fontWeight: "800", color: "#6B667D", marginBottom: 12, letterSpacing: 0.2 },
 
@@ -483,14 +483,14 @@ const s = StyleSheet.create({
     backgroundColor: "#fff", borderRadius: 16, padding: 14, marginBottom: 10,
     borderWidth: 1.5, borderColor: "#EDE9FE",
   },
-  itemCardMuted: { opacity: 0.45, borderColor: "#E4E0F0" },
+  itemCardMuted: { opacity: 0.45, borderColor: "#E7DBEF" },
   itemTapRow: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
 
   checkbox: {
-    width: 22, height: 22, borderRadius: 7, borderWidth: 2, borderColor: "#E4E0F0",
+    width: 22, height: 22, borderRadius: 7, borderWidth: 2, borderColor: "#E7DBEF",
     alignItems: "center", justifyContent: "center", marginTop: 2,
   },
-  checkboxChecked: { backgroundColor: "#4C2E96", borderColor: "#4C2E96" },
+  checkboxChecked: { backgroundColor: "#6E3482", borderColor: "#6E3482" },
   checkboxTick: { color: "#fff", fontSize: 13, fontWeight: "900" },
 
   itemHeaderRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 3 },

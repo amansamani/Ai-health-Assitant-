@@ -272,12 +272,12 @@ export default function MealLoggerScreen({ navigation }) {
         onPress={() => navigation.navigate("LogMealPhoto")}
         activeOpacity={0.85}
       >
-        <Ionicons name="camera-outline" size={22} color="#4C2E96" />
+        <Ionicons name="camera-outline" size={22} color="#6E3482" />
         <View style={{ flex: 1, marginLeft: 12 }}>
           <Text style={s.photoEntryTitle}>Snap a Photo</Text>
           <Text style={s.photoEntrySub}>Let AI estimate your meal's calories</Text>
         </View>
-        <Ionicons name="arrow-forward" size={18} color="#4C2E96" />
+        <Ionicons name="arrow-forward" size={18} color="#6E3482" />
       </TouchableOpacity>
 
       <Text style={s.sectionTitle}>Today's Meals</Text>
@@ -407,13 +407,13 @@ const s = StyleSheet.create({
   photoEntryCard: {
     flexDirection: "row", alignItems: "center",
     backgroundColor: "#EDE9FE", borderRadius: 18,
-    borderWidth: 1.5, borderColor: "#A78BFA",
+    borderWidth: 1.5, borderColor: "#A56ABD",
     paddingVertical: 14, paddingHorizontal: 16,
     marginBottom: 20,
   },
   photoEntryTitle: { fontSize: 14, fontWeight: "800", color: "#1B1730" },
   photoEntrySub: { fontSize: 12, color: "#6B667D", marginTop: 1 },
-  photoEntryArrow: { fontSize: 18, color: "#4C2E96", fontWeight: "700" },
+  photoEntryArrow: { fontSize: 18, color: "#6E3482", fontWeight: "700" },
 
   mealCard: {
     backgroundColor: COLORS.surface, borderRadius: 16, padding: 14, marginBottom: 12,

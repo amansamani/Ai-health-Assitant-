@@ -218,7 +218,7 @@ export default function TrackingScreen() {
 
           {/* ── HERO PROGRESS ── */}
           <FadeSlideIn delay={80}>
-            <LinearGradient colors={["#170F36", "#29195A", "#170F36"]} style={styles.heroCard}>
+            <LinearGradient colors={["#170F36", "#49225B", "#170F36"]} style={styles.heroCard}>
               <View style={styles.heroDecor} />
               <View style={styles.heroBadgeRow}>
                 <Ionicons name="calendar-outline" size={12} color="#FACC15" />

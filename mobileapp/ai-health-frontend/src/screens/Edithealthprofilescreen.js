@@ -31,7 +31,7 @@ function AnimatedInput({ icon, label, placeholder, value, onChangeText, keyboard
   };
 
   const borderColor = borderAnim.interpolate({
-    inputRange: [0, 1], outputRange: ["#E4E0F0", "#4C2E96"],
+    inputRange: [0, 1], outputRange: ["#E7DBEF", "#6E3482"],
   });
 
   return (
@@ -42,7 +42,7 @@ function AnimatedInput({ icon, label, placeholder, value, onChangeText, keyboard
         <TextInput
           style={styles.input}
           placeholder={placeholder}
-          placeholderTextColor="#E4E0F0"
+          placeholderTextColor="#E7DBEF"
           value={value}
           onChangeText={onChangeText}
           onFocus={onFocus}
@@ -133,7 +133,7 @@ const ACTIVITY_OPTIONS = [
 
 const GOAL_OPTIONS = [
   { key: "lose",     label: "Lose",     emoji: "🔥", desc: "Cut fat",      color: "#EF4444" },
-  { key: "maintain", label: "Maintain", emoji: "⚖️", desc: "Stay healthy", color: "#4C2E96" },
+  { key: "maintain", label: "Maintain", emoji: "⚖️", desc: "Stay healthy", color: "#6E3482" },
   { key: "gain",     label: "Gain",     emoji: "💪", desc: "Build mass",   color: "#F59E0B" },
 ];
 
@@ -255,7 +255,7 @@ export default function EditHealthProfileScreen({ navigation }) {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#4C2E96" />
+        <ActivityIndicator size="large" color="#6E3482" />
         <Text style={styles.loadingText}>Loading your profile…</Text>
       </View>
     );
@@ -317,7 +317,7 @@ export default function EditHealthProfileScreen({ navigation }) {
                 <Chip
                   key={g.key} option={g}
                   selected={form.gender === g.key}
-                  color="#4C2E96"
+                  color="#6E3482"
                   onPress={() => handleChange("gender", g.key)}
                 />
               ))}
@@ -391,7 +391,7 @@ export default function EditHealthProfileScreen({ navigation }) {
             style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1, marginTop: 8 }]}
           >
             <LinearGradient
-              colors={saved ? ["#22C55E", "#16A34A"] : ["#4C2E96", "#6339B8"]}
+              colors={saved ? ["#22C55E", "#16A34A"] : ["#6E3482", "#6339B8"]}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
               style={styles.saveBtn}
             >
@@ -466,7 +466,7 @@ const styles = StyleSheet.create({
   chip: {
     flexDirection: "row", alignItems: "center",
     backgroundColor: "#F5F3FF", borderRadius: 24,
-    borderWidth: 1.5, borderColor: "#E4E0F0",
+    borderWidth: 1.5, borderColor: "#E7DBEF",
     paddingVertical: 10, paddingHorizontal: 18, gap: 6,
   },
   chipEmoji: { fontSize: 16 },
@@ -490,7 +490,7 @@ const styles = StyleSheet.create({
   saveBtn: {
     borderRadius: 18, paddingVertical: 17,
     alignItems: "center", justifyContent: "center",
-    shadowColor: "#4C2E96", shadowOffset: { width: 0, height: 6 },
+    shadowColor: "#6E3482", shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35, shadowRadius: 16, elevation: 8,
   },
   saveBtnText: { color: "#fff", fontSize: 16, fontWeight: "900", letterSpacing: 0.3 },

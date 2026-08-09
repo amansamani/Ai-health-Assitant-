@@ -225,7 +225,7 @@ export default function WorkoutDetailScreen() {
 
   const ListHeader = useMemo(() => (
     <Animated.View style={{ opacity: headerOpacity, transform: [{ translateY: headerSlide }] }}>
-      <LinearGradient colors={["#170F36", "#29195A"]} style={styles.hero}>
+      <LinearGradient colors={["#170F36", "#49225B"]} style={styles.hero}>
         <View style={styles.heroDecor} />
         <Pressable
           onPress={() => router.back()}

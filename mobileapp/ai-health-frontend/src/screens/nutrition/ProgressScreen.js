@@ -48,7 +48,7 @@ function getStatusMeta(insight) {
   }
   return insight.delta > 0
     ? { label: "CALORIES INCREASED", color: "#1E88E5", bg: "#E3F2FD" }
-    : { label: "CALORIES REDUCED", color: "#4C2E96", bg: "#EDE9FE" };
+    : { label: "CALORIES REDUCED", color: "#6E3482", bg: "#EDE9FE" };
 }
 
 // ─── Weekly Insight Card ───────────────────────────────────────────────────────
@@ -160,11 +160,11 @@ export default function ProgressScreen() {
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#4C2E96"]} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#6E3482"]} />
         }
       >
         {loading ? (
-          <ActivityIndicator size="large" color="#4C2E96" style={{ marginTop: 40 }} />
+          <ActivityIndicator size="large" color="#6E3482" style={{ marginTop: 40 }} />
         ) : error ? (
           <Text style={styles.errorTxt}>{error}</Text>
         ) : (
@@ -192,7 +192,7 @@ const wi = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E0E7FF",
     overflow: "hidden",
-    shadowColor: "#4C2E96",
+    shadowColor: "#6E3482",
     shadowOpacity: 0.08,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
@@ -207,7 +207,7 @@ const wi = StyleSheet.create({
     borderBottomColor: "#E0E7FF",
   },
   headerTitle: { fontSize: 15, fontWeight: "800", color: "#3730A3" },
-  headerSub:   { fontSize: 12, color: "#4C2E96", fontWeight: "500", marginTop: 2 },
+  headerSub:   { fontSize: 12, color: "#6E3482", fontWeight: "500", marginTop: 2 },
   badge: {
     borderRadius: 8,
     paddingHorizontal: 8,

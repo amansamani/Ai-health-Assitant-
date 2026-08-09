@@ -1,5 +1,8 @@
 import { useEffect } from "react";
-import Svg, { G, Path, Circle, Ellipse, Rect, Mask, Defs } from "react-native-svg";
+import Svg, {
+  G, Path, Circle, Ellipse, Rect, Mask, Defs,
+  LinearGradient as SvgLinearGradient, Stop,
+} from "react-native-svg";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -128,7 +131,7 @@ function CrescentShape({ color, size = 20, cutDx = 5, cutDy = -4, maskId }) {
   );
 }
 
-export function SleepIcon({ trigger, size = 24, color = "#4C2E96" }) {
+export function SleepIcon({ trigger, size = 24, color = "#6E3482" }) {
   const SLEEP_VB = "-2 -1 32 32";
   return (
     <IconFrame size={size}>
@@ -281,5 +284,62 @@ export function AppleIcon({ trigger, size = 22, color = "#8E24AA" }) {
         </Svg>
       </Piece>
     </IconFrame>
+  );
+}
+
+// ── Motivation card sky illustration ─────────────────────────────────────────
+// A small time-of-day scene for the Home motivation card: sun rising in the
+// morning, high in the afternoon, setting in the evening, and a moon +
+// stars at night — over a mountain silhouette so it reads as one continuous
+// "same view, different time of day" rather than an unrelated icon swap.
+// Entirely static SVG (gradient defs + plain shapes) — only the wrapping
+// view is animated, on the same safe opacity/scale pattern as every other
+// icon here.
+export function getTimeBucket() {
+  const h = new Date().getHours();
+  if (h >= 5 && h < 12) return "morning";
+  if (h >= 12 && h < 17) return "day";
+  if (h >= 17 && h < 21) return "evening";
+  return "night";
+}
+
+const SKY_SCENES = {
+  morning: { sky: ["#FCEBD5", "#F5EBFA"], mountain: "#C99B6E", sun: "#FDBA55", sunCy: 58 },
+  day:     { sky: ["#EDE6FB", "#F5EBFA"], mountain: "#8B7BA8", sun: "#FFC94D", sunCy: 20 },
+  evening: { sky: ["#F6A66B", "#6E3482"], mountain: "#3D1F52", sun: "#FF8A5B", sunCy: 55 },
+  night:   { sky: ["#170F36", "#49225B"], mountain: "#0D0820", sun: null,     sunCy: null },
+};
+
+export function MotivationSkyIllustration({ trigger, width = 118, height = 78 }) {
+  const scene = SKY_SCENES[getTimeBucket()];
+  const animatedStyle = usePieceStyle(trigger, 0, false);
+
+  return (
+    <Animated.View style={[{ width, height }, animatedStyle]}>
+      <Svg width={width} height={height} viewBox="0 0 118 78">
+        <Defs>
+          <SvgLinearGradient id="motivSkyGrad" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor={scene.sky[0]} />
+            <Stop offset="1" stopColor={scene.sky[1]} />
+          </SvgLinearGradient>
+        </Defs>
+
+        <Rect x="0" y="0" width="118" height="78" rx="16" fill="url(#motivSkyGrad)" />
+
+        {scene.sun != null ? (
+          <Circle cx="80" cy={scene.sunCy} r="16" fill={scene.sun} />
+        ) : (
+          <>
+            <G transform="translate(66,10)">
+              <CrescentShape color="#F5EBFA" size={26} cutDx={8} cutDy={-5} maskId="motivMoon" />
+            </G>
+            <Circle cx="30" cy="14" r="1.4" fill="#F5EBFA" />
+            <Circle cx="40" cy="24" r="1" fill="#A56ABD" />
+          </>
+        )}
+
+        <Path d="M0 78 L28 40 L46 58 L62 32 L88 60 L118 38 L118 78 Z" fill={scene.mountain} />
+      </Svg>
+    </Animated.View>
   );
 }

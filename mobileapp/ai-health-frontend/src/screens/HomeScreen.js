@@ -17,7 +17,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { COLORS } from "../constants/theme";
 import CircularProgressRing from "../components/CircularProgressRing";
 import WeeklyInsightCard from "../components/WeeklyInsightCard";
-import { StepsIcon, WaterIcon, SleepIcon, ManualLogIcon } from "../components/icons/MotionIcons";
+import { StepsIcon, WaterIcon, SleepIcon, ManualLogIcon, MotivationSkyIllustration } from "../components/icons/MotionIcons";
 import { useReplayOnFocus } from "../hooks/useReplayOnFocus";
 import AiCoachFab from "../components/AiCoachFab";
 
@@ -96,17 +96,18 @@ function getDailyQuote() {
   return MOTIVATION_QUOTES[dayOfYear % MOTIVATION_QUOTES.length];
 }
 
-function MotivationCard() {
+function MotivationCard({ iconTrigger }) {
   const quote = useMemo(getDailyQuote, []);
   return (
     <View style={styles.motivationCard}>
-      <View style={styles.motivationIconWrap}>
-        <Ionicons name="sparkles-outline" size={16} color={COLORS.primary} />
-      </View>
-      <View style={{ flex: 1 }}>
+      <View style={{ flex: 1, paddingRight: 10 }}>
+        <View style={styles.motivationIconWrap}>
+          <Ionicons name="sparkles-outline" size={16} color={COLORS.primary} />
+        </View>
         <Text style={styles.motivationLabel}>TODAY'S MOTIVATION</Text>
         <Text style={styles.motivationQuote}>{quote}</Text>
       </View>
+      <MotivationSkyIllustration trigger={iconTrigger} />
     </View>
   );
 }
@@ -209,13 +210,13 @@ export default function HomeScreen() {
 
         {/* ── TODAY'S MOTIVATION ── */}
         <FadeSlideIn delay={60}>
-          <MotivationCard />
+          <MotivationCard iconTrigger={iconTrigger} />
         </FadeSlideIn>
 
         {/* ── HERO CARD ── */}
         <FadeSlideIn delay={110}>
           <LinearGradient
-            colors={["#170F36", "#29195A", "#170F36"]}
+            colors={["#170F36", "#49225B", "#170F36"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.heroCard}
@@ -426,7 +427,7 @@ const styles = StyleSheet.create({
     width: 30, height: 30, borderRadius: 10,
     backgroundColor: COLORS.surfaceMuted,
     justifyContent: "center", alignItems: "center",
-    marginTop: 1,
+    marginBottom: 10,
   },
   motivationLabel: {
     fontSize: 10, fontWeight: "800", color: COLORS.textMuted,

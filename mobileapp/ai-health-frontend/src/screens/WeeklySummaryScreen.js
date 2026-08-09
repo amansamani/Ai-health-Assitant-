@@ -205,7 +205,7 @@ export default function WeeklySummaryScreen() {
 
         {/* Hero card */}
         <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
-          <LinearGradient colors={["#170F36", "#29195A"]} style={s.heroCard}>
+          <LinearGradient colors={["#170F36", "#49225B"]} style={s.heroCard}>
             <View style={s.heroLeft}>
               <Text style={s.heroLabel}>CONSISTENCY</Text>
               <Text style={s.heroTitle}>Days Tracked</Text>
