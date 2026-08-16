@@ -128,7 +128,27 @@ export default function RegisterScreen() {
 
       <Divider />
 
-      <GoogleSignInButton onSuccess={(user) => login(user.token)} />
+      <GoogleSignInButton
+        onSuccess={(data) => {
+          if (data.hasHealthProfile) {
+            // Returning Google user who already set up their profile.
+            login(data.token);
+          } else {
+            // First Google sign-in (or an account that never finished
+            // setup) — send them through the same health-profile step
+            // manual registration uses, instead of straight to home.
+            router.push({
+              pathname: "/(auth)/health-profile",
+              params: {
+                name: data.user?.name ?? "",
+                email: data.user?.email ?? "",
+                token: data.token,
+                workoutGoal: goal,
+              },
+            });
+          }
+        }}
+      />
 
       <View style={{ height: 16 }} />
 

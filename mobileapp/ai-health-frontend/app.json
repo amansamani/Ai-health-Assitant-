@@ -17,7 +17,10 @@
     "android": {
       "package": "com.amansamani.aihealthfrontend",
       "permissions": [
-        "android.permission.CAMERA"
+        "android.permission.CAMERA",
+        "android.permission.health.READ_STEPS",
+        "android.permission.health.READ_SLEEP",
+        "android.permission.health.READ_ACTIVE_CALORIES_BURNED"
       ],
       "adaptiveIcon": {
         "backgroundColor": "#29195A",
@@ -54,11 +57,20 @@
       "expo-web-browser",
       "expo-font",
       "expo-video",
+      "react-native-health-connect",
+      [
+        "@kingstinct/react-native-healthkit",
+        {
+          "NSHealthShareUsageDescription": "FitLip reads your steps, sleep, and active calories from Health to keep your daily tracking up to date automatically.",
+          "NSHealthUpdateUsageDescription": false
+        }
+      ],
       [
         "expo-build-properties",
         {
           "android": {
-            "ndkVersion": "26.3.11579264"
+            "ndkVersion": "26.3.11579264",
+            "minSdkVersion": 26
           }
         }
       ],

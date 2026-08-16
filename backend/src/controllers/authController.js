@@ -1,4 +1,5 @@
 const User = require("../models/User");
+const HealthProfile = require("../modules/health/health.model");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const sendEmail = require("../utils/sendEmail");
@@ -90,9 +91,12 @@ const loginUser = async (req, res) => {
       { expiresIn: "30d" }
     );
 
+    const healthProfile = await HealthProfile.findOne({ user: user._id }).select("_id").lean();
+
     res.status(200).json({
       message: "Login successful",
       token,
+      hasHealthProfile: !!healthProfile,
       user: {
         id: user._id,
         name: user.name,
@@ -256,13 +260,22 @@ const googleLogin = async (req, res) => {
       });
     }
 
-    // 3. Return JWT
+    // 3. Check whether this user has already completed their health profile.
+    // A brand-new Google account never has one; a returning Google user
+    // usually does. The frontend uses this flag to decide whether to send
+    // the user through health-profile setup or straight to home — without
+    // it, every Google sign-in (including first-time ones) was skipping
+    // setup entirely.
+    const healthProfile = await HealthProfile.findOne({ user: user._id }).select("_id").lean();
+
+    // 4. Return JWT
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
       expiresIn: "30d",
     });
 
     res.json({
       token,
+      hasHealthProfile: !!healthProfile,
       user: { name: user.name, email: user.email, picture: user.picture },
     });
   } catch (err) {

@@ -41,6 +41,7 @@ const healthProfileSchema = new mongoose.Schema(
     bmr:                Number,
     maintenanceCalories: Number,
     targetCalories:     Number,
+    activeCalorieGoal:  Number, // personalized Active Burn ring goal (kcal/day)
     proteinTarget:      Number,
     carbTarget:         Number,
     fatTarget:          Number,

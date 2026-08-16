@@ -10,6 +10,7 @@ import API from "../services/api";
 import { COLORS } from "../constants/theme";
 import { AuthContext } from "../context/AuthContext";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useActiveCalorieGoal } from "../hooks/useActiveCalorieGoal";
 
 // ── Safe number helper — handles undefined/null/NaN from API ─────────────────
 const safeNum = (val, decimals = 0) => {
@@ -98,6 +99,7 @@ export default function WeeklySummaryScreen() {
   const { token }  = useContext(AuthContext);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
+  const { activeCalorieGoal } = useActiveCalorieGoal();
 
   const fadeAnim  = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
@@ -150,6 +152,7 @@ export default function WeeklySummaryScreen() {
   const avgSteps = safeNum(summary.avgSteps);
   const avgWater = safeNum(summary.avgWater, 1);
   const avgSleep = safeNum(summary.avgSleep, 1);
+  const avgCalories = safeNum(summary.avgCalories);
   const daysTracked = safeNum(summary.daysTracked);
 
   const bestDayStr = summary.bestDay
@@ -162,11 +165,11 @@ export default function WeeklySummaryScreen() {
     ? { icon: "trending-up", color: "#F59E0B", text: "Almost!" }
     : { icon: "trending-up-outline", color: COLORS.textMuted, text: "Keep Going" };
 
-  const waterScore = avgWater >= 3
+  const caloriesScore = avgCalories >= activeCalorieGoal
     ? { icon: "trophy", color: "#22C55E", text: "Goal Met!" }
-    : avgWater >= 2
-    ? { icon: "water", color: "#3B82F6", text: "Good!" }
-    : { icon: "trending-up-outline", color: COLORS.textMuted, text: "Drink More" };
+    : avgCalories >= activeCalorieGoal * 0.6
+    ? { icon: "flame", color: "#F97316", text: "Good!" }
+    : { icon: "trending-up-outline", color: COLORS.textMuted, text: "Move More" };
 
   const sleepScore = avgSleep >= 8
     ? { icon: "trophy", color: "#22C55E", text: "Goal Met!" }
@@ -174,12 +177,14 @@ export default function WeeklySummaryScreen() {
     ? { icon: "moon", color: COLORS.primary, text: "Decent" }
     : { icon: "trending-up-outline", color: COLORS.textMuted, text: "Sleep More" };
 
-  // Overall score
-  const stepsP = Math.min(avgSteps / 10000, 1);
-  const waterP = Math.min(avgWater / 3, 1);
-  const sleepP = Math.min(avgSleep / 8, 1);
-  const daysP  = daysTracked / 7;
-  const score  = Math.round(((stepsP + waterP + sleepP + daysP) / 4) * 100);
+  // Overall score — steps, calories burned, sleep, and days-tracked
+  // consistency. Water is tracked (shown below) but doesn't factor into
+  // the score since it's manual-only for most people.
+  const stepsP    = Math.min(avgSteps / 10000, 1);
+  const caloriesP = Math.min(avgCalories / activeCalorieGoal, 1);
+  const sleepP    = Math.min(avgSleep / 8, 1);
+  const daysP     = daysTracked / 7;
+  const score  = Math.round(((stepsP + caloriesP + sleepP + daysP) / 4) * 100);
   const grade  = score >= 80 ? "A" : score >= 60 ? "B" : score >= 40 ? "C" : "D";
   const gradeColor = score >= 80 ? "#22C55E" : score >= 60 ? "#F59E0B" : score >= 40 ? "#F97316" : "#EF4444";
   const scoreMsg = score >= 80 ? "Outstanding week!" : score >= 60 ? "Solid effort!" : score >= 40 ? "Good start!" : "Let's pick it up!";
@@ -246,25 +251,25 @@ export default function WeeklySummaryScreen() {
           </View>
         </Animated.View>
 
-        {/* Water card */}
+        {/* Active Burn card */}
         <Animated.View style={[s.statCard, { opacity: fadeAnim }]}>
           <View style={s.statHeader}>
-            <View style={[s.statIconBox, { backgroundColor: "#dbeafe" }]}>
-              <Ionicons name="water-outline" size={22} color="#3B82F6" />
+            <View style={[s.statIconBox, { backgroundColor: "#ffedd5" }]}>
+              <Ionicons name="flame-outline" size={22} color="#F97316" />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={s.statLabel}>Average Water</Text>
-              <ScoreTag {...waterScore} />
+              <Text style={s.statLabel}>Average Active Burn</Text>
+              <ScoreTag {...caloriesScore} />
             </View>
             <View style={s.statNumBox}>
-              <AnimatedNumber value={avgWater} suffix="L" />
-              <Text style={s.statUnit}>per day</Text>
+              <AnimatedNumber value={avgCalories} />
+              <Text style={s.statUnit}>kcal/day</Text>
             </View>
           </View>
-          <StatBar value={avgWater} max={3} color="#3B82F6" />
+          <StatBar value={avgCalories} max={activeCalorieGoal} color="#F97316" />
           <View style={s.statFooter}>
-            <Text style={s.statGoalText}>Goal: 3 L</Text>
-            <Text style={[s.statPct, { color: "#3B82F6" }]}>{Math.round((avgWater / 3) * 100)}%</Text>
+            <Text style={s.statGoalText}>Goal: {activeCalorieGoal} kcal · personalized</Text>
+            <Text style={[s.statPct, { color: "#F97316" }]}>{Math.round((avgCalories / activeCalorieGoal) * 100)}%</Text>
           </View>
         </Animated.View>
 
@@ -288,6 +293,14 @@ export default function WeeklySummaryScreen() {
             <Text style={s.statGoalText}>Goal: 8 hrs</Text>
             <Text style={[s.statPct, { color: COLORS.primary }]}>{Math.round((avgSleep / 8) * 100)}%</Text>
           </View>
+        </Animated.View>
+
+        {/* Water — secondary, compact (manual-only, not part of the score) */}
+        <Animated.View style={[s.waterStrip, { opacity: fadeAnim }]}>
+          <Ionicons name="water-outline" size={16} color="#3B82F6" />
+          <Text style={s.waterStripText}>
+            Avg water logged: <Text style={s.waterStripValue}>{avgWater} L/day</Text>
+          </Text>
         </Animated.View>
 
         {/* Overall score */}
@@ -365,6 +378,14 @@ const s = StyleSheet.create({
   statFooter:  { flexDirection: "row", justifyContent: "space-between", marginTop: 8 },
   statGoalText:{ fontSize: 11, color: COLORS.textMuted },
   statPct:     { fontSize: 12, fontWeight: "700" },
+
+  waterStrip: {
+    flexDirection: "row", alignItems: "center", gap: 8,
+    backgroundColor: "#3B82F60F", borderRadius: 12,
+    paddingHorizontal: 14, paddingVertical: 10, marginBottom: 16,
+  },
+  waterStripText:  { fontSize: 12.5, color: COLORS.textMuted, fontWeight: "500" },
+  waterStripValue: { color: "#3B82F6", fontWeight: "800" },
 
   scoreCard: {
     backgroundColor: COLORS.surface, borderRadius: 16, padding: 20, marginTop: 4,

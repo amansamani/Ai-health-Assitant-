@@ -11,6 +11,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import API from "../services/api";
 import { AuthContext } from "../context/AuthContext";
 import { COLORS } from "../constants/theme";
+import { useActiveCalorieGoal } from "../hooks/useActiveCalorieGoal";
 
 const { width } = Dimensions.get("window");
 
@@ -20,6 +21,11 @@ const TYPE_CONFIG = {
     label: "Steps", icon: "footsteps-outline", unit: "", goal: 10000,
     color: "#22C55E", gradient: ["#14532D", "#166534", "#15803D"],
     tip: "10,000 steps a day keeps the doctor away",
+  },
+  caloriesBurned: {
+    label: "Active Burn", icon: "flame-outline", unit: "kcal", goal: 400, // fallback goal — overridden with the personalized value below
+    color: "#F97316", gradient: ["#7C2D12", "#9A3412", "#EA580C"],
+    tip: "Every active minute adds up — consistency beats intensity",
   },
   water: {
     label: "Water", icon: "water-outline", unit: "L", goal: 3,
@@ -133,7 +139,12 @@ export default function TrackDetailScreen() {
   const { token } = useContext(AuthContext);
   const { type: rawType } = useLocalSearchParams();
   const type    = Array.isArray(rawType) ? rawType[0] : rawType;
-  const config  = TYPE_CONFIG[type] ?? TYPE_CONFIG.steps;
+  const { activeCalorieGoal } = useActiveCalorieGoal();
+  const baseConfig = TYPE_CONFIG[type] ?? TYPE_CONFIG.steps;
+  // caloriesBurned's static goal above is just a fallback for the first
+  // render — swap in the personalized one (from the user's own BMR/TDEE
+  // numbers) once it's loaded.
+  const config = type === "caloriesBurned" ? { ...baseConfig, goal: activeCalorieGoal } : baseConfig;
 
   const [today, setToday]     = useState(null);
   const [logs, setLogs]       = useState([]);

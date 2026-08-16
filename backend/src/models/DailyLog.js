@@ -16,12 +16,25 @@ const dailyLogSchema = new mongoose.Schema(
       default: 0,
     },
     water: {
-      type: Number, // liters
+      type: Number, // liters — manual-only; most wearables don't log hydration
       default: 0,
     },
     sleep: {
       type: Number, // hours
       default: 0,
+    },
+    caloriesBurned: {
+      type: Number, // active calories (kcal), typically device-synced
+      default: 0,
+    },
+    // "device" = read straight from Health Connect/HealthKit (Tier 1).
+    // "estimated" = no wearable data today, so we derived it — from steps
+    // via METs, or from a completed in-app workout (Tier 2).
+    // "manual" = hand-typed or a quick-add preset (Tier 3).
+    source: {
+      type: String,
+      enum: ["manual", "device", "estimated"],
+      default: "manual",
     },
   },
   { timestamps: true }

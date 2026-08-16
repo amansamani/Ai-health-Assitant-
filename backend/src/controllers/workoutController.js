@@ -1,6 +1,31 @@
 const logger = require("../config/logger");
 const WorkoutPlan = require("../models/WorkoutPlan");
 const WorkoutLog = require("../models/WorkoutLog");
+const HealthProfile = require("../modules/health/health.model");
+const { addEstimatedCaloriesForToday } = require("./trackingController");
+
+// Rough MET (Metabolic Equivalent of Task) values per workout style —
+// grounded loosely in the Compendium of Physical Activities (resistance
+// training ~3.5-6 METs, vigorous circuits/calisthenics higher). These are
+// estimates, not lab measurements — good enough for a Tier 2 fallback when
+// there's no wearable to measure the real thing.
+const MET_TABLE = {
+  equipment:  { bulk: 6,   lean: 7,   fit: 5.5 },
+  bodyweight: { bulk: 5,   lean: 6.5, fit: 4.5 },
+};
+const DEFAULT_MET = 5;
+
+function estimateWorkoutCalories(plan, weightKg) {
+  if (!weightKg) return 0;
+  const met = MET_TABLE[plan.mode]?.[plan.goal] ?? DEFAULT_MET;
+  // WorkoutPlan doesn't store an explicit duration, so we approximate ~4
+  // minutes per exercise (working sets + rest), clamped to a realistic
+  // session length.
+  const durationMinutes = Math.min(Math.max((plan.exercises?.length || 6) * 4, 20), 60);
+  // Standard ACSM formula: kcal/min = METs × 3.5 × weight(kg) / 200
+  const kcal = ((met * 3.5 * weightKg) / 200) * durationMinutes;
+  return Math.round(kcal);
+}
 
 exports.getWorkouts = async (req, res) => {
   try {
@@ -48,7 +73,24 @@ exports.markWorkoutComplete = async (req, res) => {
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
-    res.status(200).json({ message: "Workout marked complete", log });
+    // Tier 2b of the calorie-source hierarchy: no wearable needed — since
+    // we already know exactly what workout the user just finished, we can
+    // estimate the burn from METs + their logged body weight.
+    let caloriesAdded = 0;
+    try {
+      const profile = await HealthProfile.findOne({ user: req.user.id }).select("weight").lean();
+      if (profile?.weight) {
+        caloriesAdded = estimateWorkoutCalories(plan, profile.weight);
+        if (caloriesAdded > 0) {
+          await addEstimatedCaloriesForToday(req.user.id, caloriesAdded);
+        }
+      }
+    } catch (err) {
+      logger.warn({ err }, "Could not add estimated workout calories");
+      caloriesAdded = 0;
+    }
+
+    res.status(200).json({ message: "Workout marked complete", log, caloriesAdded });
   } catch (err) {
     logger.error({ err }, "Mark workout complete error");
     res.status(500).json({ message: "Failed to mark workout complete" });

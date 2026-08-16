@@ -17,8 +17,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { COLORS } from "../constants/theme";
 import CircularProgressRing from "../components/CircularProgressRing";
 import WeeklyInsightCard from "../components/WeeklyInsightCard";
-import { StepsIcon, WaterIcon, SleepIcon, ManualLogIcon, MotivationSkyIllustration } from "../components/icons/MotionIcons";
+import { StepsIcon, SleepIcon, ManualLogIcon, MotivationSkyIllustration } from "../components/icons/MotionIcons";
 import { useReplayOnFocus } from "../hooks/useReplayOnFocus";
+import { useActiveCalorieGoal } from "../hooks/useActiveCalorieGoal";
 import AiCoachFab from "../components/AiCoachFab";
 
 const { width } = Dimensions.get("window");
@@ -123,8 +124,8 @@ export default function HomeScreen() {
   const [greeting, setGreeting] = useState("Good Morning");
 
   const STEP_GOAL  = 10000;
-  const WATER_GOAL = 3;
   const SLEEP_GOAL = 8;
+  const { activeCalorieGoal } = useActiveCalorieGoal();
 
   const iconTrigger = useReplayOnFocus();
 
@@ -167,10 +168,10 @@ export default function HomeScreen() {
     }, [updatedTodayParam, token, fetchToday])
   );
 
-  const steps   = today?.steps ?? 0;
-  const water   = today?.water ?? 0;
-  const sleep   = today?.sleep ?? 0;
-  const stepPct = Math.round(Math.min(steps / STEP_GOAL, 1) * 100);
+  const steps    = today?.steps ?? 0;
+  const calories = today?.caloriesBurned ?? 0;
+  const sleep    = today?.sleep ?? 0;
+  const stepPct  = Math.round(Math.min(steps / STEP_GOAL, 1) * 100);
 
   const greetIcon =
     greeting === "Good Morning"   ? "partly-sunny-outline"
@@ -272,11 +273,10 @@ export default function HomeScreen() {
               onPress={() => router.push({ pathname: "/(app)/track-detail", params: { type: "steps" } })}
             />
             <StatSquare
-              icon="water-outline" label="Water"
-              renderIcon={<WaterIcon trigger={iconTrigger} size={24} color="#3B82F6" />}
-              value={loading ? "—" : `${water} L`}
-              color="#3B82F6" progress={Math.min(water / WATER_GOAL, 1)}
-              onPress={() => router.push({ pathname: "/(app)/track-detail", params: { type: "water" } })}
+              icon="flame-outline" label="Active Burn"
+              value={loading ? "—" : `${calories} kcal`}
+              color="#F97316" progress={Math.min(calories / activeCalorieGoal, 1)}
+              onPress={() => router.push({ pathname: "/(app)/track-detail", params: { type: "caloriesBurned" } })}
             />
             <StatSquare
               icon="moon-outline" label="Sleep"

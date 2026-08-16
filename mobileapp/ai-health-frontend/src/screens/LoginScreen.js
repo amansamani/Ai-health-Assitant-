@@ -30,6 +30,20 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       const res = await API.post("/auth/login", { email, password });
+      if (res.data.hasHealthProfile === false) {
+        // Account exists but never finished health-profile setup
+        // (e.g. they closed the app mid-onboarding). Send them there
+        // instead of straight to home.
+        router.push({
+          pathname: "/(auth)/health-profile",
+          params: {
+            name: res.data.user?.name ?? "",
+            email: res.data.user?.email ?? "",
+            token: res.data.token,
+          },
+        });
+        return;
+      }
       await login(res.data.token);
       // AuthContext flips userToken -> the (auth) layout guard redirects to /(app)/home.
     } catch (err) {

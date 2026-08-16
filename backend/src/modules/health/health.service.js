@@ -13,6 +13,29 @@ function calculateBMR({ weight, height, age, gender }) {
   }
 }
 
+// (maintenanceCalories - bmr) is literally "the calories your stated
+// activity level accounts for above resting metabolism" — it's already
+// baked into the TDEE formula above. Active Burn (what a watch/phone
+// actually measures — deliberate movement) is a *subset* of that: the rest
+// is NEAT (fidgeting, posture, digestion) that no sensor attributes to a
+// single "workout". We take a goal-weighted slice of it instead of using
+// a flat number, so a sedentary desk worker and an already-active person
+// don't get the same target.
+function calculateActiveCalorieGoal({ bmr, maintenanceCalories, goal }) {
+  const activityCalories = Math.max(maintenanceCalories - bmr, 0);
+
+  const goalFactor =
+    goal === "lose" ? 0.5   // extra push to burn, supports the deficit
+    : goal === "gain" ? 0.35 // lighter push — don't eat into a bulk surplus
+    : 0.45;                  // maintain
+
+  const raw = activityCalories * goalFactor;
+  // Clamp to a realistic ring-goal range — without this, a very sedentary
+  // profile could compute to an unmotivating ~40 kcal, and a very active
+  // one to an unreachable ~1500 kcal.
+  return Math.round(Math.min(Math.max(raw, 150), 900));
+}
+
 function calculateMacros({ weight, targetCalories, goal }) {
   // Anchor protein first
   const proteinPerKg =
@@ -56,10 +79,17 @@ function generateCalorieProfile(data) {
     goal: data.goal
   });
 
+  const activeCalorieGoal = calculateActiveCalorieGoal({
+    bmr,
+    maintenanceCalories,
+    goal: data.goal
+  });
+
   return {
     bmr: Math.round(bmr),
     maintenanceCalories: Math.round(maintenanceCalories),
     targetCalories: Math.round(targetCalories),
+    activeCalorieGoal,
     ...macros
   };
 }

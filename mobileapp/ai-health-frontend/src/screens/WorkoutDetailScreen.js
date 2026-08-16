@@ -177,6 +177,8 @@ export default function WorkoutDetailScreen() {
   const exercises = useMemo(() => workout?.exercises ?? [], [workout]);
 
   const [completed, setCompleted] = useState({});
+  const [calorieToast, setCalorieToast] = useState(null); // number|null — kcal added on completion
+  const toastAnim = useRef(new Animated.Value(0)).current;
 
   const headerOpacity = useRef(new Animated.Value(0)).current;
   const headerSlide   = useRef(new Animated.Value(-10)).current;
@@ -207,10 +209,22 @@ export default function WorkoutDetailScreen() {
   useEffect(() => {
     if (allDone && !hasLoggedCompletion.current && workout?._id) {
       hasLoggedCompletion.current = true;
-      API.post("/workouts/complete", { workoutPlanId: workout._id }).catch((err) => {
-        console.warn("Failed to sync workout completion:", err?.message);
-        hasLoggedCompletion.current = false;
-      });
+      API.post("/workouts/complete", { workoutPlanId: workout._id })
+        .then((res) => {
+          const added = res.data?.caloriesAdded;
+          if (added > 0) {
+            setCalorieToast(added);
+            Animated.sequence([
+              Animated.spring(toastAnim, { toValue: 1, useNativeDriver: true, friction: 7 }),
+              Animated.delay(3000),
+              Animated.timing(toastAnim, { toValue: 0, duration: 250, useNativeDriver: true }),
+            ]).start(() => setCalorieToast(null));
+          }
+        })
+        .catch((err) => {
+          console.warn("Failed to sync workout completion:", err?.message);
+          hasLoggedCompletion.current = false;
+        });
     }
   }, [allDone, workout]);
 
@@ -281,6 +295,27 @@ export default function WorkoutDetailScreen() {
         ListHeaderComponent={ListHeader}
         ListFooterComponent={ListFooter}
       />
+
+      {calorieToast != null && (
+        <Animated.View
+          style={[
+            styles.calorieToast,
+            {
+              opacity: toastAnim,
+              transform: [{
+                translateY: toastAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }),
+              }],
+            },
+          ]}
+        >
+          <View style={styles.calorieToastIconWrap}>
+            <Ionicons name="flame" size={16} color="#F97316" />
+          </View>
+          <Text style={styles.calorieToastText}>
+            +{calorieToast} kcal added to today's Active Burn
+          </Text>
+        </Animated.View>
+      )}
     </SafeAreaView>
   );
 }
@@ -290,6 +325,20 @@ const styles = StyleSheet.create({
   listContent: { paddingBottom: 40 },
   center:      { flex: 1, justifyContent: "center", alignItems: "center" },
   loadingText: { color: COLORS.textMuted, fontSize: 15, fontWeight: "600" },
+
+  calorieToast: {
+    position: "absolute", left: 20, right: 20, bottom: 24,
+    flexDirection: "row", alignItems: "center", gap: 10,
+    backgroundColor: COLORS.surface, borderRadius: 16,
+    paddingHorizontal: 14, paddingVertical: 12,
+    borderWidth: 1, borderColor: "#F9731630",
+    ...shadow(10),
+  },
+  calorieToastIconWrap: {
+    width: 30, height: 30, borderRadius: 15,
+    backgroundColor: "#F973161A", alignItems: "center", justifyContent: "center",
+  },
+  calorieToastText: { flex: 1, fontSize: 13, fontWeight: "700", color: COLORS.textDark },
 
   hero: {
     padding: 24, paddingTop: 16, paddingBottom: 28,

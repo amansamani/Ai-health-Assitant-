@@ -12,6 +12,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import API from "../services/api";
 import { AuthContext } from "../context/AuthContext";
 import { COLORS } from "../constants/theme";
+import {
+  isHealthSyncAvailable,
+  requestHealthSyncPermissions,
+  fetchTodayFromDevice,
+} from "../services/healthSync";
+import { useActiveCalorieGoal } from "../hooks/useActiveCalorieGoal";
+import { kcalFromMET, QUICK_ADD_ACTIVITIES } from "../utils/metCalories";
+import CircularProgressRing from "../components/CircularProgressRing";
 
 const { width } = Dimensions.get("window");
 
@@ -33,7 +41,7 @@ function FadeSlideIn({ delay = 0, children }) {
 }
 
 // ── Track Input Card ──────────────────────────────────────────────────────────
-function TrackInputCard({ icon, label, unit, value, onChangeText, color, goal, placeholder }) {
+function TrackInputCard({ icon, label, unit, value, onChangeText, color, goal, placeholder, synced, onEditManually }) {
   const [focused, setFocused] = useState(false);
   const borderAnim = useRef(new Animated.Value(0)).current;
 
@@ -55,7 +63,7 @@ function TrackInputCard({ icon, label, unit, value, onChangeText, color, goal, p
   const pct      = Math.round(progress * 100);
 
   return (
-    <Animated.View style={[styles.trackCard, { borderColor }]}>
+    <Animated.View style={[styles.trackCard, { borderColor: synced ? color + "40" : borderColor }]}>
       <View style={[styles.trackAccent, { backgroundColor: color }]} />
 
       <View style={styles.trackCardInner}>
@@ -64,23 +72,41 @@ function TrackInputCard({ icon, label, unit, value, onChangeText, color, goal, p
         </View>
 
         <View style={styles.trackMid}>
-          <Text style={styles.trackLabel}>{label}</Text>
-          <TextInput
-            style={[styles.trackInput, focused && { color }]}
-            placeholder={placeholder}
-            placeholderTextColor={COLORS.textLight}
-            keyboardType="numeric"
-            value={value}
-            onChangeText={onChangeText}
-            onFocus={onFocus}
-            onBlur={onBlur}
-            accessibilityLabel={`${label}, in ${unit}`}
-          />
+          <View style={styles.trackLabelRow}>
+            <Text style={styles.trackLabel}>{label}</Text>
+            {synced && (
+              <View style={[styles.syncedPill, { backgroundColor: color + "18" }]}>
+                <Ionicons name="sync" size={9} color={color} />
+                <Text style={[styles.syncedPillText, { color }]}>Synced</Text>
+              </View>
+            )}
+          </View>
+          {synced ? (
+            <Text style={[styles.trackInput, { color }]}>{value || "0"}</Text>
+          ) : (
+            <TextInput
+              style={[styles.trackInput, focused && { color }]}
+              placeholder={placeholder}
+              placeholderTextColor={COLORS.textLight}
+              keyboardType="numeric"
+              value={value}
+              onChangeText={onChangeText}
+              onFocus={onFocus}
+              onBlur={onBlur}
+              accessibilityLabel={`${label}, in ${unit}`}
+            />
+          )}
         </View>
 
         <View style={styles.trackRight}>
           <Text style={[styles.trackUnit, { color }]}>{unit}</Text>
-          <Text style={styles.trackPct}>{pct}%</Text>
+          {synced && onEditManually ? (
+            <Pressable onPress={onEditManually} hitSlop={8} accessibilityRole="button" accessibilityLabel={`Edit ${label} manually`}>
+              <Text style={styles.trackEditLink}>Edit</Text>
+            </Pressable>
+          ) : (
+            <Text style={styles.trackPct}>{pct}%</Text>
+          )}
         </View>
       </View>
 
@@ -109,7 +135,148 @@ function LogStat({ icon, label, value, color }) {
   );
 }
 
-// ── Main Screen ───────────────────────────────────────────────────────────────
+// ── Sync Status Banner ────────────────────────────────────────────────────────
+function SyncStatusBanner({ status, lastSyncedAt, syncing, onRefresh, onRetry }) {
+  if (status === "checking") return null;
+
+  const timeLabel = lastSyncedAt
+    ? lastSyncedAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+    : null;
+
+  if (status === "synced" || status === "partial") {
+    return (
+      <View style={styles.syncBanner}>
+        <View style={styles.syncBannerLeft}>
+          <View style={styles.syncDotWrap}>
+            <Ionicons name="watch-outline" size={14} color="#22C55E" />
+          </View>
+          <Text style={styles.syncBannerText}>
+            {status === "synced"
+              ? `Synced from your device${timeLabel ? ` · ${timeLabel}` : ""}`
+              : `Partially synced — fill in the rest below${timeLabel ? ` · ${timeLabel}` : ""}`}
+          </Text>
+        </View>
+        <Pressable onPress={onRefresh} disabled={syncing} hitSlop={8} accessibilityRole="button" accessibilityLabel="Refresh from device">
+          {syncing ? <ActivityIndicator size="small" color={COLORS.primary} /> : <Ionicons name="refresh" size={16} color={COLORS.primary} />}
+        </Pressable>
+      </View>
+    );
+  }
+
+  if (status === "unavailable") {
+    return (
+      <View style={[styles.syncBanner, { backgroundColor: COLORS.surfaceMuted }]}>
+        <View style={styles.syncBannerLeft}>
+          <Ionicons name="information-circle-outline" size={16} color={COLORS.textMuted} />
+          <Text style={[styles.syncBannerText, { color: COLORS.textMuted }]}>
+            Auto-sync isn't available on this device — enter your stats below.
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  // denied / error
+  return (
+    <View style={[styles.syncBanner, { backgroundColor: COLORS.surfaceMuted }]}>
+      <View style={styles.syncBannerLeft}>
+        <Ionicons name="alert-circle-outline" size={16} color={COLORS.textMuted} />
+        <Text style={[styles.syncBannerText, { color: COLORS.textMuted }]}>
+          Device sync isn't connected — enter your stats below.
+        </Text>
+      </View>
+      <Pressable onPress={onRetry} disabled={syncing} hitSlop={8} accessibilityRole="button" accessibilityLabel="Try device sync again">
+        {syncing ? <ActivityIndicator size="small" color={COLORS.primary} /> : <Text style={styles.syncRetryText}>Try again</Text>}
+      </Pressable>
+    </View>
+  );
+}
+
+
+// ── Active Burn Card ──────────────────────────────────────────────────────────
+// The hero treatment for calories — a ring against the personalized goal,
+// a source badge for transparency (synced / estimated / manual), and
+// quick-add presets for activities a phone/watch can't see on its own.
+// The ring is always the primary visual regardless of where the number
+// came from; tapping "Edit manually" reveals an inline input rather than
+// swapping the whole card to a different layout.
+function ActiveBurnCard({ value, goal, source, syncing, onQuickAdd, onManualChange }) {
+  const [editing, setEditing] = useState(false);
+  const numVal = parseFloat(value) || 0;
+  const progress = Math.min(numVal / goal, 1);
+
+  const badge =
+    source === "device"
+      ? { icon: "watch-outline", text: "Synced from your device", color: "#22C55E" }
+      : source === "estimated"
+      ? { icon: "walk-outline", text: "Estimated from your steps", color: "#F97316" }
+      : { icon: "create-outline", text: "Logged manually", color: COLORS.textMuted };
+
+  return (
+    <View style={styles.burnCard}>
+      <View style={styles.burnTop}>
+        <View style={styles.burnRingWrap}>
+          <CircularProgressRing
+            size={104} strokeWidth={9}
+            progress={progress} color="#F97316"
+            valueText={value || "0"} label="kcal"
+          />
+        </View>
+
+        <View style={styles.burnInfo}>
+          <Text style={styles.burnTitle}>Active Burn</Text>
+          <Text style={styles.burnGoal}>Goal: {goal.toLocaleString()} kcal · personalized</Text>
+
+          <View style={[styles.burnBadge, { backgroundColor: badge.color + "18" }]}>
+            {syncing
+              ? <ActivityIndicator size="small" color={badge.color} />
+              : <Ionicons name={badge.icon} size={11} color={badge.color} />}
+            <Text style={[styles.burnBadgeText, { color: badge.color }]}>{badge.text}</Text>
+          </View>
+
+          <Pressable onPress={() => setEditing((e) => !e)} hitSlop={8} style={{ marginTop: 6 }} accessibilityRole="button" accessibilityLabel="Edit active burn manually">
+            <Text style={styles.trackEditLink}>{editing ? "Done" : "Edit manually"}</Text>
+          </Pressable>
+        </View>
+      </View>
+
+      {editing ? (
+        <View style={styles.burnEditRow}>
+          <TextInput
+            style={styles.burnEditInput}
+            keyboardType="numeric"
+            placeholder="e.g. 320"
+            placeholderTextColor={COLORS.textLight}
+            value={value}
+            onChangeText={onManualChange}
+            autoFocus
+            accessibilityLabel="Active burn, in kcal"
+          />
+          <Text style={styles.burnEditUnit}>kcal</Text>
+        </View>
+      ) : (
+        <>
+          <Text style={styles.burnQuickAddLabel}>NO WATCH? LOG AN ACTIVITY</Text>
+          <View style={styles.quickAddRow}>
+            {QUICK_ADD_ACTIVITIES.map((a) => (
+              <Pressable
+                key={a.key}
+                onPress={() => onQuickAdd(a)}
+                style={({ pressed }) => [styles.quickAddChip, { opacity: pressed ? 0.7 : 1 }]}
+                accessibilityRole="button"
+                accessibilityLabel={`Add ${a.label} to today's active burn`}
+              >
+                <Ionicons name={a.icon} size={16} color="#F97316" />
+                <Text style={styles.quickAddText}>{a.label}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </>
+      )}
+    </View>
+  );
+}
+
 const STEP_GOAL  = 10000;
 const WATER_GOAL = 3;
 const SLEEP_GOAL = 8;
@@ -117,14 +284,30 @@ const SLEEP_GOAL = 8;
 export default function TrackingScreen() {
   const router = useRouter();
   const { token } = useContext(AuthContext);
+  const { activeCalorieGoal, weightKg } = useActiveCalorieGoal();
   const [steps, setSteps]       = useState("");
-  const [water, setWater]       = useState("");
+  const [water, setWater]       = useState(""); // manual-only — see note below
   const [sleep, setSleep]       = useState("");
+  const [calories, setCalories] = useState("");
   const [loading, setLoading]   = useState(true);
   const [saving, setSaving]     = useState(false);
   const [saved, setSaved]       = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [todayLog, setTodayLog] = useState(null);
+
+  // Device sync state. `deviceFields` tracks which of steps/sleep/calories
+  // are currently populated from Health Connect / HealthKit (and therefore
+  // rendered read-only). Water is intentionally never part of this — almost
+  // no wearable logs hydration automatically, so it's always a plain manual
+  // field, kept in its own section below.
+  const [syncStatus, setSyncStatus]   = useState("checking"); // checking | synced | partial | denied | unavailable
+  const [syncing, setSyncing]         = useState(false);
+  const [lastSyncedAt, setLastSyncedAt] = useState(null);
+  const [deviceFields, setDeviceFields] = useState({ steps: false, sleep: false, calories: false });
+  // Calorie source, for the Active Burn card's transparency badge —
+  // "device" (Tier 1, real sensor data), "estimated" (Tier 2, derived from
+  // steps or a completed workout), or null (Tier 3 / not yet logged today).
+  const [caloriesSource, setCaloriesSource] = useState(null);
 
   const btnScale = useRef(new Animated.Value(1)).current;
   const onBtnIn  = () => Animated.spring(btnScale, { toValue: 0.97, useNativeDriver: true }).start();
@@ -138,6 +321,11 @@ export default function TrackingScreen() {
         setSteps(res.data.steps?.toString() || "");
         setWater(res.data.water?.toString() || "");
         setSleep(res.data.sleep?.toString() || "");
+        setCalories(res.data.caloriesBurned?.toString() || "");
+        // Whole-document source is a simplification (one field covers all
+        // metrics), but it's a reasonable stand-in for the Active Burn
+        // badge until device sync (below) sets something more precise.
+        if (res.data.caloriesBurned) setCaloriesSource(res.data.source ?? "manual");
       }
     } catch {
       console.log("No tracking data for today");
@@ -146,22 +334,133 @@ export default function TrackingScreen() {
     }
   }, []);
 
+  // Try Health Connect / HealthKit, fill in whichever of steps/sleep/calories
+  // it can give us, and silently push those straight to the backend so
+  // Home reflects them without the user touching Save. Water is never part
+  // of this — see the note by the state declarations above.
+  //
+  // Calories specifically has a Tier 1 → Tier 2 fallback baked into
+  // fetchTodayFromDevice: if the device gives steps but no direct calorie
+  // reading, it estimates walking calories from steps + weight instead of
+  // leaving the ring empty (see healthSync.js).
+  const runDeviceSync = useCallback(async () => {
+    setSyncing(true);
+    try {
+      const available = await isHealthSyncAvailable();
+      if (!available) {
+        setSyncStatus("unavailable");
+        return;
+      }
+
+      const perms = await requestHealthSyncPermissions();
+      if (perms.unavailable || (!perms.steps && !perms.sleep && !perms.calories)) {
+        setSyncStatus("denied");
+        return;
+      }
+
+      const device = await fetchTodayFromDevice(weightKg);
+      const nextDeviceFields = { steps: false, sleep: false, calories: false };
+      const toSave = {};
+
+      if (device.steps != null) {
+        setSteps(String(device.steps));
+        nextDeviceFields.steps = true;
+        toSave.steps = device.steps;
+      }
+      if (device.sleepHours != null) {
+        setSleep(String(device.sleepHours));
+        nextDeviceFields.sleep = true;
+        toSave.sleep = device.sleepHours;
+      }
+      if (device.caloriesBurned != null) {
+        setCalories(String(device.caloriesBurned));
+        nextDeviceFields.calories = true;
+        toSave.caloriesBurned = device.caloriesBurned;
+        setCaloriesSource(device.caloriesEstimated ? "estimated" : "device");
+      }
+
+      setDeviceFields(nextDeviceFields);
+      const gotAny = nextDeviceFields.steps || nextDeviceFields.sleep || nextDeviceFields.calories;
+      const gotAll = nextDeviceFields.steps && nextDeviceFields.sleep && nextDeviceFields.calories;
+
+      if (!gotAny) {
+        setSyncStatus("denied");
+        return;
+      }
+
+      setSyncStatus(gotAll ? "synced" : "partial");
+      setLastSyncedAt(new Date());
+
+      // Push the device-derived fields straight to the backend so Home /
+      // Weekly Summary pick them up immediately, without waiting for a
+      // manual Save tap. Steps/sleep are real Tier 1 reads whenever either
+      // is present, so the doc-level source is "device" even if calories
+      // itself was a Tier 2 estimate — falls back to "estimated" only when
+      // calories is the *only* thing that synced.
+      const overallSource = (nextDeviceFields.steps || nextDeviceFields.sleep) ? "device" : "estimated";
+      try {
+        const res = await API.post("/track/today", { ...toSave, source: overallSource });
+        setTodayLog(res.data);
+      } catch (err) {
+        console.log("Auto-sync save failed:", err.response?.data?.message || err.message);
+      }
+    } finally {
+      setSyncing(false);
+    }
+  }, [weightKg]);
+
   useFocusEffect(
     useCallback(() => {
       if (!token) return;
       setLoading(true);
-      fetchToday();
-    }, [token, fetchToday])
+      fetchToday().then(runDeviceSync);
+    }, [token, fetchToday, runDeviceSync])
   );
+
+  // Let the user drop a device-synced field back to manual entry (e.g. the
+  // watch's step count looks wrong today) without losing the other synced
+  // fields.
+  const editManually = (field) => {
+    setDeviceFields((prev) => ({ ...prev, [field]: false }));
+  };
+
+  // Active Burn card: typing a value directly always means "manual" now.
+  const handleCaloriesManualChange = (text) => {
+    setCalories(text);
+    setCaloriesSource("manual");
+  };
+
+  // Tier 3: quick-add presets for activities a phone/watch can't see on
+  // its own (swimming, most cycling, off-body yoga). Adds on top of
+  // whatever's already logged today rather than overwriting it.
+  const handleQuickAdd = async (activity) => {
+    const added = kcalFromMET(activity.met, weightKg, activity.minutes);
+    const next = Math.round((parseFloat(calories) || 0) + added);
+    setCalories(String(next));
+    setCaloriesSource("manual");
+    try {
+      const res = await API.post("/track/today", { caloriesBurned: next, source: "manual" });
+      setTodayLog(res.data);
+    } catch (err) {
+      console.log("Quick-add save failed:", err.response?.data?.message || err.message);
+    }
+  };
 
   const saveToday = async () => {
     setErrorMsg("");
     try {
       setSaving(true);
-      const payload = { steps: Number(steps), water: Number(water), sleep: Number(sleep) };
+      const payload = {
+        steps: Number(steps),
+        water: Number(water),
+        sleep: Number(sleep),
+        caloriesBurned: Number(calories),
+        source: "manual",
+      };
       await API.post("/track/today", payload);
       setSaved(true);
       setTodayLog(payload);
+      setCaloriesSource("manual");
       setTimeout(() => setSaved(false), 2500);
       router.push({
         pathname: "/(app)/home",
@@ -184,10 +483,12 @@ export default function TrackingScreen() {
     );
   }
 
-  // Overall progress
+  // Overall progress — steps, calories, and sleep are the primary (usually
+  // device-synced) trio. Water is tracked separately below and doesn't
+  // factor into this badge, since it's manual-only for most people.
   const totalPct = Math.round(
     ((Math.min(parseFloat(steps) || 0, STEP_GOAL) / STEP_GOAL +
-      Math.min(parseFloat(water) || 0, WATER_GOAL) / WATER_GOAL +
+      Math.min(parseFloat(calories) || 0, activeCalorieGoal) / activeCalorieGoal +
       Math.min(parseFloat(sleep) || 0, SLEEP_GOAL) / SLEEP_GOAL) / 3) * 100
   );
 
@@ -239,8 +540,8 @@ export default function TrackingScreen() {
                   <Text style={styles.heroStat}>{steps || "0"} steps</Text>
                 </View>
                 <View style={styles.heroStatItem}>
-                  <Ionicons name="water-outline" size={13} color="#B8AFD6" />
-                  <Text style={styles.heroStat}>{water || "0"} L</Text>
+                  <Ionicons name="flame-outline" size={13} color="#B8AFD6" />
+                  <Text style={styles.heroStat}>{calories || "0"} kcal</Text>
                 </View>
                 <View style={styles.heroStatItem}>
                   <Ionicons name="moon-outline" size={13} color="#B8AFD6" />
@@ -257,21 +558,38 @@ export default function TrackingScreen() {
             </View>
           ) : null}
 
-          {/* ── INPUT CARDS ── */}
+          {/* ── SYNC STATUS ── */}
+          <FadeSlideIn delay={120}>
+            <SyncStatusBanner
+              status={syncStatus}
+              lastSyncedAt={lastSyncedAt}
+              syncing={syncing}
+              onRefresh={runDeviceSync}
+              onRetry={runDeviceSync}
+            />
+          </FadeSlideIn>
+
+          {/* ── ACTIVE BURN (hero) ── */}
           <FadeSlideIn delay={160}>
+            <Text style={styles.sectionLabel}>ACTIVE BURN</Text>
+            <ActiveBurnCard
+              value={calories}
+              goal={activeCalorieGoal}
+              source={caloriesSource}
+              syncing={syncing}
+              onQuickAdd={handleQuickAdd}
+              onManualChange={handleCaloriesManualChange}
+            />
+          </FadeSlideIn>
+
+          {/* ── INPUT CARDS ── */}
+          <FadeSlideIn delay={220}>
             <Text style={styles.sectionLabel}>UPDATE TODAY'S DATA</Text>
             <TrackInputCard
               icon="footsteps-outline" label="Steps" unit="steps"
               placeholder="e.g. 8000" value={steps}
               onChangeText={setSteps} color="#22C55E" goal={STEP_GOAL}
-            />
-          </FadeSlideIn>
-
-          <FadeSlideIn delay={220}>
-            <TrackInputCard
-              icon="water-outline" label="Water" unit="litres"
-              placeholder="e.g. 2.5" value={water}
-              onChangeText={setWater} color="#3B82F6" goal={WATER_GOAL}
+              synced={deviceFields.steps} onEditManually={() => editManually("steps")}
             />
           </FadeSlideIn>
 
@@ -280,6 +598,17 @@ export default function TrackingScreen() {
               icon="moon-outline" label="Sleep" unit="hours"
               placeholder="e.g. 7.5" value={sleep}
               onChangeText={setSleep} color={COLORS.primary} goal={SLEEP_GOAL}
+              synced={deviceFields.sleep} onEditManually={() => editManually("sleep")}
+            />
+          </FadeSlideIn>
+
+          {/* ── HYDRATION (always manual — no sensor tracks this) ── */}
+          <FadeSlideIn delay={320}>
+            <Text style={styles.sectionLabel}>HYDRATION · LOGGED MANUALLY</Text>
+            <TrackInputCard
+              icon="water-outline" label="Water" unit="litres"
+              placeholder="e.g. 2.5" value={water}
+              onChangeText={setWater} color="#3B82F6" goal={WATER_GOAL}
             />
           </FadeSlideIn>
 
@@ -324,8 +653,12 @@ export default function TrackingScreen() {
                 </View>
                 <View style={styles.logRow}>
                   <LogStat icon="footsteps-outline" label="Steps" value={`${todayLog.steps?.toLocaleString() ?? 0}`} color="#22C55E" />
-                  <LogStat icon="water-outline" label="Water" value={`${todayLog.water ?? 0} L`} color="#3B82F6" />
+                  <LogStat icon="flame-outline" label="Calories" value={`${todayLog.caloriesBurned ?? 0} kcal`} color="#F97316" />
                   <LogStat icon="moon-outline" label="Sleep" value={`${todayLog.sleep ?? 0} hrs`} color={COLORS.primary} />
+                </View>
+                <View style={styles.logDivider} />
+                <View style={styles.logRow}>
+                  <LogStat icon="water-outline" label="Water" value={`${todayLog.water ?? 0} L`} color="#3B82F6" />
                 </View>
               </View>
             </FadeSlideIn>
@@ -394,6 +727,17 @@ const styles = StyleSheet.create({
   },
   errorText: { color: COLORS.error, fontSize: 13, fontWeight: "600", flex: 1 },
 
+  // Sync status banner
+  syncBanner: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    backgroundColor: "#22C55E14", borderRadius: 14, padding: 12, marginBottom: 16,
+    gap: 10,
+  },
+  syncBannerLeft: { flexDirection: "row", alignItems: "center", gap: 8, flex: 1 },
+  syncDotWrap: { width: 22, height: 22, borderRadius: 11, backgroundColor: "#22C55E20", alignItems: "center", justifyContent: "center" },
+  syncBannerText: { fontSize: 12.5, fontWeight: "600", color: COLORS.textDark, flex: 1 },
+  syncRetryText: { fontSize: 12.5, fontWeight: "800", color: COLORS.primary },
+
   // Section label
   sectionLabel: {
     fontSize: 11, fontWeight: "800", color: COLORS.textLight,
@@ -414,7 +758,14 @@ const styles = StyleSheet.create({
     justifyContent: "center", alignItems: "center",
   },
   trackMid:   { flex: 1 },
-  trackLabel: { fontSize: 11, fontWeight: "700", color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 },
+  trackLabelRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 },
+  trackLabel: { fontSize: 11, fontWeight: "700", color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 0.5 },
+  syncedPill: {
+    flexDirection: "row", alignItems: "center", gap: 3,
+    borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2,
+  },
+  syncedPillText: { fontSize: 9, fontWeight: "800", textTransform: "uppercase", letterSpacing: 0.3 },
+  trackEditLink: { fontSize: 11, color: COLORS.textMuted, fontWeight: "700", textDecorationLine: "underline" },
   trackInput: {
     fontSize: 20, fontWeight: "900", color: COLORS.textDark,
     padding: 0, letterSpacing: -0.5,
@@ -427,6 +778,46 @@ const styles = StyleSheet.create({
     marginHorizontal: 14, marginBottom: 12, borderRadius: 2, overflow: "hidden",
   },
   trackBarFill: { height: "100%", borderRadius: 2, maxWidth: "100%" },
+
+  // Active Burn card
+  burnCard: {
+    backgroundColor: COLORS.surface, borderRadius: 20,
+    padding: 16, marginBottom: 12,
+    borderWidth: 1.5, borderColor: "#F9731630",
+    boxShadow: "0px 2px 10px rgba(23,15,54,0.07)",
+  },
+  burnTop:      { flexDirection: "row", alignItems: "center", gap: 16, marginBottom: 14 },
+  burnRingWrap: { alignItems: "center", justifyContent: "center" },
+  burnInfo:     { flex: 1 },
+  burnTitle:    { fontSize: 15, fontWeight: "800", color: COLORS.textDark, marginBottom: 2 },
+  burnGoal:     { fontSize: 12, color: COLORS.textMuted, fontWeight: "500", marginBottom: 8 },
+  burnBadge: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    alignSelf: "flex-start", borderRadius: 10,
+    paddingHorizontal: 8, paddingVertical: 4,
+  },
+  burnBadgeText: { fontSize: 11, fontWeight: "700" },
+  burnQuickAddLabel: {
+    fontSize: 10, fontWeight: "800", color: COLORS.textLight,
+    letterSpacing: 0.8, marginBottom: 10,
+  },
+  quickAddRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  quickAddChip: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    backgroundColor: "#F973160F", borderWidth: 1, borderColor: "#F9731630",
+    borderRadius: 20, paddingHorizontal: 12, paddingVertical: 8,
+  },
+  quickAddText: { fontSize: 12.5, fontWeight: "700", color: "#F97316" },
+  burnEditRow: {
+    flexDirection: "row", alignItems: "center", gap: 8,
+    backgroundColor: COLORS.surfaceMuted, borderRadius: 12,
+    paddingHorizontal: 14, paddingVertical: 4,
+  },
+  burnEditInput: {
+    flex: 1, fontSize: 18, fontWeight: "800", color: COLORS.textDark,
+    paddingVertical: 10,
+  },
+  burnEditUnit: { fontSize: 13, fontWeight: "700", color: COLORS.textMuted },
 
   // Save button
   saveBtn: {
@@ -451,6 +842,7 @@ const styles = StyleSheet.create({
   logTitle: { fontSize: 16, fontWeight: "800", color: COLORS.textDark },
   logDot:   { width: 8, height: 8, borderRadius: 4, backgroundColor: "#22C55E" },
   logRow:   { flexDirection: "row", justifyContent: "space-between" },
+  logDivider: { height: 1, backgroundColor: COLORS.border, marginVertical: 14 },
   logStat:  { flex: 1, alignItems: "center", gap: 8 },
   logStatIcon: {
     width: 44, height: 44, borderRadius: 14,

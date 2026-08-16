@@ -9,6 +9,44 @@ const getTodayRange = () => {
   return { startOfToday, endOfToday };
 };
 
+// Tier 2 of the calorie-source hierarchy: called by workoutController when
+// a workout is marked complete, to add a METs-based estimate on top of
+// today's caloriesBurned.
+//
+// If a wearable has already reported real active-calorie data today
+// (source === "device"), we deliberately skip adding the estimate — the
+// watch almost certainly already captured that same workout, and stacking
+// an estimate on top would double-count it. Estimates only fill the gap
+// when there's no real device data for the day.
+const addEstimatedCaloriesForToday = async (userId, kcalToAdd) => {
+  if (!kcalToAdd || kcalToAdd <= 0) return null;
+
+  const { startOfToday, endOfToday } = getTodayRange();
+  let track = await DailyLog.findOne({
+    user: userId,
+    date: { $gte: startOfToday, $lte: endOfToday },
+  });
+
+  if (track?.source === "device") {
+    return track; // real data already present — don't stack an estimate on it
+  }
+
+  if (track) {
+    track.caloriesBurned = Math.round((track.caloriesBurned || 0) + kcalToAdd);
+    track.source = "estimated";
+    await track.save();
+  } else {
+    track = await DailyLog.create({
+      user: userId,
+      date: startOfToday,
+      caloriesBurned: Math.round(kcalToAdd),
+      source: "estimated",
+    });
+  }
+  return track;
+};
+exports.addEstimatedCaloriesForToday = addEstimatedCaloriesForToday;
+
 exports.getTodayTracking = async (req, res) => {
   try {
     const { startOfToday, endOfToday } = getTodayRange();
@@ -25,10 +63,10 @@ exports.getTodayTracking = async (req, res) => {
 
 exports.saveTodayTracking = async (req, res) => {
   try {
-    const { steps, water, sleep } = req.body;
+    const { steps, water, sleep, caloriesBurned, source } = req.body;
 
-    if (steps === undefined || water === undefined || sleep === undefined) {
-      return res.status(400).json({ message: "steps, water and sleep are required" });
+    if (steps === undefined && water === undefined && sleep === undefined && caloriesBurned === undefined) {
+      return res.status(400).json({ message: "At least one of steps, water, sleep or caloriesBurned is required" });
     }
 
     const { startOfToday, endOfToday } = getTodayRange();
@@ -38,18 +76,25 @@ exports.saveTodayTracking = async (req, res) => {
       date: { $gte: startOfToday, $lte: endOfToday },
     });
 
+    // Only overwrite the fields that were actually sent — this lets a
+    // device sync post steps+sleep+calories now and water later (or vice
+    // versa) without one write wiping out the other's numbers.
     if (track) {
-      track.steps = steps;
-      track.water = water;
-      track.sleep = sleep;
+      if (steps !== undefined) track.steps = steps;
+      if (water !== undefined) track.water = water;
+      if (sleep !== undefined) track.sleep = sleep;
+      if (caloriesBurned !== undefined) track.caloriesBurned = caloriesBurned;
+      if (source) track.source = source;
       await track.save();
     } else {
       track = await DailyLog.create({
         user: req.user.id,
         date: startOfToday,
-        steps,
-        water,
-        sleep,
+        steps: steps ?? 0,
+        water: water ?? 0,
+        sleep: sleep ?? 0,
+        caloriesBurned: caloriesBurned ?? 0,
+        source: source || "manual",
       });
     }
 
@@ -94,12 +139,13 @@ exports.getWeeklySummary = async (req, res) => {
       return res.status(200).json({ message: "No data" });
     }
 
-    let totalSteps = 0, totalWater = 0, totalSleep = 0, bestDay = null;
+    let totalSteps = 0, totalWater = 0, totalSleep = 0, totalCalories = 0, bestDay = null;
 
     logs.forEach((log) => {
       totalSteps += log.steps;
       totalWater += log.water;
       totalSleep += log.sleep;
+      totalCalories += log.caloriesBurned || 0;
       if (!bestDay || log.steps > bestDay.steps) bestDay = log;
     });
 
@@ -107,6 +153,7 @@ exports.getWeeklySummary = async (req, res) => {
       avgSteps: Math.round(totalSteps / logs.length),
       avgWater: (totalWater / logs.length).toFixed(1),
       avgSleep: (totalSleep / logs.length).toFixed(1),
+      avgCalories: Math.round(totalCalories / logs.length),
       bestDay: bestDay.date,
       daysTracked: logs.length,
     });

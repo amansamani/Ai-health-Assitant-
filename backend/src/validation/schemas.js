@@ -1,10 +1,24 @@
 const { z } = require("zod");
 
-const trackingSchema = z.object({
-  steps: z.coerce.number().int("steps must be a whole number").min(0).max(100000),
-  water: z.coerce.number().min(0).max(50),
-  sleep: z.coerce.number().min(0).max(24),
-});
+const trackingSchema = z
+  .object({
+    steps: z.coerce.number().int("steps must be a whole number").min(0).max(100000).optional(),
+    water: z.coerce.number().min(0).max(50).optional(),
+    sleep: z.coerce.number().min(0).max(24).optional(),
+    caloriesBurned: z.coerce.number().min(0).max(10000).optional(),
+    // Where this update came from — lets the UI show a "synced from device"
+    // badge vs a manually-typed value. Defaults to "manual" server-side if
+    // omitted, so older app builds keep working unchanged.
+    source: z.enum(["manual", "device", "estimated"]).optional(),
+  })
+  .refine(
+    (data) =>
+      data.steps !== undefined ||
+      data.water !== undefined ||
+      data.sleep !== undefined ||
+      data.caloriesBurned !== undefined,
+    { message: "At least one of steps, water, sleep or caloriesBurned is required" }
+  );
 
 const healthProfileSchema = z
   .object({

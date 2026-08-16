@@ -129,10 +129,14 @@ const DIET_OPTIONS = [
 
 export default function HealthProfileScreen({ navigation, route }) {
   const { login } = useContext(AuthContext);
-  const { name, email, password, token, workoutGoal} = route.params ?? {};
+  const { name, email, token, workoutGoal} = route.params ?? {};
 
   useEffect(() => {
-    if (!name || !email || !password) {
+    // `token` is the only thing this screen actually needs (it's what
+    // authorizes the /health and /nutrition/generate calls below). Password
+    // is intentionally NOT required here — Google sign-in users never have
+    // one, and requiring it used to bounce them straight back out.
+    if (!token) {
       alert("Registration data missing");
       navigation.goBack();
     }
