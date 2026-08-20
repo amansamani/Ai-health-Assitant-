@@ -60,6 +60,7 @@ app.use("/api/user", userRoutes);
 app.use("/api/workouts", workoutRoutes);
 app.use("/api/track", trackingRoutes);
 app.use("/api/health", require("./src/modules/health/health.routes"));
+app.use("/api/social", require("./src/modules/social/social.routes"));
 app.use("/api/nutrition", require("./src/modules/nutrition/nutrition.routes"));
 app.use("/api/admin", require("./src/routes/admin"));
 
@@ -92,6 +93,22 @@ const startServer = async () => {
 
 const scheduleWeeklyJob = require("./src/jobs/scheduleWeekly");
 scheduleWeeklyJob().catch(err => logger.error({ err }, "Weekly job scheduling failed (non-fatal)"));
+
+const scheduleEngagementNotifications = require("./src/jobs/scheduleEngagementNotifications");
+scheduleEngagementNotifications().catch(err => logger.error({ err }, "Engagement notification scheduling failed (non-fatal)"));
+
+// Render's Background Worker service type has no free tier (starts at
+// $7/mo), so instead of running the queue consumer as a separate service,
+// it runs right here in the API process. BullMQ has no problem with a
+// single process being both producer (the scheduler above) and consumer
+// (this) of the same queue — it's just a Worker instance like any other.
+//
+// ⚠️ If you ever DO move this to its own paid Render Background Worker
+// service (`npm run start:worker`, see src/workers/index.js), delete this
+// require — otherwise two consumers would both poll the same queue. Not
+// harmful (BullMQ's atomic job-claiming means a job still only runs once),
+// just wasteful.
+require("./src/workers/engagementNotifications.worker");
 
     app.listen(PORT, "0.0.0.0", () => {
       logger.info(`Server running on port ${PORT}`);

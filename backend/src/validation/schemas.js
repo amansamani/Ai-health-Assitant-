@@ -64,4 +64,23 @@ const mealPhotoSchema = z
     path: ["images"],
   });
 
-module.exports = { trackingSchema, healthProfileSchema, workoutProgressSchema, mealPhotoSchema };
+const objectIdSchema = z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid id");
+
+const addFriendSchema = z.object({
+  code: z.string().min(4).max(12),
+});
+
+const createDuelSchema = z.object({
+  opponentId: objectIdSchema,
+  metric: z.enum(["steps", "caloriesBurned", "workouts"]),
+  durationDays: z.coerce.number().int().min(1).max(30),
+});
+
+const respondDuelSchema = z.object({
+  action: z.enum(["accept", "decline"]),
+});
+
+module.exports = {
+  trackingSchema, healthProfileSchema, workoutProgressSchema, mealPhotoSchema,
+  addFriendSchema, createDuelSchema, respondDuelSchema,
+};

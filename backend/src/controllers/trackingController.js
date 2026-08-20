@@ -1,5 +1,6 @@
 const logger = require("../config/logger");
 const DailyLog = require("../models/DailyLog");
+const { checkAndAwardStreakAchievements } = require("../modules/social/achievement.service");
 
 const getTodayRange = () => {
   const startOfToday = new Date();
@@ -97,6 +98,14 @@ exports.saveTodayTracking = async (req, res) => {
         source: source || "manual",
       });
     }
+
+    // Fire-and-forget — never let an achievements bug block the response.
+    // (checkAndAwardStreakAchievements already has its own internal
+    // try/catch and never rejects, but .catch here is cheap insurance.)
+    // Same pattern as workoutController.js's markWorkoutComplete — a
+    // streak can be extended either by finishing a workout or by hitting
+    // a steps/calories goal via tracking, so both places need the check.
+    checkAndAwardStreakAchievements(req.user.id).catch(() => {});
 
     res.status(200).json(track);
   } catch (err) {

@@ -4,6 +4,7 @@ const logger = require('../config/logger');
 connectDB()
   .then(() => {
     require('./weeklyAdjustment.worker');
+    require('./engagementNotifications.worker');
     logger.info('Worker service started');
   })
   .catch((err) => {

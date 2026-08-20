@@ -32,6 +32,10 @@ const userSchema = new mongoose.Schema(
       default: "fit",
     },
     pushToken: { type: String }, // Expo push token, set via /user/push-token
+    // Shareable code for the friend-connect flow (e.g. "AX7K2M") — generated
+    // lazily on first request rather than backfilled for every existing
+    // user. Sparse index so users without one yet don't collide on null.
+    friendCode: { type: String, unique: true, sparse: true },
     role: {
       type: String,
       enum: ["user", "admin"],

@@ -288,6 +288,26 @@ export default function HomeScreen() {
           </View>
         </FadeSlideIn>
 
+        {/* ── COMPETE WITH FRIENDS ── */}
+        <FadeSlideIn delay={160}>
+          <Pressable
+            onPress={() => router.push("/(app)/social")}
+            style={({ pressed }) => [styles.competeCard, { opacity: pressed ? 0.93 : 1 }]}
+            accessibilityRole="button"
+            accessibilityLabel="Compete with friends"
+          >
+            <View style={styles.competeAccent} />
+            <View style={styles.competeIconWrap}>
+              <Ionicons name="flash" size={20} color="#F97316" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.competeTitle}>Compete with Friends</Text>
+              <Text style={styles.competeSub}>Duels, streak battles & achievements</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
+          </Pressable>
+        </FadeSlideIn>
+
         <WeeklyInsightCard />
 
         {/* ── LOG TODAY'S FOOD (manual entry) ── */}
@@ -415,6 +435,26 @@ const styles = StyleSheet.create({
   },
   logFoodTitle: { fontSize: 15, fontWeight: "800", color: COLORS.textDark },
   logFoodSub:   { fontSize: 12, color: COLORS.textMuted, marginTop: 2, fontWeight: "500" },
+
+  // ── Compete with Friends card ──────────────────────────────────────────────
+  competeCard: {
+    flexDirection: "row", alignItems: "center", gap: 12,
+    backgroundColor: COLORS.surface, borderRadius: 18,
+    padding: 16, marginBottom: 14,
+    overflow: "hidden",
+    boxShadow: "0px 2px 10px rgba(23, 15, 54, 0.06)",
+  },
+  competeAccent: {
+    position: "absolute", left: 0, top: 0, bottom: 0, width: 4,
+    backgroundColor: "#F97316",
+  },
+  competeIconWrap: {
+    width: 42, height: 42, borderRadius: 13,
+    backgroundColor: "#F9731618",
+    justifyContent: "center", alignItems: "center",
+  },
+  competeTitle: { fontSize: 15, fontWeight: "800", color: COLORS.textDark },
+  competeSub:   { fontSize: 12, color: COLORS.textMuted, marginTop: 2, fontWeight: "500" },
 
   // ── Motivation card ────────────────────────────────────────────────────────
   motivationCard: {

@@ -3,6 +3,7 @@ const WorkoutPlan = require("../models/WorkoutPlan");
 const WorkoutLog = require("../models/WorkoutLog");
 const HealthProfile = require("../modules/health/health.model");
 const { addEstimatedCaloriesForToday } = require("./trackingController");
+const { checkAndAwardStreakAchievements } = require("../modules/social/achievement.service");
 
 // Rough MET (Metabolic Equivalent of Task) values per workout style —
 // grounded loosely in the Compendium of Physical Activities (resistance
@@ -89,6 +90,11 @@ exports.markWorkoutComplete = async (req, res) => {
       logger.warn({ err }, "Could not add estimated workout calories");
       caloriesAdded = 0;
     }
+
+    // Fire-and-forget — never let an achievements bug block the response.
+    // (checkAndAwardStreakAchievements already has its own internal
+    // try/catch and never rejects, but .catch here is cheap insurance.)
+    checkAndAwardStreakAchievements(req.user.id).catch(() => {});
 
     res.status(200).json({ message: "Workout marked complete", log, caloriesAdded });
   } catch (err) {
