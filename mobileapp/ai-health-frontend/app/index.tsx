@@ -1,6 +1,7 @@
-import { View, ActivityIndicator } from "react-native";
-import { useContext } from "react";
+import { ActivityIndicator, View } from "react-native";
 import { Redirect } from "expo-router";
+import { useContext } from "react";
+
 import { AuthContext } from "@/src/context/AuthContext";
 
 export default function Index() {
@@ -8,11 +9,21 @@ export default function Index() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
         <ActivityIndicator size="large" />
       </View>
     );
   }
 
-  return <Redirect href={userToken ? "/(app)/home" : "/(auth)/login"} />;
+  if (userToken) {
+    return <Redirect href="/(app)/(tabs)/home" />;
+  }
+
+  return <Redirect href="/(auth)/login" />;
 }

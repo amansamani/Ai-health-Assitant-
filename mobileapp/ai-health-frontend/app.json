@@ -42,8 +42,7 @@
         {
           "backgroundColor": "#29195A",
           "image": "./assets/images/splash-fullscreen.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
+          "resizeMode": "cover",
           "dark": {
             "backgroundColor": "#000000"
           },

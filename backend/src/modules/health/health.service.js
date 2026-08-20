@@ -1,99 +1,423 @@
+"use strict";
+
 const ACTIVITY_MULTIPLIERS = {
   sedentary: 1.2,
   light: 1.375,
   moderate: 1.55,
-  active: 1.725
+  active: 1.725,
 };
 
-function calculateBMR({ weight, height, age, gender }) {
-  if (gender === "male") {
-    return 10 * weight + 6.25 * height - 5 * age + 5;
-  } else {
-    return 10 * weight + 6.25 * height - 5 * age - 161;
+const VALID_GOALS = [
+  "lose",
+  "maintain",
+  "gain",
+];
+
+const VALID_GENDERS = [
+  "male",
+  "female",
+];
+
+const VALID_ACTIVITY_LEVELS = Object.keys(
+  ACTIVITY_MULTIPLIERS
+);
+
+const VALID_DIET_TYPES = [
+  "veg",
+  "non-veg",
+  "vegan",
+];
+
+/**
+ * Calculate BMR using the Mifflin-St Jeor equation.
+ */
+function calculateBMR({
+  weight,
+  height,
+  age,
+  gender,
+}) {
+  if (
+    !Number.isFinite(weight) ||
+    !Number.isFinite(height) ||
+    !Number.isFinite(age)
+  ) {
+    throw new Error(
+      "Weight, height and age must be valid numbers"
+    );
   }
+
+  if (!VALID_GENDERS.includes(gender)) {
+    throw new Error(
+      "Invalid gender"
+    );
+  }
+
+  const bmr =
+    gender === "male"
+      ? 10 * weight +
+        6.25 * height -
+        5 * age +
+        5
+      : 10 * weight +
+        6.25 * height -
+        5 * age -
+        161;
+
+  if (
+    !Number.isFinite(bmr) ||
+    bmr <= 0
+  ) {
+    throw new Error(
+      "Unable to calculate a valid BMR"
+    );
+  }
+
+  return bmr;
 }
 
-// (maintenanceCalories - bmr) is literally "the calories your stated
-// activity level accounts for above resting metabolism" — it's already
-// baked into the TDEE formula above. Active Burn (what a watch/phone
-// actually measures — deliberate movement) is a *subset* of that: the rest
-// is NEAT (fidgeting, posture, digestion) that no sensor attributes to a
-// single "workout". We take a goal-weighted slice of it instead of using
-// a flat number, so a sedentary desk worker and an already-active person
-// don't get the same target.
-function calculateActiveCalorieGoal({ bmr, maintenanceCalories, goal }) {
-  const activityCalories = Math.max(maintenanceCalories - bmr, 0);
+/**
+ * Calculate TDEE / maintenance calories.
+ */
+function calculateMaintenanceCalories({
+  bmr,
+  activityLevel,
+}) {
+  if (!Number.isFinite(bmr) || bmr <= 0) {
+    throw new Error(
+      "BMR must be a positive number"
+    );
+  }
+
+  const multiplier =
+    ACTIVITY_MULTIPLIERS[
+      activityLevel
+    ];
+
+  if (!multiplier) {
+    throw new Error(
+      "Invalid activity level"
+    );
+  }
+
+  return bmr * multiplier;
+}
+
+/**
+ * Calculate the daily active-calorie goal.
+ *
+ * This is intentionally NOT the user's total calorie deficit.
+ * It is a target for deliberate/activity calories.
+ */
+function calculateActiveCalorieGoal({
+  bmr,
+  maintenanceCalories,
+  goal,
+}) {
+  if (
+    !Number.isFinite(bmr) ||
+    !Number.isFinite(
+      maintenanceCalories
+    )
+  ) {
+    throw new Error(
+      "Invalid calorie values"
+    );
+  }
+
+  if (!VALID_GOALS.includes(goal)) {
+    throw new Error(
+      "Invalid nutrition goal"
+    );
+  }
+
+  const activityCalories = Math.max(
+    maintenanceCalories - bmr,
+    0
+  );
 
   const goalFactor =
-    goal === "lose" ? 0.5   // extra push to burn, supports the deficit
-    : goal === "gain" ? 0.35 // lighter push — don't eat into a bulk surplus
-    : 0.45;                  // maintain
+    goal === "lose"
+      ? 0.5
+      : goal === "gain"
+        ? 0.35
+        : 0.45;
 
-  const raw = activityCalories * goalFactor;
-  // Clamp to a realistic ring-goal range — without this, a very sedentary
-  // profile could compute to an unmotivating ~40 kcal, and a very active
-  // one to an unreachable ~1500 kcal.
-  return Math.round(Math.min(Math.max(raw, 150), 900));
+  const raw =
+    activityCalories * goalFactor;
+
+  /*
+   * Keep the activity target within a practical range.
+   */
+  return Math.round(
+    Math.min(
+      Math.max(raw, 150),
+      900
+    )
+  );
 }
 
-function calculateMacros({ weight, targetCalories, goal }) {
-  // Anchor protein first
+/**
+ * Calculate macro targets.
+ */
+function calculateMacros({
+  weight,
+  targetCalories,
+  goal,
+}) {
+  if (
+    !Number.isFinite(weight) ||
+    weight <= 0
+  ) {
+    throw new Error(
+      "Weight must be a positive number"
+    );
+  }
+
+  if (
+    !Number.isFinite(targetCalories) ||
+    targetCalories <= 0
+  ) {
+    throw new Error(
+      "Target calories must be positive"
+    );
+  }
+
   const proteinPerKg =
-    goal === "lose" ? 2.0 :
-    goal === "gain" ? 1.8 :
-    1.6;
+    goal === "lose"
+      ? 2.0
+      : goal === "gain"
+        ? 1.8
+        : 1.6;
 
-  const proteinGrams = weight * proteinPerKg;
-  const proteinCalories = proteinGrams * 4;
+  const proteinGrams =
+    weight * proteinPerKg;
 
-  const remainingCalories = targetCalories - proteinCalories;
+  const proteinCalories =
+    proteinGrams * 4;
 
-  // Split remaining between carbs and fats
-  const fatCalories = remainingCalories * 0.3;
-  const carbCalories = remainingCalories * 0.7;
+  /*
+   * Ensure the protein target does not consume
+   * more calories than the entire calorie budget.
+   */
+  const remainingCalories = Math.max(
+    targetCalories -
+      proteinCalories,
+    0
+  );
+
+  const fatCalories =
+    remainingCalories * 0.3;
+
+  const carbCalories =
+    remainingCalories * 0.7;
 
   return {
-    proteinTarget: Math.round(proteinGrams),
-    carbTarget: Math.round(carbCalories / 4),
-    fatTarget: Math.round(fatCalories / 9)
+    proteinTarget: Math.round(
+      proteinGrams
+    ),
+
+    carbTarget: Math.round(
+      carbCalories / 4
+    ),
+
+    fatTarget: Math.round(
+      fatCalories / 9
+    ),
   };
 }
 
-function generateCalorieProfile(data) {
-  const bmr = calculateBMR(data);
+/**
+ * Generate the complete calorie/macro profile.
+ */
+function generateCalorieProfile(
+  data
+) {
+  if (!data) {
+    throw new Error(
+      "Health profile data is required"
+    );
+  }
+
+  const {
+    weight,
+    height,
+    age,
+    gender,
+    activityLevel,
+    goal,
+    dietType,
+  } = data;
+
+  if (
+    !Number.isFinite(Number(age)) ||
+    !Number.isFinite(Number(height)) ||
+    !Number.isFinite(Number(weight))
+  ) {
+    throw new Error(
+      "Age, height and weight are required"
+    );
+  }
+
+  if (
+    !VALID_GENDERS.includes(
+      gender
+    )
+  ) {
+    throw new Error(
+      "Invalid gender"
+    );
+  }
+
+  if (
+    !VALID_ACTIVITY_LEVELS.includes(
+      activityLevel
+    )
+  ) {
+    throw new Error(
+      "Invalid activity level"
+    );
+  }
+
+  if (
+    !VALID_GOALS.includes(goal)
+  ) {
+    throw new Error(
+      "Invalid nutrition goal"
+    );
+  }
+
+  if (
+    !VALID_DIET_TYPES.includes(
+      dietType
+    )
+  ) {
+    throw new Error(
+      "Invalid diet type"
+    );
+  }
+
+  const numericData = {
+    age: Number(age),
+    height: Number(height),
+    weight: Number(weight),
+    gender,
+    activityLevel,
+    goal,
+    dietType,
+  };
+
+  const bmr =
+    calculateBMR(numericData);
 
   const maintenanceCalories =
-    bmr * ACTIVITY_MULTIPLIERS[data.activityLevel];
+    calculateMaintenanceCalories({
+      bmr,
+      activityLevel,
+    });
 
-  let targetCalories = maintenanceCalories;
+  /*
+   * Keep the existing FitLip goal adjustments:
+   *
+   * lose      -> 400 kcal deficit
+   * maintain  -> maintenance
+   * gain      -> 300 kcal surplus
+   */
+  let targetCalories =
+    maintenanceCalories;
 
-  if (data.goal === "lose") {
+  if (goal === "lose") {
     targetCalories -= 400;
-  } else if (data.goal === "gain") {
+  }
+
+  if (goal === "gain") {
     targetCalories += 300;
   }
 
-  const macros = calculateMacros({
-    weight: data.weight,
+  /*
+   * Never allow an accidental negative/near-zero
+   * calorie target.
+   */
+  targetCalories = Math.max(
     targetCalories,
-    goal: data.goal
-  });
+    1200
+  );
 
-  const activeCalorieGoal = calculateActiveCalorieGoal({
-    bmr,
-    maintenanceCalories,
-    goal: data.goal
-  });
+  const macros =
+    calculateMacros({
+      weight: numericData.weight,
+      targetCalories,
+      goal,
+    });
+
+  const activeCalorieGoal =
+    calculateActiveCalorieGoal({
+      bmr,
+      maintenanceCalories,
+      goal,
+    });
 
   return {
     bmr: Math.round(bmr),
-    maintenanceCalories: Math.round(maintenanceCalories),
-    targetCalories: Math.round(targetCalories),
+
+    maintenanceCalories:
+      Math.round(
+        maintenanceCalories
+      ),
+
+    targetCalories:
+      Math.round(targetCalories),
+
     activeCalorieGoal,
-    ...macros
+
+    ...macros,
   };
 }
 
+/**
+ * Convert the application's User goal to the
+ * HealthProfile nutrition goal.
+ *
+ * User model:
+ *
+ *   bulk -> gain
+ *   lean -> lose
+ *   fit  -> maintain
+ */
+function mapUserGoalToHealthGoal(
+  userGoal
+) {
+  const mapping = {
+    bulk: "gain",
+    lean: "lose",
+    fit: "maintain",
+  };
+
+  return mapping[userGoal] || null;
+}
+
+/**
+ * Convert HealthProfile goal back to User goal.
+ */
+function mapHealthGoalToUserGoal(
+  healthGoal
+) {
+  const mapping = {
+    gain: "bulk",
+    lose: "lean",
+    maintain: "fit",
+  };
+
+  return mapping[healthGoal] || null;
+}
+
 module.exports = {
-  generateCalorieProfile
+  ACTIVITY_MULTIPLIERS,
+  calculateBMR,
+  calculateMaintenanceCalories,
+  calculateActiveCalorieGoal,
+  calculateMacros,
+  generateCalorieProfile,
+  mapUserGoalToHealthGoal,
+  mapHealthGoalToUserGoal,
 };

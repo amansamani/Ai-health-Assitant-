@@ -1,173 +1,714 @@
-const logger = require("../config/logger");
-const DailyLog = require("../models/DailyLog");
-const { checkAndAwardStreakAchievements } = require("../modules/social/achievement.service");
+"use strict";
 
-const getTodayRange = () => {
-  const startOfToday = new Date();
-  startOfToday.setHours(0, 0, 0, 0);
-  const endOfToday = new Date();
-  endOfToday.setHours(23, 59, 59, 999);
-  return { startOfToday, endOfToday };
+const logger = require(
+  "../config/logger"
+);
+
+const DailyLog = require(
+  "../models/DailyLog"
+);
+
+const User = require(
+  "../models/User"
+);
+
+const {
+  checkAndAwardStreakAchievements,
+} = require(
+  "../modules/social/achievement.service"
+);
+
+const {
+  getDayRange,
+  getRelativeDateKey,
+  getDateKeyRange,
+  getTimezone,
+} = require(
+  "../utils/date"
+);
+
+/**
+ * Get today's local calendar range for the authenticated user.
+ */
+const getTodayRange = (
+  req
+) => {
+  const timezone =
+    getTimezone(req);
+
+  const {
+    start,
+    end,
+  } = getDayRange(
+    new Date(),
+    timezone
+  );
+
+  return {
+    startOfToday: start,
+    endOfToday: end,
+    timezone,
+  };
 };
 
-// Tier 2 of the calorie-source hierarchy: called by workoutController when
-// a workout is marked complete, to add a METs-based estimate on top of
-// today's caloriesBurned.
-//
-// If a wearable has already reported real active-calorie data today
-// (source === "device"), we deliberately skip adding the estimate — the
-// watch almost certainly already captured that same workout, and stacking
-// an estimate on top would double-count it. Estimates only fill the gap
-// when there's no real device data for the day.
-const addEstimatedCaloriesForToday = async (userId, kcalToAdd) => {
-  if (!kcalToAdd || kcalToAdd <= 0) return null;
+/**
+ * Add estimated calories for today.
+ *
+ * IMPORTANT FIX:
+ *
+ * The old implementation attempted to use `req` inside this
+ * helper even though `req` was not passed into the function.
+ *
+ * This function now:
+ *
+ *   1. receives userId
+ *   2. optionally receives timezone
+ *   3. falls back to the user's stored timezone
+ *
+ * This function is used by workoutController.js, which only
+ * passes userId + calories.
+ */
+const addEstimatedCaloriesForToday =
+  async (
+    userId,
+    kcalToAdd,
+    timezone = null
+  ) => {
+    try {
+      const numericKcal =
+        Number(kcalToAdd);
 
-  const { startOfToday, endOfToday } = getTodayRange();
-  let track = await DailyLog.findOne({
-    user: userId,
-    date: { $gte: startOfToday, $lte: endOfToday },
-  });
+      if (
+        !Number.isFinite(
+          numericKcal
+        ) ||
+        numericKcal <= 0
+      ) {
+        return null;
+      }
 
-  if (track?.source === "device") {
-    return track; // real data already present — don't stack an estimate on it
-  }
+      /*
+       * If the caller did not provide a timezone,
+       * get it from the user record.
+       */
+      let resolvedTimezone =
+        timezone;
 
-  if (track) {
-    track.caloriesBurned = Math.round((track.caloriesBurned || 0) + kcalToAdd);
-    track.source = "estimated";
-    await track.save();
-  } else {
-    track = await DailyLog.create({
-      user: userId,
-      date: startOfToday,
-      caloriesBurned: Math.round(kcalToAdd),
-      source: "estimated",
-    });
-  }
-  return track;
-};
-exports.addEstimatedCaloriesForToday = addEstimatedCaloriesForToday;
+      if (
+        !resolvedTimezone
+      ) {
+        const user =
+          await User.findById(
+            userId
+          )
+            .select("timezone")
+            .lean();
 
-exports.getTodayTracking = async (req, res) => {
-  try {
-    const { startOfToday, endOfToday } = getTodayRange();
-    const todayLog = await DailyLog.findOne({
-      user: req.user.id,
-      date: { $gte: startOfToday, $lte: endOfToday },
-    });
-    res.status(200).json(todayLog);
-  } catch (err) {
-    logger.error({ err }, "Get today error");
-    res.status(500).json({ message: "Failed to fetch today tracking" });
-  }
-};
+        resolvedTimezone =
+          user?.timezone ||
+          "UTC";
+      }
 
-exports.saveTodayTracking = async (req, res) => {
-  try {
-    const { steps, water, sleep, caloriesBurned, source } = req.body;
+      const {
+        start,
+        end,
+      } = getDayRange(
+        new Date(),
+        resolvedTimezone
+      );
 
-    if (steps === undefined && water === undefined && sleep === undefined && caloriesBurned === undefined) {
-      return res.status(400).json({ message: "At least one of steps, water, sleep or caloriesBurned is required" });
+      let track =
+        await DailyLog.findOne({
+          user: userId,
+          date: {
+            $gte: start,
+            $lte: end,
+          },
+        });
+
+      /*
+       * Tier 1 device data wins.
+       *
+       * If the wearable already reported today's
+       * active calories, don't stack workout estimates
+       * on top of it.
+       */
+      if (
+        track?.source ===
+        "device"
+      ) {
+        return track;
+      }
+
+      if (track) {
+        track.caloriesBurned =
+          Math.round(
+            Number(
+              track.caloriesBurned ||
+                0
+            ) +
+              numericKcal
+          );
+
+        track.source =
+          "estimated";
+
+        await track.save();
+      } else {
+        track =
+          await DailyLog.create({
+            user: userId,
+
+            date: start,
+
+            steps: 0,
+
+            water: 0,
+
+            sleep: 0,
+
+            caloriesBurned:
+              Math.round(
+                numericKcal
+              ),
+
+            source:
+              "estimated",
+          });
+      }
+
+      return track;
+    } catch (error) {
+      logger.error(
+        {
+          err: error,
+          userId,
+        },
+        "Failed to add estimated calories"
+      );
+
+      /*
+       * This is a helper called after workout completion.
+       *
+       * A tracking estimation failure should not make
+       * the workout itself fail.
+       */
+      return null;
     }
+  };
 
-    const { startOfToday, endOfToday } = getTodayRange();
+exports.addEstimatedCaloriesForToday =
+  addEstimatedCaloriesForToday;
 
-    let track = await DailyLog.findOne({
-      user: req.user.id,
-      date: { $gte: startOfToday, $lte: endOfToday },
-    });
+/**
+ * GET /api/track/today
+ */
+exports.getTodayTracking =
+  async (
+    req,
+    res
+  ) => {
+    try {
+      const {
+        startOfToday,
+        endOfToday,
+      } =
+        getTodayRange(req);
 
-    // Only overwrite the fields that were actually sent — this lets a
-    // device sync post steps+sleep+calories now and water later (or vice
-    // versa) without one write wiping out the other's numbers.
-    if (track) {
-      if (steps !== undefined) track.steps = steps;
-      if (water !== undefined) track.water = water;
-      if (sleep !== undefined) track.sleep = sleep;
-      if (caloriesBurned !== undefined) track.caloriesBurned = caloriesBurned;
-      if (source) track.source = source;
-      await track.save();
-    } else {
-      track = await DailyLog.create({
-        user: req.user.id,
-        date: startOfToday,
-        steps: steps ?? 0,
-        water: water ?? 0,
-        sleep: sleep ?? 0,
-        caloriesBurned: caloriesBurned ?? 0,
-        source: source || "manual",
+      const todayLog =
+        await DailyLog.findOne({
+          user: req.user.id,
+
+          date: {
+            $gte: startOfToday,
+            $lte: endOfToday,
+          },
+        });
+
+      return res
+        .status(200)
+        .json(todayLog);
+    } catch (error) {
+      logger.error(
+        {
+          err: error,
+        },
+        "Get today tracking error"
+      );
+
+      return res.status(500).json({
+        message:
+          "Failed to fetch today tracking",
       });
     }
+  };
 
-    // Fire-and-forget — never let an achievements bug block the response.
-    // (checkAndAwardStreakAchievements already has its own internal
-    // try/catch and never rejects, but .catch here is cheap insurance.)
-    // Same pattern as workoutController.js's markWorkoutComplete — a
-    // streak can be extended either by finishing a workout or by hitting
-    // a steps/calories goal via tracking, so both places need the check.
-    checkAndAwardStreakAchievements(req.user.id).catch(() => {});
+/**
+ * POST /api/track/today
+ */
+exports.saveTodayTracking =
+  async (
+    req,
+    res
+  ) => {
+    try {
+      const {
+        steps,
+        water,
+        sleep,
+        caloriesBurned,
+        source,
+      } = req.body;
 
-    res.status(200).json(track);
-  } catch (err) {
-    logger.error({ err }, "Save today error");
-    res.status(500).json({ message: "Failed to save today tracking" });
-  }
-};
+      if (
+        steps ===
+          undefined &&
+        water ===
+          undefined &&
+        sleep ===
+          undefined &&
+        caloriesBurned ===
+          undefined
+      ) {
+        return res.status(400).json({
+          message:
+            "At least one of steps, water, sleep or caloriesBurned is required",
+        });
+      }
 
-exports.getRecentLogs = async (req, res) => {
-  try {
-    const days = Math.min(Number(req.params.days) || 3, 30);
-    const { startOfToday } = getTodayRange();
-    const fromDate = new Date(startOfToday);
-    fromDate.setDate(startOfToday.getDate() - days);
+      const {
+        startOfToday,
+        endOfToday,
+      } =
+        getTodayRange(req);
 
-    const logs = await DailyLog.find({
-      user: req.user.id,
-      date: { $gte: fromDate, $lt: startOfToday },
-    }).sort({ date: -1 });
+      let track =
+        await DailyLog.findOne({
+          user: req.user.id,
 
-    res.status(200).json(logs);
-  } catch (err) {
-    logger.error({ err }, "Recent logs error");
-    res.status(500).json({ message: "Failed to fetch recent logs" });
-  }
-};
+          date: {
+            $gte: startOfToday,
+            $lte: endOfToday,
+          },
+        });
 
-exports.getWeeklySummary = async (req, res) => {
-  try {
-    const { startOfToday, endOfToday } = getTodayRange();
-    const lastWeek = new Date(startOfToday);
-    lastWeek.setDate(startOfToday.getDate() - 6);
+      /*
+       * Device data has priority over estimates/manual data.
+       *
+       * If a device has already supplied calories,
+       * a later manual/estimated request must not replace
+       * that device value.
+       */
+      const incomingSource =
+        source || "manual";
 
-    const logs = await DailyLog.find({
-      user: req.user.id,
-      date: { $gte: lastWeek, $lte: endOfToday },
-    });
+      if (track) {
+        /*
+         * Steps
+         */
+        if (
+          steps !==
+          undefined
+        ) {
+          track.steps =
+            steps;
+        }
 
-    if (!logs.length) {
-      return res.status(200).json({ message: "No data" });
+        /*
+         * Water
+         */
+        if (
+          water !==
+          undefined
+        ) {
+          track.water =
+            water;
+        }
+
+        /*
+         * Sleep
+         */
+        if (
+          sleep !==
+          undefined
+        ) {
+          track.sleep =
+            sleep;
+        }
+
+        /*
+         * Calories
+         *
+         * Device is authoritative.
+         */
+        if (
+          caloriesBurned !==
+            undefined
+        ) {
+          const existingIsDevice =
+            track.source ===
+            "device";
+
+          const incomingIsDevice =
+            incomingSource ===
+            "device";
+
+          if (
+            !existingIsDevice ||
+            incomingIsDevice
+          ) {
+            track.caloriesBurned =
+              caloriesBurned;
+          }
+        }
+
+        /*
+         * Source priority:
+         *
+         * device > estimated > manual
+         */
+        const sourcePriority = {
+          manual: 1,
+          estimated: 2,
+          device: 3,
+        };
+
+        const existingPriority =
+          sourcePriority[
+            track.source ||
+              "manual"
+          ] || 1;
+
+        const incomingPriority =
+          sourcePriority[
+            incomingSource
+          ] || 1;
+
+        if (
+          incomingPriority >=
+          existingPriority
+        ) {
+          track.source =
+            incomingSource;
+        }
+
+        await track.save();
+      } else {
+        track =
+          await DailyLog.create({
+            user: req.user.id,
+
+            date: startOfToday,
+
+            steps:
+              steps ?? 0,
+
+            water:
+              water ?? 0,
+
+            sleep:
+              sleep ?? 0,
+
+            caloriesBurned:
+              caloriesBurned ??
+              0,
+
+            source:
+              incomingSource,
+          });
+      }
+
+      /*
+       * Achievement processing must never block
+       * the tracking response.
+       */
+      checkAndAwardStreakAchievements(
+        req.user.id
+      ).catch(
+        () => {}
+      );
+
+      return res
+        .status(200)
+        .json(track);
+    } catch (error) {
+      logger.error(
+        {
+          err: error,
+        },
+        "Save today tracking error"
+      );
+
+      return res.status(500).json({
+        message:
+          "Failed to save today tracking",
+      });
     }
+  };
 
-    let totalSteps = 0, totalWater = 0, totalSleep = 0, totalCalories = 0, bestDay = null;
+/**
+ * GET /api/track/recent/:days
+ *
+ * Returns previous calendar days, excluding today.
+ */
+exports.getRecentLogs =
+  async (
+    req,
+    res
+  ) => {
+    try {
+      const requestedDays =
+        Number(
+          req.params.days
+        );
 
-    logs.forEach((log) => {
-      totalSteps += log.steps;
-      totalWater += log.water;
-      totalSleep += log.sleep;
-      totalCalories += log.caloriesBurned || 0;
-      if (!bestDay || log.steps > bestDay.steps) bestDay = log;
-    });
+      const days =
+        Number.isFinite(
+          requestedDays
+        )
+          ? Math.min(
+              Math.max(
+                Math.floor(
+                  requestedDays
+                ),
+                1
+              ),
+              30
+            )
+          : 3;
 
-    res.status(200).json({
-      avgSteps: Math.round(totalSteps / logs.length),
-      avgWater: (totalWater / logs.length).toFixed(1),
-      avgSleep: (totalSleep / logs.length).toFixed(1),
-      avgCalories: Math.round(totalCalories / logs.length),
-      bestDay: bestDay.date,
-      daysTracked: logs.length,
-    });
-  } catch (err) {
-    logger.error({ err }, "Weekly summary error");
-    res.status(500).json({ message: "Weekly summary failed" });
-  }
-};
+      const timezone =
+        getTimezone(req);
+
+      const todayKey =
+        getRelativeDateKey(
+          new Date(),
+          0,
+          timezone
+        );
+
+      /*
+       * `days` previous calendar days.
+       */
+      const fromKey =
+        getRelativeDateKey(
+          new Date(),
+          -days,
+          timezone
+        );
+
+      const {
+        start: fromDate,
+      } =
+        getDateKeyRange(
+          fromKey,
+          timezone
+        );
+
+      const {
+        start: todayStart,
+      } =
+        getDateKeyRange(
+          todayKey,
+          timezone
+        );
+
+      const logs =
+        await DailyLog.find({
+          user: req.user.id,
+
+          date: {
+            $gte: fromDate,
+            $lt: todayStart,
+          },
+        }).sort({
+          date: -1,
+        });
+
+      return res
+        .status(200)
+        .json(logs);
+    } catch (error) {
+      logger.error(
+        {
+          err: error,
+        },
+        "Recent logs error"
+      );
+
+      return res.status(500).json({
+        message:
+          "Failed to fetch recent logs",
+      });
+    }
+  };
+
+/**
+ * GET /api/track/weekly
+ *
+ * Last seven local calendar days, including today.
+ */
+exports.getWeeklySummary =
+  async (
+    req,
+    res
+  ) => {
+    try {
+      const timezone =
+        getTimezone(req);
+
+      const todayKey =
+        getRelativeDateKey(
+          new Date(),
+          0,
+          timezone
+        );
+
+      const sevenDaysAgoKey =
+        getRelativeDateKey(
+          new Date(),
+          -6,
+          timezone
+        );
+
+      const {
+        start:
+          startOfWeek,
+      } =
+        getDateKeyRange(
+          sevenDaysAgoKey,
+          timezone
+        );
+
+      const {
+        end:
+          endOfToday,
+      } =
+        getDateKeyRange(
+          todayKey,
+          timezone
+        );
+
+      const logs =
+        await DailyLog.find({
+          user: req.user.id,
+
+          date: {
+            $gte: startOfWeek,
+            $lte: endOfToday,
+          },
+        }).sort({
+          date: 1,
+        });
+
+      if (!logs.length) {
+        return res.status(200).json({
+          message:
+            "No data",
+          avgSteps: 0,
+          avgWater: 0,
+          avgSleep: 0,
+          avgCalories: 0,
+          bestDay: null,
+          daysTracked: 0,
+        });
+      }
+
+      let totalSteps = 0;
+      let totalWater = 0;
+      let totalSleep = 0;
+      let totalCalories = 0;
+
+      let bestDay = null;
+
+      for (
+        const log of logs
+      ) {
+        totalSteps +=
+          Number(
+            log.steps || 0
+          );
+
+        totalWater +=
+          Number(
+            log.water || 0
+          );
+
+        totalSleep +=
+          Number(
+            log.sleep || 0
+          );
+
+        totalCalories +=
+          Number(
+            log.caloriesBurned ||
+              0
+          );
+
+        if (
+          !bestDay ||
+          Number(
+            log.steps || 0
+          ) >
+            Number(
+              bestDay.steps || 0
+            )
+        ) {
+          bestDay =
+            log;
+        }
+      }
+
+      return res
+        .status(200)
+        .json({
+          avgSteps:
+            Math.round(
+              totalSteps /
+                logs.length
+            ),
+
+          avgWater:
+            Number(
+              (
+                totalWater /
+                logs.length
+              ).toFixed(1)
+            ),
+
+          avgSleep:
+            Number(
+              (
+                totalSleep /
+                logs.length
+              ).toFixed(1)
+            ),
+
+          avgCalories:
+            Math.round(
+              totalCalories /
+                logs.length
+            ),
+
+          bestDay:
+            bestDay
+              ? bestDay.date
+              : null,
+
+          daysTracked:
+            logs.length,
+        });
+    } catch (error) {
+      logger.error(
+        {
+          err: error,
+        },
+        "Weekly summary error"
+      );
+
+      return res.status(500).json({
+        message:
+          "Weekly summary failed",
+      });
+    }
+  };

@@ -1,6 +1,7 @@
+import { ActivityIndicator, View } from "react-native";
+import { Redirect, Stack } from "expo-router";
 import { useContext } from "react";
-import { View, ActivityIndicator } from "react-native";
-import { Stack, Redirect } from "expo-router";
+
 import { AuthContext } from "@/src/context/AuthContext";
 
 export default function AuthLayout() {
@@ -8,16 +9,29 @@ export default function AuthLayout() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
         <ActivityIndicator size="large" />
       </View>
     );
   }
 
-  // Deep link / stale tab landed on an auth screen while already logged in.
+  // If the user is already authenticated, don't allow them
+  // to remain inside the authentication flow.
   if (userToken) {
-    return <Redirect href="/(app)/home" />;
+    return <Redirect href="/(app)/(tabs)/home" />;
   }
 
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <Stack
+      screenOptions={{
+        headerShown: false,
+      }}
+    />
+  );
 }
