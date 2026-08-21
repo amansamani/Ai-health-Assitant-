@@ -2,6 +2,8 @@
 
 const jwt = require("jsonwebtoken");
 
+const logger = require("../config/logger");
+
 const User = require(
   "../models/User"
 );
@@ -49,7 +51,7 @@ const protect = async (
     if (
       !process.env.JWT_SECRET
     ) {
-      console.error(
+      logger.error(
         "JWT_SECRET is not configured"
       );
 
@@ -136,9 +138,9 @@ const protect = async (
             },
           }
         ).catch((error) => {
-          console.error(
-            "Failed to persist user timezone:",
-            error.message
+          logger.error(
+            { err: error },
+            "Failed to persist user timezone"
           );
         });
       }
@@ -172,9 +174,9 @@ const protect = async (
       });
     }
 
-    console.error(
-      "Authentication middleware error:",
-      error
+    logger.error(
+      { err: error },
+      "Authentication middleware error"
     );
 
     return res.status(500).json({

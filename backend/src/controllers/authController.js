@@ -5,6 +5,7 @@ const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const sendEmail = require("../utils/sendEmail");
 const { OAuth2Client } = require("google-auth-library");
+const logger = require("../config/logger");
 
 const googleClient = new OAuth2Client(
   process.env.GOOGLE_WEB_CLIENT_ID
@@ -128,7 +129,7 @@ const registerUser = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("❌ REGISTER ERROR:", error);
+    logger.error({ err: error }, "Register error");
 
     /*
      * MongoDB unique-index race condition protection.
@@ -203,7 +204,7 @@ const loginUser = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("❌ LOGIN ERROR:", error);
+    logger.error({ err: error }, "Login error");
 
     return res.status(500).json({
       message: "Login failed",
@@ -289,15 +290,15 @@ const forgotPassword = async (req, res) => {
     });
 
     sendEmail(email, otp).catch((error) => {
-      console.error(
-        "❌ PASSWORD RESET EMAIL ERROR:",
-        error.message
+      logger.error(
+        { err: error },
+        "Password reset email error"
       );
     });
   } catch (error) {
-    console.error(
-      "❌ FORGOT PASSWORD ERROR:",
-      error
+    logger.error(
+      { err: error },
+      "Forgot password error"
     );
 
     return res.status(500).json({
@@ -430,9 +431,9 @@ const verifyOtp = async (req, res) => {
       resetToken,
     });
   } catch (error) {
-    console.error(
-      "❌ VERIFY OTP ERROR:",
-      error
+    logger.error(
+      { err: error },
+      "Verify OTP error"
     );
 
     return res.status(500).json({
@@ -568,9 +569,9 @@ const resetPassword = async (req, res) => {
       message: "Password reset successful.",
     });
   } catch (error) {
-    console.error(
-      "❌ RESET PASSWORD ERROR:",
-      error
+    logger.error(
+      { err: error },
+      "Reset password error"
     );
 
     return res.status(500).json({
@@ -600,7 +601,7 @@ const googleLogin = async (req, res) => {
     }
 
     if (!process.env.GOOGLE_WEB_CLIENT_ID) {
-      console.error(
+      logger.error(
         "GOOGLE_WEB_CLIENT_ID is not configured"
       );
 
@@ -723,9 +724,9 @@ const googleLogin = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error(
-      "❌ GOOGLE AUTH ERROR:",
-      error
+    logger.error(
+      { err: error },
+      "Google auth error"
     );
 
     return res.status(401).json({

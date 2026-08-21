@@ -1,5 +1,7 @@
 "use strict";
 
+const logger = require("../config/logger");
+
 const User = require(
   "../models/User"
 );
@@ -189,9 +191,9 @@ const updateGoal =
           healthGoal,
         });
     } catch (error) {
-      console.error(
-        "Update goal error:",
-        error
+      logger.error(
+        { err: error },
+        "Update goal error"
       );
 
       return res.status(500).json({
@@ -251,9 +253,9 @@ const registerPushToken =
             "Push token registered",
         });
     } catch (error) {
-      console.error(
-        "Register push token error:",
-        error
+      logger.error(
+        { err: error },
+        "Register push token error"
       );
 
       return res.status(500).json({

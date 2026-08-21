@@ -144,7 +144,7 @@ export default function HealthProfileScreen({ navigation, route }) {
 
   const [form, setForm] = useState({
     age: "", gender: "male", height: "", weight: "",
-    activityLevel: "moderate", goal: "lose", dietType: "non-veg",
+    activityLevel: "moderate", dietType: "non-veg",
     goal: WORKOUT_TO_DIET_GOAL[workoutGoal] ?? "lose",
     diseases: "", allergies: "",
   });
