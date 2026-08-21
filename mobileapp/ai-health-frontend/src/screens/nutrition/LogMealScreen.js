@@ -8,7 +8,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { logMeal, searchFoodsFromMongo, searchFoodsByFilter } from "../../services/nutritionService";
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
-const USDA_API_KEY = "EEvdPZ0U1r3rWH9g5ElfGeYhassb8Y9XkJKFZlY2";
+const USDA_API_KEY = process.env.EXPO_PUBLIC_USDA_API_KEY || "";
 
 const MEAL_TYPES = ["breakfast", "lunch", "dinner", "snack"];
 const MEAL_ICONS = { breakfast: "🌅", lunch: "☀️", dinner: "🌙", snack: "🍎" };
