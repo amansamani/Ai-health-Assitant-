@@ -254,7 +254,7 @@ export default function HomeScreen() {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Today's Stats</Text>
             <Pressable
-              onPress={() => router.push("/(app)/tracking")}
+              onPress={() => router.push("/(app)/(tabs)/tracking")}
               style={styles.editBtn}
               accessibilityRole="button"
               accessibilityLabel="Edit today's stats"

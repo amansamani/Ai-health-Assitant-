@@ -463,7 +463,7 @@ export default function TrackingScreen() {
       setCaloriesSource("manual");
       setTimeout(() => setSaved(false), 2500);
       router.push({
-        pathname: "/(app)/home",
+        pathname: "/(app)/(tabs)/home",
         params: { updatedToday: JSON.stringify(payload) },
       });
     } catch (err) {
