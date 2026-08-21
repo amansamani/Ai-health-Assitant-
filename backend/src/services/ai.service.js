@@ -10,25 +10,34 @@ const { z } = require("zod");
 // GEMINI INITIALIZATION
 // ─────────────────────────────────────────────────────────────────────────────
 
-const GEMINI_API_KEY =
-  process.env.GEMINI_API_KEY;
+/*
+ * Lazily initialized so that simply `require()`-ing this module never
+ * throws at process boot when GEMINI_API_KEY isn't set yet. The error
+ * now surfaces only when an AI call is actually attempted, inside
+ * whatever try/catch the caller already has around it.
+ */
+let genAI;
+let model;
 
-if (!GEMINI_API_KEY) {
-  throw new Error(
-    "GEMINI_API_KEY is not configured."
-  );
+function getModel() {
+  if (!model) {
+    const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+
+    if (!GEMINI_API_KEY) {
+      throw new Error(
+        "GEMINI_API_KEY is not configured."
+      );
+    }
+
+    genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+
+    model = genAI.getGenerativeModel({
+      model: "gemini-2.5-flash",
+    });
+  }
+
+  return model;
 }
-
-const genAI =
-  new GoogleGenerativeAI(
-    GEMINI_API_KEY
-  );
-
-const model =
-  genAI.getGenerativeModel({
-    model:
-      "gemini-2.5-flash",
-  });
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONSTANTS
@@ -1504,7 +1513,7 @@ async function requestAiPlan(
   prompt
 ) {
   const result =
-    await model.generateContent(
+    await getModel().generateContent(
       prompt
     );
 

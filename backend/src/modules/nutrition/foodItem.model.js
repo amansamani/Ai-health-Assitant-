@@ -12,11 +12,14 @@ const FOOD_CATEGORIES = [
   "dinner",
   "snack",
   "snacks", // kept temporarily for existing database records
+  "beverages", // present in existing database records
+  "fruits", // present in existing database records
 ];
 
 const DIET_TYPES = [
   "veg",
   "non-veg",
+  "nonveg", // kept temporarily for existing database records (no hyphen)
   "eggetarian",
   "vegan",
   "vegetarian",
@@ -480,7 +483,7 @@ foodItemSchema.index(
 
 foodItemSchema.pre(
   "validate",
-  function (next) {
+  function () {
     if (
       typeof this.name ===
       "string"
@@ -542,8 +545,6 @@ foodItemSchema.pre(
           ),
         ];
     }
-
-    next();
   }
 );
 

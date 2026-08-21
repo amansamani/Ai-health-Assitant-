@@ -40,6 +40,7 @@ app.use(
 
 const allowedOrigins = (
   process.env.CORS_ORIGIN ||
+  process.env.CLIENT_URL ||
   "http://localhost:19006,http://localhost:8081"
 )
   .split(",")
@@ -308,6 +309,7 @@ const startServer = async () => {
       "MONGO_URI",
       "REDIS_URL",
       "JWT_SECRET",
+      "GEMINI_API_KEY",
     ];
 
     const missing =

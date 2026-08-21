@@ -182,14 +182,12 @@ const userSchema = new mongoose.Schema(
 /*
  * Normalize email before validation/save.
  */
-userSchema.pre("validate", function (next) {
+userSchema.pre("validate", function () {
   if (this.email) {
     this.email = String(this.email)
       .trim()
       .toLowerCase();
   }
-
-  next();
 });
 
 module.exports =

@@ -11,8 +11,17 @@ import { COLORS } from '../constants/theme';
 
 // Must be the WEB-type client ID from Google Cloud Console (not Android/iOS) —
 // this is what makes Google actually return an idToken your backend can verify.
+const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+
+if (!GOOGLE_WEB_CLIENT_ID && __DEV__) {
+  console.warn(
+    "⚠️ EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID is not set. Copy .env.example to .env and set it, " +
+    "then restart Expo (env vars are baked in at start, not hot-reloaded)."
+  );
+}
+
 GoogleSignin.configure({
-  webClientId: '701044360865-o2san4uegg1j0tpjk8q51eihm6e0g10l.apps.googleusercontent.com',
+  webClientId: GOOGLE_WEB_CLIENT_ID,
   offlineAccess: false,
 });
 
