@@ -1,26 +1,36 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Stack } from "expo-router";
-import * as Updates from "expo-updates";
+import * as SplashScreen from "expo-splash-screen";
 import { AuthProvider } from "@/src/context/AuthContext";
 
-// Single provider for the whole app. index.tsx and both (auth)/(app) route
-// groups read auth state from here, so login state stays in sync no matter
-// which URL/screen the user is on.
+SplashScreen.preventAutoHideAsync();
+
 export default function RootLayout() {
+  const [appReady, setAppReady] = useState(false);
+
   useEffect(() => {
-    if (__DEV__) return;
-    (async () => {
+    async function prepare() {
       try {
-        const res = await Updates.checkForUpdateAsync();
-        if (res.isAvailable) {
-          await Updates.fetchUpdateAsync();
-          await Updates.reloadAsync();
-        }
-      } catch (e) {
-        console.log("update check fail", e);
+        // Load fonts, local configuration, etc. here if needed.
+      } catch (error) {
+        console.error("Startup error:", error);
+      } finally {
+        setAppReady(true);
       }
-    })();
+    }
+
+    prepare();
   }, []);
+
+  useEffect(() => {
+    if (appReady) {
+      SplashScreen.hide();
+    }
+  }, [appReady]);
+
+  if (!appReady) {
+    return null;
+  }
 
   return (
     <AuthProvider>

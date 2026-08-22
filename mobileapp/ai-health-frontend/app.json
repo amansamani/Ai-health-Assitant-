@@ -2,7 +2,7 @@
   "expo": {
     "name": "Fitlip",
     "slug": "ai-health-frontend",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "aihealthfrontend",
@@ -98,7 +98,8 @@
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/201b359d-32f6-4d73-916e-4e3d6fc64d2d"
+      "url": "https://u.expo.dev/201b359d-32f6-4d73-916e-4e3d6fc64d2d",
+      "checkAutomatically": "NEVER"
     }
   }
 }

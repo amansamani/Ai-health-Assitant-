@@ -241,7 +241,7 @@ exports.getWorkouts = async (req, res) => {
         exercises: enrichedExercises,
         caloriesPerExercise,
         estimatedWorkoutCalories,
-        todayCompleted: sameWorkoutToday ? Boolean(todayLog.completed) : false,
+        todayCompleted: sameWorkoutToday ? Boolean(workoutTodayLog.completed) : false,
         todayCompletedCount,
         todayCaloriesBurned: legacyCompleted
           ? Number(workoutTodayLog.caloriesBurned || 0)
