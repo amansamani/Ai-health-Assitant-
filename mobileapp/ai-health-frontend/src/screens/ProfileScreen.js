@@ -75,6 +75,7 @@ export default function ProfileScreen() {
   const [visibility, setVisibility] = useState("private");
   const [selectedGoal, setSelectedGoal] = useState("fit");
   const [followRequests, setFollowRequests] = useState([]);
+  const [customPlan, setCustomPlan] = useState(null);
   const [token, setToken] = useState(userToken || null);
   const mountedRef = useRef(true);
 
@@ -101,6 +102,13 @@ export default function ProfileScreen() {
       setVisibility(p.profileVisibility || "private");
       setSelectedGoal(p.goal || "fit");
       setFollowRequests(requestsRes.data || []);
+      try {
+        const customRes = await API.get("/custom-workouts/plans");
+        const plans = Array.isArray(customRes.data) ? customRes.data : [];
+        setCustomPlan(plans.find((item) => item.isActive) || plans[0] || null);
+      } catch (_) {
+        setCustomPlan(null);
+      }
       const currentToken = await getToken();
       if (mountedRef.current) setToken(currentToken);
     } catch (err) {
@@ -369,6 +377,21 @@ export default function ProfileScreen() {
         </FadeSlideIn>
 
         <FadeSlideIn delay={380}>
+          <Pressable onPress={() => router.push("/(app)/custom-workout")} style={styles.secondaryCard}>
+            <View style={[styles.previewIcon, { backgroundColor: "#F1EAFE" }]}>
+              <Ionicons name="construct-outline" size={19} color={COLORS.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.cardTitle}>Workout plan</Text>
+              <Text style={styles.cardSubtitle}>
+                {customPlan ? `Custom: ${customPlan.name || "My Plan"} · Active in Exercises` : "Recommended plan is active · Create a custom plan here"}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={19} color={COLORS.textMuted} />
+          </Pressable>
+        </FadeSlideIn>
+
+        <FadeSlideIn delay={420}>
           <Pressable onPress={logout} style={styles.logoutBtn}>
             <Ionicons name="log-out-outline" size={18} color={COLORS.error} />
             <Text style={styles.logoutText}>Log Out</Text>

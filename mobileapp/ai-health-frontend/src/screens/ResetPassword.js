@@ -9,7 +9,7 @@ import { Banner, BackLink } from "../components/auth/AuthBits";
 
 export default function ResetPassword() {
   const router = useRouter();
-  const { email } = useLocalSearchParams();
+  const { email, resetToken } = useLocalSearchParams();
   const [newPassword, setNewPassword] = useState("");
   const [confirmPass, setConfirmPass] = useState("");
   const [error, setError] = useState("");
@@ -31,7 +31,11 @@ export default function ResetPassword() {
     setError("");
     setLoading(true);
     try {
-      await API.post("/auth/reset-password", { email, newPassword });
+      await API.post("/auth/reset-password", {
+        email,
+        resetToken,
+        newPassword,
+      });
       router.replace({ pathname: "/(auth)/login", params: { justReset: "1" } });
     } catch (err) {
       setError(err?.response?.data?.message || "Something went wrong");

@@ -170,7 +170,22 @@ function MotivationCard({ iconTrigger }) {
       <View pointerEvents="none" style={styles.motivationScene}>
         <MotivationSkyIllustration trigger={iconTrigger} width={width - 40} height={172} />
         <Animated.View style={[styles.motivationAtmosphere, breatheStyle]} />
-        <Animated.View style={[styles.motivationGlow, glowStyle]} />
+        <Animated.View style={[styles.motivationGlow, glowStyle]}>
+          <LinearGradient
+            pointerEvents="none"
+            colors={[
+              "rgba(255,255,255,0)",
+              "rgba(255,255,255,0.04)",
+              "rgba(255,255,255,0.14)",
+              "rgba(255,255,255,0.04)",
+              "rgba(255,255,255,0)",
+            ]}
+            locations={[0, 0.25, 0.5, 0.75, 1]}
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 1, y: 0.5 }}
+            style={StyleSheet.absoluteFill}
+          />
+        </Animated.View>
         <View style={styles.motivationScrim} />
         <View pointerEvents="none" style={styles.motivationVignette} />
       </View>
@@ -563,12 +578,13 @@ const styles = StyleSheet.create({
   },
   motivationGlow: {
     position: "absolute",
-    width: 150,
-    height: 270,
-    borderRadius: 75,
-    backgroundColor: "#FFFFFF",
-    top: -52,
-    left: "30%",
+    width: 92,
+    height: 250,
+    top: -38,
+    left: "36%",
+    opacity: 0.85,
+    borderRadius: 46,
+    overflow: "hidden",
   },
   motivationScrim: {
     ...StyleSheet.absoluteFillObject,

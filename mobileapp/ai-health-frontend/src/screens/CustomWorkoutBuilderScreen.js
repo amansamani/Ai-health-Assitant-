@@ -7,6 +7,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import API from "../services/api";
 import { COLORS } from "../constants/theme";
 
@@ -176,6 +177,7 @@ export default function CustomWorkoutBuilderScreen() {
       const res = editing
         ? await API.put(`/custom-workouts/plans/${planId}`, payload)
         : await API.post("/custom-workouts/plans", payload);
+      await AsyncStorage.setItem("@fitlip_workout_plan_mode", "custom");
       Alert.alert("Plan saved", "Your custom workout plan is now active.", [{ text: "Done", onPress: () => router.replace("/(app)/workout") }]);
       return res.data;
     } catch (error) {

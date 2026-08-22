@@ -26,8 +26,24 @@ export default function VerifyOtp() {
     setError("");
     setLoading(true);
     try {
-      await API.post("/auth/verify-otp", { email, otp });
-      router.push({ pathname: "/(auth)/reset-password", params: { email } });
+      const response = await API.post("/auth/verify-otp", {
+        email,
+        otp,
+    });
+
+    const { resetToken } = response.data;
+
+    if (!resetToken) {
+      throw new Error("Reset authorization was not received");
+    }
+
+    router.push({
+    pathname: "/(auth)/reset-password",
+    params: {
+      email,
+      resetToken,
+    },
+  });
     } catch (err) {
       setError(err?.response?.data?.message || "Invalid or expired code");
     } finally {

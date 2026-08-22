@@ -246,6 +246,26 @@ export default function WorkoutDetailScreen() {
     return () => anim.stop();
   }, [headerOpacity, headerSlide]);
 
+  const exerciseKey = useCallback((item) => item?.exerciseId ? `id:${item.exerciseId}` : `name:${item?.name}`, []);
+
+  const buildCompletedMap = useCallback((progress) => {
+    const completedIds = new Set((progress?.completedExerciseIds || []).map((id) => String(id)));
+    const completedNames = new Set((progress?.completedExerciseNames || []).map((name) => String(name)));
+    const nextCompleted = {};
+
+    // Build state from the actual exercises shown on screen.
+    // Do not create both an ID key and a name key for the same exercise,
+    // otherwise one completed exercise can be counted twice (e.g. 8/6).
+    exercises.forEach((item) => {
+      const key = exerciseKey(item);
+      const byId = Boolean(item?.exerciseId) && completedIds.has(String(item.exerciseId));
+      const byName = !item?.exerciseId && completedNames.has(String(item.name));
+      if (byId || byName) nextCompleted[key] = true;
+    });
+
+    return nextCompleted;
+  }, [exercises, exerciseKey]);
+
   const loadProgress = useCallback(async () => {
     if (!workout?._id) return;
 
@@ -253,10 +273,7 @@ export default function WorkoutDetailScreen() {
       setLoadingProgress(true);
       const res = await API.get(`/workouts/progress?workoutPlanId=${workout._id}&planType=${planType}&dayOfWeek=${dayOfWeek}`);
       const progress = res.data || {};
-      const nextCompleted = {};
-      (progress.completedExerciseNames || []).forEach((name) => { nextCompleted[`name:${name}`] = true; });
-      (progress.completedExerciseIds || []).forEach((id) => { nextCompleted[`id:${id}`] = true; });
-      setCompleted(nextCompleted);
+      setCompleted(buildCompletedMap(progress));
       setSelected({});
       setWorkoutCalories(Number(progress.workoutCalories || 0));
       setAttemptNumber(Number(progress.attemptNumber || 1));
@@ -266,7 +283,7 @@ export default function WorkoutDetailScreen() {
     } finally {
       setLoadingProgress(false);
     }
-  }, [workout?._id]);
+  }, [workout?._id, planType, dayOfWeek, buildCompletedMap]);
 
   useEffect(() => {
     loadProgress();
@@ -289,8 +306,6 @@ export default function WorkoutDetailScreen() {
       Animated.timing(statusToastAnim, { toValue: 0, duration: 250, useNativeDriver: true }),
     ]).start(() => setStatusToast(null));
   }, [statusToastAnim]);
-
-  const exerciseKey = useCallback((item) => item?.exerciseId ? `id:${item.exerciseId}` : `name:${item?.name}`, []);
 
   const toggleExerciseSelection = useCallback((item) => {
     const key = exerciseKey(item);
@@ -321,11 +336,7 @@ export default function WorkoutDetailScreen() {
       });
 
       const progress = res.data?.progress || {};
-      const nextCompleted = {};
-      (progress.completedExerciseNames || []).forEach((name) => { nextCompleted[`name:${name}`] = true; });
-      (progress.completedExerciseIds || []).forEach((id) => { nextCompleted[`id:${id}`] = true; });
-
-      setCompleted(nextCompleted);
+      setCompleted(buildCompletedMap(progress));
       setSelected({});
       setWorkoutCalories(Number(progress.workoutCalories || 0));
       setCompletedToday(Boolean(progress.completedToday));
@@ -339,7 +350,7 @@ export default function WorkoutDetailScreen() {
     } finally {
       setSyncing(false);
     }
-  }, [completed, selected, syncing, showCalorieToast, workout?._id, planType, dayOfWeek, exercises, exerciseKey]);
+  }, [completed, selected, syncing, showCalorieToast, workout?._id, planType, dayOfWeek, exercises, exerciseKey, buildCompletedMap]);
 
   const retryWorkout = useCallback(() => {
     Alert.alert(
@@ -681,7 +692,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primaryDark, paddingHorizontal: 16, paddingVertical: 10,
     borderRadius: 12,
   },
-  cardSelected: { borderWidth: 2, borderColor: "#8B5CF6", backgroundColor: "#FBF8FF" },
+  cardSelected: { borderWidth: 1.5, borderColor: "#8B5CF6", backgroundColor: "#F7F2FF" },
   selectedBadge: {
     flexDirection: "row", alignItems: "center", gap: 4, marginLeft: 6,
     paddingHorizontal: 6, paddingVertical: 3, borderRadius: 8, backgroundColor: "#F1EAFE",

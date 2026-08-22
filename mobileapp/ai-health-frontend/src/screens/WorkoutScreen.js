@@ -3,6 +3,7 @@ import {
   ActivityIndicator, Pressable, Animated, Dimensions, Platform,
 } from "react-native";
 import { useEffect, useState, useCallback, useRef, useContext } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import API from "../services/api";
 import { AuthContext } from "../context/AuthContext";
@@ -12,6 +13,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { COLORS } from "../constants/theme";
 
 const { width } = Dimensions.get("window");
+const PLAN_PREF_KEY = "@fitlip_workout_plan_mode";
 
 // ── Goal config ───────────────────────────────────────────────────────────────
 const GOAL_META = {
@@ -59,15 +61,19 @@ function WorkoutCard({ item, index, onPress }) {
   const onOut = () => Animated.spring(scale, { toValue: 1,    useNativeDriver: true }).start();
 
   const accentColor = DAY_COLORS[(item.day - 1) % DAY_COLORS.length];
+  const isRestDay = Boolean(item.isRestDay);
 
   return (
     <FadeSlideIn delay={index * 60}>
       <Pressable
-        onPress={onPress} onPressIn={onIn} onPressOut={onOut}
+        onPress={isRestDay ? undefined : onPress}
+        onPressIn={isRestDay ? undefined : onIn}
+        onPressOut={isRestDay ? undefined : onOut}
+        disabled={isRestDay}
         accessibilityRole="button"
-        accessibilityLabel={`Day ${item.day}: ${item.title}, ${item.exercises.length} exercises`}
+        accessibilityLabel={isRestDay ? `Day ${item.day}: ${item.title}, rest day` : `Day ${item.day}: ${item.title}, ${item.exercises.length} exercises`}
       >
-        <Animated.View style={[styles.card, shadow(4), { transform: [{ scale }] }]}>
+        <Animated.View style={[styles.card, shadow(4), isRestDay && styles.cardRest, { transform: [{ scale }] }]}>
           <View style={[styles.cardAccent, { backgroundColor: accentColor }]} />
 
           <View style={styles.cardContent}>
@@ -82,8 +88,8 @@ function WorkoutCard({ item, index, onPress }) {
               <Text style={styles.cardTitle} numberOfLines={1}>{item.title}</Text>
               <View style={styles.cardMeta}>
                 <View style={styles.metaPill}>
-                  <Ionicons name="barbell-outline" size={11} color={COLORS.textLight} />
-                  <Text style={styles.metaText}>{item.exercises.length} exercises</Text>
+                  <Ionicons name={isRestDay ? "bed-outline" : "barbell-outline"} size={11} color={COLORS.textLight} />
+                  <Text style={styles.metaText}>{isRestDay ? "Rest day" : `${item.exercises.length} exercises`}</Text>
                 </View>
                 {item.duration ? (
                   <View style={[styles.metaPill, { marginLeft: 8 }]}>
@@ -110,7 +116,7 @@ function WorkoutCard({ item, index, onPress }) {
             </View>
 
             <View style={[styles.cardArrow, { backgroundColor: accentColor + "15" }]}>
-              <Ionicons name="arrow-forward" size={16} color={accentColor} />
+              <Ionicons name={isRestDay ? "bed-outline" : "arrow-forward"} size={16} color={accentColor} />
             </View>
           </View>
         </Animated.View>
@@ -127,11 +133,33 @@ export default function WorkoutScreen() {
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState("");
   const [mode, setMode]         = useState("bodyweight");
-  const [planMode, setPlanMode] = useState("standard");
+  const [planMode, setPlanMode] = useState(null);
+  const [planPreferenceLoading, setPlanPreferenceLoading] = useState(true);
   const [customPlans, setCustomPlans] = useState([]);
   const [customLoading, setCustomLoading] = useState(false);
 
   const goal = GOAL_META[userGoal] ?? GOAL_META.fit;
+
+  useEffect(() => {
+    let mounted = true;
+    AsyncStorage.getItem(PLAN_PREF_KEY)
+      .then((value) => {
+        if (!mounted) return;
+        setPlanMode(value === "custom" || value === "standard" ? value : null);
+      })
+      .catch(() => {
+        if (mounted) setPlanMode(null);
+      })
+      .finally(() => {
+        if (mounted) setPlanPreferenceLoading(false);
+      });
+    return () => { mounted = false; };
+  }, []);
+
+  const choosePlanMode = useCallback(async (nextMode) => {
+    await AsyncStorage.setItem(PLAN_PREF_KEY, nextMode);
+    setPlanMode(nextMode);
+  }, []);
 
   const fetchWorkouts = useCallback(async () => {
     try {
@@ -173,10 +201,29 @@ export default function WorkoutScreen() {
 
   if (planMode === "custom") {
     const activePlan = customPlans.find((item) => item.isActive) || customPlans[0];
+
+    if (!activePlan) {
+      return (
+        <SafeAreaView style={styles.container}>
+          <View style={[styles.center, { paddingHorizontal: 24 }]}>
+            <View style={styles.choiceIcon}><Ionicons name="construct-outline" size={28} color={COLORS.primary} /></View>
+            <Text style={styles.choiceTitle}>Create your custom workout</Text>
+            <Text style={styles.choiceText}>Set it up from your Profile. Once saved, it will automatically appear here with the same workout experience.</Text>
+            <Pressable onPress={() => router.push("/(app)/profile")} style={styles.primarySmallButton}>
+              <Text style={styles.primarySmallText}>Go to Profile</Text>
+            </Pressable>
+            <Pressable onPress={() => choosePlanMode("standard")} style={styles.secondaryChoiceButton}>
+              <Text style={styles.secondaryChoiceText}>Use Recommended Plan</Text>
+            </Pressable>
+          </View>
+        </SafeAreaView>
+      );
+    }
+
     return (
       <SafeAreaView style={styles.container}>
         <FlatList
-          data={activePlan?.days || []}
+          data={activePlan.days || []}
           keyExtractor={(item) => String(item.dayOfWeek)}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContent}
@@ -184,56 +231,117 @@ export default function WorkoutScreen() {
             <>
               <View style={styles.headerRow}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.screenTitle}>My Plan</Text>
-                  <Text style={styles.screenSub}>{activePlan?.name || "Build a plan that fits you"}</Text>
+                  <Text style={styles.screenTitle}>{activePlan.name || "My Workout"}</Text>
+                  <Text style={styles.screenSub}>Your custom training plan</Text>
                 </View>
-                <Pressable onPress={() => router.push("/(app)/custom-workout")} style={styles.customHeaderBtn}>
-                  <Ionicons name="add" size={16} color="#fff" />
-                  <Text style={styles.customHeaderBtnText}>{activePlan ? "Edit" : "Create"}</Text>
+                <View style={[styles.goalChip, { backgroundColor: "#F1EAFE", borderColor: "#8B5CF640" }]}>
+                  <Ionicons name="construct-outline" size={14} color="#6339B8" style={{ marginRight: 5 }} />
+                  <Text style={[styles.goalChipText, { color: "#6339B8" }]}>Custom</Text>
+                </View>
+              </View>
+
+              <LinearGradient colors={["#170F36", "#49225B"]} style={[styles.statsBar, shadow(8)]}>
+                <View style={styles.statItem}>
+                  <Text style={styles.statNum}>{activePlan.days?.filter((d) => !d.isRestDay).length || 0}</Text>
+                  <Text style={styles.statLabel}>Training Days</Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statItem}>
+                  <Text style={styles.statNum}>{activePlan.days?.reduce((sum, d) => sum + (d.exercises?.length || 0), 0) || 0}</Text>
+                  <Text style={styles.statLabel}>Exercises</Text>
+                </View>
+                <View style={styles.statDivider} />
+                <Pressable onPress={() => router.push("/(app)/profile")} style={styles.statItem}>
+                  <Ionicons name="settings-outline" size={20} color="#B8AFD6" />
+                  <Text style={styles.statLabel}>Manage</Text>
                 </Pressable>
-              </View>
-              <View style={styles.planModeRow}>
-                <Pressable onPress={() => setPlanMode("standard")} style={styles.planModeButton}><Ionicons name="sparkles-outline" size={15} color={COLORS.textMuted} /><Text style={styles.planModeText}>Recommended</Text></Pressable>
-                <View style={[styles.planModeButton, styles.planModeActive]}><Ionicons name="construct-outline" size={15} color="#fff" /><Text style={[styles.planModeText, { color: "#fff" }]}>My Plan</Text></View>
-              </View>
-              {!activePlan ? (
-                <View style={[styles.customEmptyCard, shadow(4)]}>
-                  <Ionicons name="fitness-outline" size={42} color={COLORS.primary} />
-                  <Text style={styles.customEmptyTitle}>Build your own workout</Text>
-                  <Text style={styles.customEmptyText}>Choose Push/Pull/Legs, Upper/Lower, a single-muscle split, or create every day from scratch.</Text>
-                  <Pressable onPress={() => router.push("/(app)/custom-workout")} style={styles.primarySmallButton}><Text style={styles.primarySmallText}>Create Custom Plan</Text></Pressable>
-                </View>
-              ) : null}
-              {customLoading && <ActivityIndicator size="small" color={COLORS.primary} style={{ marginVertical: 18 }} />}
-              {activePlan ? <Text style={styles.sectionLabel}>YOUR WEEK</Text> : null}
+              </LinearGradient>
+
+              <Text style={styles.sectionLabel}>THIS WEEK'S PLAN</Text>
             </>
           )}
-          renderItem={({ item }) => (
-            <Pressable
+          renderItem={({ item, index }) => (
+            <WorkoutCard
+              item={{
+                day: item.dayOfWeek,
+                title: item.title,
+                exercises: item.exercises || [],
+                isRestDay: item.isRestDay,
+              }}
+              index={index}
               onPress={async () => {
-                if (item.isRestDay) return;
                 try {
                   const res = await API.get(`/custom-workouts/plans/${activePlan._id}/days/${item.dayOfWeek}`);
                   router.push({ pathname: "/(app)/workout-detail", params: { workout: JSON.stringify({ _id: activePlan._id, planType: "custom", dayOfWeek: item.dayOfWeek, day: item.dayOfWeek, title: res.data.title, goal: activePlan.goal, mode: activePlan.mode, exercises: res.data.exercises }) } });
-                } catch (error) {
+                } catch {
                   Alert.alert("Couldn't open workout", "Please try again.");
                 }
               }}
-              disabled={item.isRestDay}
-              style={[styles.customDayCard, shadow(3), item.isRestDay && styles.customDayRest]}
-            >
-              <View style={styles.dayBadge}><Text style={styles.customDayNum}>{item.dayOfWeek}</Text><Text style={styles.customDayWord}>{item.isRestDay ? "REST" : "DAY"}</Text></View>
-              <View style={{ flex: 1 }}><Text style={styles.cardTitle}>{item.title}</Text><Text style={styles.customDayMeta}>{item.isRestDay ? "Recovery day" : `${item.exercises?.length || 0} exercises`}</Text></View>
-              <Ionicons name={item.isRestDay ? "bed-outline" : "arrow-forward-circle"} size={28} color={item.isRestDay ? COLORS.textMuted : COLORS.primary} />
-            </Pressable>
+            />
           )}
-          ListFooterComponent={() => activePlan ? (
+          ListFooterComponent={() => (
             <Pressable onPress={() => router.push({ pathname: "/(app)/custom-workout", params: { planId: activePlan._id } })} style={styles.manageLink}>
-              <Text style={styles.manageLinkText}>Manage this plan</Text>
+              <Text style={styles.manageLinkText}>Manage custom plan in Profile</Text>
               <Ionicons name="chevron-forward" size={14} color={COLORS.primary} />
             </Pressable>
-          ) : null}
+          )}
         />
+      </SafeAreaView>
+    );
+  }
+
+  if (planPreferenceLoading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
+    );
+  }
+
+  if (planMode === null) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.choiceScreen}>
+          <View style={styles.headerRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.screenTitle}>Choose your workout</Text>
+              <Text style={styles.screenSub}>Pick one plan style. You can change it later from Profile.</Text>
+            </View>
+            <View style={[styles.goalChip, { backgroundColor: goal.bg, borderColor: goal.color + "40" }]}>
+              <Ionicons name={goal.icon} size={14} color={goal.color} style={{ marginRight: 5 }} />
+              <Text style={[styles.goalChipText, { color: goal.color }]}>{goal.label}</Text>
+            </View>
+          </View>
+
+          <Pressable onPress={() => choosePlanMode("standard")} style={[styles.planChoiceCard, shadow(5)]}>
+            <View style={[styles.choiceIcon, { backgroundColor: "#EDE9FE" }]}>
+              <Ionicons name="sparkles" size={24} color="#6339B8" />
+            </View>
+            <View style={styles.choiceCopy}>
+              <Text style={styles.choiceCardTitle}>Recommended Plan</Text>
+              <Text style={styles.choiceCardText}>Use FitLip's ready-made weekly plan based on your goal and equipment.</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={22} color="#6339B8" />
+          </Pressable>
+
+          <Pressable onPress={() => choosePlanMode("custom")} style={[styles.planChoiceCard, shadow(5)]}>
+            <View style={[styles.choiceIcon, { backgroundColor: "#F3F4F6" }]}>
+              <Ionicons name="construct-outline" size={24} color={COLORS.textDark} />
+            </View>
+            <View style={styles.choiceCopy}>
+              <Text style={styles.choiceCardTitle}>Custom Plan</Text>
+              <Text style={styles.choiceCardText}>Use the plan you created from Profile and keep the same exercise flow.</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={22} color={COLORS.textMuted} />
+          </Pressable>
+
+          {!customPlans.length && (
+            <View style={styles.choiceHint}>
+              <Ionicons name="information-circle-outline" size={16} color={COLORS.textMuted} />
+              <Text style={styles.choiceHintText}>No custom plan exists yet. Create one from Profile first.</Text>
+            </View>
+          )}
+        </View>
       </SafeAreaView>
     );
   }
@@ -311,16 +419,6 @@ export default function WorkoutScreen() {
                 </View>
               </View>
             </FadeSlideIn>
-
-            <View style={styles.planModeRow}>
-              <View style={[styles.planModeButton, styles.planModeActive]}><Ionicons name="sparkles-outline" size={15} color="#fff" /><Text style={[styles.planModeText, { color: "#fff" }]}>Recommended</Text></View>
-              <Pressable onPress={() => { setPlanMode("custom"); fetchCustomPlans(); }} style={styles.planModeButton}><Ionicons name="construct-outline" size={15} color={COLORS.textMuted} /><Text style={styles.planModeText}>My Plan</Text></Pressable>
-            </View>
-            <Pressable onPress={() => router.push("/(app)/custom-workout")} style={[styles.customPromo, shadow(4)]}>
-              <View style={styles.customPromoIcon}><Ionicons name="sparkles" size={18} color="#6339B8" /></View>
-              <View style={{ flex: 1 }}><Text style={styles.customPromoTitle}>Want your own split?</Text><Text style={styles.customPromoText}>Build Push/Pull/Legs, Upper/Lower or choose every exercise yourself.</Text></View>
-              <Ionicons name="chevron-forward" size={18} color={COLORS.primary} />
-            </Pressable>
 
             {/* Stats bar */}
             <FadeSlideIn delay={80}>
@@ -460,6 +558,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface, borderRadius: 20,
     marginBottom: 12, overflow: "hidden",
   },
+  cardRest: { opacity: 0.68 },
   cardAccent:  { height: 3, width: "100%" },
   cardContent: {
     flexDirection: "row", alignItems: "center",
@@ -485,14 +584,18 @@ const styles = StyleSheet.create({
   todayDoneRow: { flexDirection: "row", alignItems: "center", marginTop: 7, gap: 5 },
   todayDoneText: { fontSize: 10, color: "#166534", fontWeight: "800" },
 
-  planModeRow: { flexDirection: "row", backgroundColor: COLORS.surface, borderRadius: 14, padding: 4, marginBottom: 14, borderWidth: 1, borderColor: COLORS.border },
-  planModeButton: { flex: 1, minHeight: 40, borderRadius: 11, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 },
-  planModeActive: { backgroundColor: COLORS.primaryDark },
-  planModeText: { fontSize: 12, fontWeight: "900", color: COLORS.textMuted },
-  customPromo: { backgroundColor: COLORS.surface, borderRadius: 18, padding: 14, flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 16, borderWidth: 1, borderColor: "#E8DFFF" },
-  customPromoIcon: { width: 38, height: 38, borderRadius: 12, backgroundColor: "#F1EAFE", alignItems: "center", justifyContent: "center" },
-  customPromoTitle: { fontSize: 13, fontWeight: "900", color: COLORS.textDark },
-  customPromoText: { marginTop: 3, fontSize: 10, lineHeight: 15, color: COLORS.textMuted, fontWeight: "600" },
+  choiceScreen: { flex: 1, padding: 20, paddingTop: 18 },
+  planChoiceCard: { backgroundColor: COLORS.surface, borderRadius: 22, padding: 18, marginBottom: 14, flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: COLORS.border },
+  choiceIcon: { width: 52, height: 52, borderRadius: 16, backgroundColor: "#F1EAFE", alignItems: "center", justifyContent: "center" },
+  choiceCopy: { flex: 1, marginHorizontal: 14 },
+  choiceCardTitle: { fontSize: 16, fontWeight: "900", color: COLORS.textDark },
+  choiceCardText: { marginTop: 5, fontSize: 12, lineHeight: 17, color: COLORS.textMuted, fontWeight: "600" },
+  choiceTitle: { marginTop: 12, fontSize: 20, fontWeight: "900", color: COLORS.textDark, textAlign: "center" },
+  choiceText: { marginTop: 7, fontSize: 13, lineHeight: 19, color: COLORS.textMuted, textAlign: "center", fontWeight: "600" },
+  choiceHint: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 4, paddingHorizontal: 10 },
+  choiceHintText: { flex: 1, fontSize: 11, lineHeight: 16, color: COLORS.textMuted, fontWeight: "600" },
+  secondaryChoiceButton: { marginTop: 10, paddingHorizontal: 16, paddingVertical: 10 },
+  secondaryChoiceText: { color: COLORS.primary, fontSize: 12, fontWeight: "900" },
   customHeaderBtn: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: COLORS.primaryDark, paddingHorizontal: 11, paddingVertical: 8, borderRadius: 12 },
   customHeaderBtnText: { color: "#fff", fontSize: 11, fontWeight: "900" },
   customEmptyCard: { backgroundColor: COLORS.surface, borderRadius: 22, padding: 24, alignItems: "center", marginBottom: 18, borderWidth: 1, borderColor: "#E8DFFF" },

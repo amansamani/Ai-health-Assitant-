@@ -26,10 +26,21 @@ export default function ForgotPassword() {
     }
     setError("");
     setLoading(true);
-    // Fire and don't wait — backend handles delivery async.
-    API.post("/auth/forgot-password", { email }).catch(() => {});
-    router.push({ pathname: "/(auth)/verify-otp", params: { email } });
-    setLoading(false);
+    try {
+  await API.post("/auth/forgot-password", { email });
+
+  router.push({
+    pathname: "/(auth)/verify-otp",
+    params: { email },
+  });
+} catch (err) {
+  setError(
+    err?.response?.data?.message ||
+    "Unable to send OTP. Please try again."
+  );
+} finally {
+  setLoading(false);
+}
   };
 
   return (
