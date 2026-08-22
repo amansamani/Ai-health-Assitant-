@@ -63,22 +63,28 @@ async function uploadImageBuffer(buffer, { publicId, folder = "fitlip/profiles",
     throw new Error("A non-empty image buffer is required");
   }
 
-  const timestamp = Math.floor(Date.now() / 1000);
-  const finalPublicId = publicId || `${folder}/${crypto.randomUUID()}`;
-  const paramsToSign = {
-    folder,
-    public_id: finalPublicId,
-    timestamp,
-  };
+const timestamp = Math.floor(Date.now() / 1000);
+const finalPublicId = publicId || `${folder}/${crypto.randomUUID()}`;
 
-  const form = new FormData();
-  form.append("file", `data:${contentType};base64,${buffer.toString("base64")}`);
-  form.append("api_key", API_KEY);
-  form.append("timestamp", String(timestamp));
-  form.append("signature", signParams(paramsToSign));
-  form.append("folder", folder);
-  form.append("public_id", finalPublicId);
-  form.append("overwrite", "true");
+const paramsToSign = {
+  folder,
+  public_id: finalPublicId,
+  timestamp,
+  overwrite: true,
+};
+
+const form = new FormData();
+
+form.append(
+  "file",
+  `data:${contentType};base64,${buffer.toString("base64")}`
+);
+form.append("api_key", API_KEY);
+form.append("timestamp", String(timestamp));
+form.append("signature", signParams(paramsToSign));
+form.append("folder", folder);
+form.append("public_id", finalPublicId);
+form.append("overwrite", "true");
 
   const endpoint = `https://api.cloudinary.com/v1_1/${encodeURIComponent(CLOUD_NAME)}/image/upload`;
   const response = await fetch(endpoint, { method: "POST", body: form });
