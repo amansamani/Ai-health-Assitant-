@@ -381,6 +381,109 @@ exports.markExerciseComplete = async (req, res) => {
   }
 };
 
+exports.retryWorkout = async (req, res) => {
+  try {
+    const {
+      workoutPlanId,
+      planType = "standard",
+      dayOfWeek,
+    } = req.body;
+
+    if (!workoutPlanId) {
+      return res.status(400).json({
+        message: "workoutPlanId is required",
+      });
+    }
+
+    // Load the requested workout and resolve its exercises.
+    const context = await getPlanContext(
+      workoutPlanId,
+      planType,
+      dayOfWeek
+    );
+
+    if (!context) {
+      return res.status(404).json({
+        message: "Workout plan not found",
+      });
+    }
+
+    const { start, end } = await getUserTodayRange(req.user.id);
+
+    // Find today's log for this exact workout.
+    const log = await findWorkoutLog(
+      req.user.id,
+      start,
+      end,
+      workoutPlanId,
+      context.planModel
+    );
+
+    if (!log) {
+      return res.status(400).json({
+        message: "No workout has been recorded today yet",
+      });
+    }
+
+    const currentAttempt = getCurrentAttempt(log);
+
+    if (!currentAttempt) {
+      return res.status(400).json({
+        message: "No workout attempt exists for today",
+      });
+    }
+
+    // Retry should only be available after the current attempt
+    // has been completely finished.
+    const totalExercises = context.workout.exercises?.length || 0;
+    const completedCount =
+      currentAttempt.completedExercises?.length || 0;
+
+    if (!currentAttempt.completed || completedCount < totalExercises) {
+      return res.status(400).json({
+        message:
+          "Complete the current workout before starting a retry",
+      });
+    }
+
+    // Create a fresh attempt while preserving the previous attempt.
+    const nextAttemptNumber =
+      (currentAttempt.attemptNumber || 0) + 1;
+
+    log.attempts.push({
+      attemptNumber: nextAttemptNumber,
+      completedExercises: [],
+      caloriesBurned: 0,
+      completed: false,
+      startedAt: new Date(),
+      completedAt: null,
+    });
+
+    // The overall workout is no longer considered complete because
+    // the user has started a new attempt.
+    log.completed = false;
+
+    await log.save();
+
+    const newAttempt = getCurrentAttempt(log);
+
+    return res.status(200).json({
+      message: "New workout attempt started",
+      attemptNumber: newAttempt.attemptNumber,
+      completedCount: 0,
+      totalExercises,
+      caloriesBurned: 0,
+      progress: serializeProgress(log, context.workout),
+    });
+  } catch (err) {
+    logger.error({ err }, "Retry workout error");
+
+    return res.status(500).json({
+      message: err.message || "Failed to retry workout",
+    });
+  }
+};
+
 exports.markWorkoutComplete = async (req, res) => {
   // Legacy compatibility endpoint. It now confirms all exercise IDs for the standard plan.
   try {
