@@ -6,11 +6,12 @@ import {
   ScrollView,
   Animated,
   Dimensions,
+  Image,
 } from "react-native";
 import { useState, useCallback, useContext, useRef, useEffect, useMemo } from "react";
 import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import API from "../services/api";
+import API, { API_BASE_URL } from "../services/api";
 import { LinearGradient } from "expo-linear-gradient";
 import { AuthContext } from "../context/AuthContext";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -23,6 +24,14 @@ import { useActiveCalorieGoal } from "../hooks/useActiveCalorieGoal";
 import AiCoachFab from "../components/AiCoachFab";
 
 const { width } = Dimensions.get("window");
+
+function getHomeProfileImage(user, token) {
+  if (!user?.hasProfilePhoto || !user?._id || !token) return null;
+  return {
+    uri: `${API_BASE_URL}/user/profile/photo/${user._id}?v=${encodeURIComponent(user.profileImageUpdatedAt || "1")}`,
+    headers: { Authorization: `Bearer ${token}` },
+  };
+}
 
 // ─── Animated Card Wrapper ────────────────────────────────────────────────────
 function FadeSlideIn({ delay = 0, children }) {
@@ -264,7 +273,7 @@ export default function HomeScreen() {
                 <Text style={styles.greeting}>
                   {greeting}{firstName ? `, ${firstName}` : ""}!
                 </Text>
-                <Text style={styles.subtitle}>Let's crush today's goals</Text>
+                <Text style={styles.subtitle}>Let&apos;s crush today&apos;s goals</Text>
               </View>
             </View>
             <Pressable
@@ -272,25 +281,25 @@ export default function HomeScreen() {
               accessibilityRole="button"
               accessibilityLabel="Open profile"
             >
-              {getHomeProfileImage(profile, token) ? (
-            <Image
-              source={getHomeProfileImage(profile, token)}
-              style={styles.avatar}
-              resizeMode="cover"
-              onError={(event) => {
-                console.log("Home profile image failed:", event.nativeEvent?.error);
-              }}
-            />
-          ) : (
-            <LinearGradient
-              colors={[COLORS.primary, COLORS.primaryDark]}
-              style={styles.avatar}
-            >
-              <Text style={styles.avatarText}>
-                {(firstName ?? "A")[0].toUpperCase()}
-              </Text>
-            </LinearGradient>
-          )}
+              {getHomeProfileImage(user, token) ? (
+                <Image
+                  source={getHomeProfileImage(user, token)}
+                  style={styles.avatar}
+                  resizeMode="cover"
+                  onError={(event) => {
+                    console.log("Home profile image failed:", event.nativeEvent?.error);
+                  }}
+                />
+              ) : (
+                <LinearGradient
+                  colors={[COLORS.primary, COLORS.primaryDark]}
+                  style={styles.avatar}
+                >
+                  <Text style={styles.avatarText}>
+                    {(firstName ?? "A")[0].toUpperCase()}
+                  </Text>
+                </LinearGradient>
+              )}
             </Pressable>
           </View>
         </FadeSlideIn>
@@ -312,7 +321,7 @@ export default function HomeScreen() {
             <View style={styles.heroLeft}>
               <View style={styles.heroBadgeWrap}>
                 <Ionicons name="flame" size={11} color="#FACC15" />
-                <Text style={styles.heroBadge}>TODAY'S GOAL</Text>
+                <Text style={styles.heroBadge}>TODAY&apos;S GOAL</Text>
               </View>
               <Text style={styles.heroTitle}>Step Count</Text>
               <Text style={styles.heroBig}>
@@ -338,7 +347,7 @@ export default function HomeScreen() {
         {/* ── TODAY'S STATS ── */}
         <FadeSlideIn delay={160}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Today's Stats</Text>
+            <Text style={styles.sectionTitle}>Today&apos;s Stats</Text>
             <Pressable
               onPress={() => router.push("/(app)/(tabs)/tracking")}
               style={styles.editBtn}
@@ -409,7 +418,7 @@ export default function HomeScreen() {
               <ManualLogIcon trigger={iconTrigger} size={22} color={COLORS.accent} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.logFoodTitle}>Log Today's Food</Text>
+              <Text style={styles.logFoodTitle}>Log Today&apos;s Food</Text>
               <Text style={styles.logFoodSub}>Search & add manually</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
@@ -428,7 +437,6 @@ const styles = StyleSheet.create({
   container:     { flex: 1, backgroundColor: COLORS.background },
   scrollContent: { padding: 20, paddingTop: 8 },
 
-  // Header
   headerRow: {
     flexDirection: "row", justifyContent: "space-between",
     alignItems: "center", marginBottom: 22,
@@ -442,7 +450,6 @@ const styles = StyleSheet.create({
   },
   avatarText: { color: "#fff", fontWeight: "800", fontSize: 18 },
 
-  // Hero Card
   heroCard: {
     borderRadius: 24, padding: 24, marginBottom: 22,
     flexDirection: "row", alignItems: "center", overflow: "hidden",
@@ -478,7 +485,6 @@ const styles = StyleSheet.create({
   heroBarFill:  { height: "100%", borderRadius: 3, backgroundColor: "#22C55E", maxWidth: "100%" },
   heroBarLabel: { fontSize: 12, color: "#B8AFD6" },
 
-  // Section
   sectionHeader: {
     flexDirection: "row", justifyContent: "space-between",
     alignItems: "center", marginBottom: 14,
@@ -491,7 +497,6 @@ const styles = StyleSheet.create({
   },
   editBtnText:  { fontSize: 13, fontWeight: "700", color: COLORS.primary },
 
-  // Stat squares
   statRow:      { flexDirection: "row", justifyContent: "space-between", marginBottom: 22 },
   statSquare: {
     backgroundColor: COLORS.surface, borderRadius: 20,
@@ -502,7 +507,6 @@ const styles = StyleSheet.create({
   squareValue:   { fontSize: 14, fontWeight: "800", color: COLORS.textDark, letterSpacing: -0.3 },
   squareLabel:   { fontSize: 11, marginTop: 2, fontWeight: "700" },
 
-  // ── Log Today's Food card ──────────────────────────────────────────────────
   logFoodCard: {
     flexDirection: "row", alignItems: "center", gap: 12,
     backgroundColor: COLORS.surface, borderRadius: 18,
@@ -522,7 +526,6 @@ const styles = StyleSheet.create({
   logFoodTitle: { fontSize: 15, fontWeight: "800", color: COLORS.textDark },
   logFoodSub:   { fontSize: 12, color: COLORS.textMuted, marginTop: 2, fontWeight: "500" },
 
-  // ── Compete with Friends card ──────────────────────────────────────────────
   competeCard: {
     flexDirection: "row", alignItems: "center", gap: 12,
     backgroundColor: COLORS.surface, borderRadius: 18,
@@ -542,7 +545,6 @@ const styles = StyleSheet.create({
   competeTitle: { fontSize: 15, fontWeight: "800", color: COLORS.textDark },
   competeSub:   { fontSize: 12, color: COLORS.textMuted, marginTop: 2, fontWeight: "500" },
 
-  // ── Motivation card ────────────────────────────────────────────────────────
   motivationCard: {
     minHeight: 172,
     borderRadius: 24,
