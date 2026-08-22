@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import Svg, {
   G, Path, Circle, Ellipse, Rect, Mask, Defs,
-  LinearGradient as SvgLinearGradient, Stop,
+  LinearGradient as SvgLinearGradient, RadialGradient, Stop,
 } from "react-native-svg";
 import Animated, {
   useSharedValue,
@@ -303,42 +303,161 @@ export function getTimeBucket() {
   return "night";
 }
 
+// Copy for the motivation card header — swaps with the scene so the whole
+// card (not just the background) feels tied to the time of day.
+export function getMotivationCopy(bucket = getTimeBucket()) {
+  switch (bucket) {
+    case "morning":
+      return { label: "GOOD MORNING", hint: "Early effort compounds all day long.", Icon: SunriseIcon };
+    case "day":
+      return { label: "MIDDAY MOMENTUM", hint: "Keep the streak alive — you're halfway there.", Icon: SunIcon };
+    case "evening":
+      return { label: "GOOD EVENING", hint: "Finish today stronger than you started it.", Icon: SunIcon };
+    default:
+      return { label: "LATE NIGHT FOCUS", hint: "Rest well — tomorrow is a fresh rep.", Icon: MoonStarIcon };
+  }
+}
+
+// Wide viewBox so the scene reads as a real horizon rather than a cropped
+// square, and each bucket carries its own palette, glow, and set-dressing
+// (birds at dawn/dusk, clouds by day, stars at night) so the card feels like
+// one continuous "same view, different time" illustration.
 const SKY_SCENES = {
-  morning: { sky: ["#FCEBD5", "#F5EBFA"], mountain: "#C99B6E", sun: "#FDBA55", sunCy: 58 },
-  day:     { sky: ["#EDE6FB", "#F5EBFA"], mountain: "#8B7BA8", sun: "#FFC94D", sunCy: 20 },
-  evening: { sky: ["#F6A66B", "#6E3482"], mountain: "#3D1F52", sun: "#FF8A5B", sunCy: 55 },
-  night:   { sky: ["#170F36", "#49225B"], mountain: "#0D0820", sun: null,     sunCy: null },
+  morning: {
+    sky: ["#FDE7C8", "#F7E4F2"],
+    horizonGlow: "#FFC978",
+    mountain: "#C99B6E",
+    mountainFar: "#E7C29A",
+    sun: "#FFB84D",
+    sunCy: 76,
+    stars: [],
+    clouds: [{ cx: 60, cy: 26, rx: 20, ry: 7 }, { cx: 155, cy: 18, rx: 26, ry: 8 }],
+    birds: [],
+  },
+  day: {
+    sky: ["#EFE7FC", "#F7E4F2"],
+    horizonGlow: null,
+    mountain: "#8B7BA8",
+    mountainFar: "#BBA9D6",
+    sun: "#FFC94D",
+    sunCy: 26,
+    stars: [],
+    clouds: [{ cx: 44, cy: 22, rx: 22, ry: 8 }, { cx: 172, cy: 34, rx: 18, ry: 6.5 }, { cx: 110, cy: 16, rx: 14, ry: 5.5 }],
+    birds: [],
+  },
+  evening: {
+    sky: ["#F8A667", "#5B2E73", "#2A1440"],
+    horizonGlow: "#FF8A5B",
+    mountain: "#2A1440",
+    mountainFar: "#4A2560",
+    sun: "#FF7A50",
+    sunCy: 72,
+    stars: [{ cx: 24, cy: 14, r: 1 }, { cx: 200, cy: 10, r: 1.1 }],
+    clouds: [],
+    birds: [{ x: 40, y: 30 }, { x: 52, y: 24 }, { x: 150, y: 20 }],
+  },
+  night: {
+    sky: ["#140C30", "#3B1D52"],
+    horizonGlow: null,
+    mountain: "#0B0620",
+    mountainFar: "#170F36",
+    sun: null,
+    sunCy: null,
+    stars: [
+      { cx: 22, cy: 14, r: 1.2 }, { cx: 46, cy: 26, r: 0.9 }, { cx: 78, cy: 12, r: 1.1 },
+      { cx: 118, cy: 22, r: 0.9 }, { cx: 150, cy: 14, r: 1.3 }, { cx: 176, cy: 30, r: 1 },
+      { cx: 200, cy: 18, r: 0.9 }, { cx: 92, cy: 34, r: 0.8 },
+    ],
+    clouds: [],
+    birds: [],
+  },
 };
 
-export function MotivationSkyIllustration({ trigger, width = 118, height = 78 }) {
-  const scene = SKY_SCENES[getTimeBucket()];
+const SCENE_VB_W = 220;
+const SCENE_VB_H = 92;
+
+export function MotivationSkyIllustration({ trigger, width = 220, height = 92 }) {
+  const bucket = getTimeBucket();
+  const scene = SKY_SCENES[bucket];
   const animatedStyle = usePieceStyle(trigger, 0, false);
 
   return (
-    <Animated.View style={[{ width, height }, animatedStyle]}>
-      <Svg width={width} height={height} viewBox="0 0 118 78">
+    <Animated.View style={[{ width, height, overflow: "hidden" }, animatedStyle]}>
+      <Svg
+        width={width}
+        height={height}
+        viewBox={`0 0 ${SCENE_VB_W} ${SCENE_VB_H}`}
+        preserveAspectRatio="xMidYMid slice"
+      >
         <Defs>
           <SvgLinearGradient id="motivSkyGrad" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor={scene.sky[0]} />
-            <Stop offset="1" stopColor={scene.sky[1]} />
+            {scene.sky.map((color, i) => (
+              <Stop key={i} offset={i / Math.max(scene.sky.length - 1, 1)} stopColor={color} />
+            ))}
           </SvgLinearGradient>
+          {scene.sun != null && (
+            <RadialGradient id="motivSunGlow" cx="0.5" cy="0.5" r="0.5">
+              <Stop offset="0" stopColor={scene.sun} stopOpacity="0.55" />
+              <Stop offset="1" stopColor={scene.sun} stopOpacity="0" />
+            </RadialGradient>
+          )}
         </Defs>
 
-        <Rect x="0" y="0" width="118" height="78" rx="16" fill="url(#motivSkyGrad)" />
+        {/* full-bleed sky */}
+        <Rect x="0" y="0" width={SCENE_VB_W} height={SCENE_VB_H} fill="url(#motivSkyGrad)" />
 
+        {/* warm horizon band for sunrise / sunset */}
+        {scene.horizonGlow != null && (
+          <Rect x="0" y={SCENE_VB_H - 34} width={SCENE_VB_W} height="34" fill={scene.horizonGlow} opacity="0.28" />
+        )}
+
+        {/* stars */}
+        {scene.stars.map((s, i) => (
+          <Circle key={i} cx={s.cx} cy={s.cy} r={s.r} fill="#FDF6FF" opacity={0.55 + (i % 3) * 0.15} />
+        ))}
+
+        {/* clouds */}
+        {scene.clouds.map((c, i) => (
+          <Ellipse key={i} cx={c.cx} cy={c.cy} rx={c.rx} ry={c.ry} fill="#FFFFFF" opacity="0.35" />
+        ))}
+
+        {/* birds — simple dawn/dusk silhouette strokes */}
+        {scene.birds.map((b, i) => (
+          <Path
+            key={i}
+            d={`M${b.x - 5} ${b.y} Q${b.x - 2.5} ${b.y - 4} ${b.x} ${b.y} Q${b.x + 2.5} ${b.y - 4} ${b.x + 5} ${b.y}`}
+            stroke="#2A1440"
+            strokeWidth="1.1"
+            strokeLinecap="round"
+            fill="none"
+            opacity="0.55"
+          />
+        ))}
+
+        {/* sun / moon */}
         {scene.sun != null ? (
-          <Circle cx="80" cy={scene.sunCy} r="16" fill={scene.sun} />
+          <>
+            <Circle cx={SCENE_VB_W - 60} cy={scene.sunCy} r="34" fill="url(#motivSunGlow)" />
+            <Circle cx={SCENE_VB_W - 60} cy={scene.sunCy} r="15" fill={scene.sun} />
+          </>
         ) : (
           <>
-            <G transform="translate(66,10)">
+            <G transform={`translate(${SCENE_VB_W - 54},14)`}>
               <CrescentShape color="#F5EBFA" size={26} cutDx={8} cutDy={-5} maskId="motivMoon" />
             </G>
-            <Circle cx="30" cy="14" r="1.4" fill="#F5EBFA" />
-            <Circle cx="40" cy="24" r="1" fill="#A56ABD" />
           </>
         )}
 
-        <Path d="M0 78 L28 40 L46 58 L62 32 L88 60 L118 38 L118 78 Z" fill={scene.mountain} />
+        {/* layered mountains for depth */}
+        <Path
+          d={`M0 ${SCENE_VB_H} L36 ${SCENE_VB_H - 40} L64 ${SCENE_VB_H - 18} L96 ${SCENE_VB_H - 48} L132 ${SCENE_VB_H - 20} L168 ${SCENE_VB_H - 46} L${SCENE_VB_W} ${SCENE_VB_H - 24} L${SCENE_VB_W} ${SCENE_VB_H} Z`}
+          fill={scene.mountainFar}
+          opacity="0.75"
+        />
+        <Path
+          d={`M0 ${SCENE_VB_H} L26 ${SCENE_VB_H - 26} L52 ${SCENE_VB_H - 8} L86 ${SCENE_VB_H - 34} L118 ${SCENE_VB_H - 10} L154 ${SCENE_VB_H - 30} L${SCENE_VB_W} ${SCENE_VB_H - 14} L${SCENE_VB_W} ${SCENE_VB_H} Z`}
+          fill={scene.mountain}
+        />
       </Svg>
     </Animated.View>
   );

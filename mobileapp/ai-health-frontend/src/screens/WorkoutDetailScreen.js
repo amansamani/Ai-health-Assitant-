@@ -61,8 +61,8 @@ const ExerciseCard = memo(function ExerciseCard({
     Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true }).start(), [scaleAnim]);
 
   const handlePress = useCallback(() => {
-    if (!isCompleted && !isSyncing) onToggleSelect(item.name);
-  }, [isCompleted, isSyncing, item.name, onToggleSelect]);
+    if (!isCompleted && !isSyncing) onToggleSelect(item);
+  }, [isCompleted, isSyncing, item, onToggleSelect]);
 
   const imageSource = EXERCISE_IMAGES[item.imageKey] ?? EXERCISE_IMAGES.default;
   const kcal = Number(item.caloriesPerExercise || 0);

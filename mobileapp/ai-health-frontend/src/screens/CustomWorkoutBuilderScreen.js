@@ -244,7 +244,7 @@ export default function CustomWorkoutBuilderScreen() {
               {!selected.isRestDay && <Text style={styles.dayEditorSub}>{selected.exercises.length} exercises selected</Text>}
             </View>
             <Pressable onPress={() => setDays((prev) => prev.map((day) => day.dayOfWeek === selectedDay ? { ...day, isRestDay: !day.isRestDay } : day))} style={styles.restToggle}>
-              <Ionicons name={selected.isRestDay ? "bed-outline" : "bed-outline"} size={15} color={selected.isRestDay ? "#6339B8" : COLORS.textMuted} />
+              <Ionicons name={selected.isRestDay ? "bed" : "bed-outline"} size={15} color={selected.isRestDay ? "#6339B8" : COLORS.textMuted} />
               <Text style={[styles.restToggleText, selected.isRestDay && { color: "#6339B8" }]}>{selected.isRestDay ? "Rest day" : "Mark rest"}</Text>
             </Pressable>
           </View>

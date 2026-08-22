@@ -42,7 +42,7 @@ export default function GamificationScreen() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.headerRow}>
-          <Pressable onPress={() => router.back()} style={styles.backBtn}><Ionicons name="chevron-back" size={22} color={COLORS.text} /></Pressable>
+          <Pressable onPress={() => router.back()} style={styles.backBtn}><Ionicons name="chevron-back" size={22} color={COLORS.textDark} /></Pressable>
           <View style={{ flex: 1 }}>
             <Text style={styles.title}>Your Greatness</Text>
             <Text style={styles.subtitle}>Progress that reflects consistency, not perfection.</Text>
@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#F7F0FA" },
   headerRow: { flexDirection: "row", alignItems: "center", marginBottom: 18 },
   backBtn: { width: 40, height: 40, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: "#EEE6F4", marginRight: 10 },
-  title: { fontSize: 28, fontWeight: "900", color: COLORS.text },
+  title: { fontSize: 28, fontWeight: "900", color: COLORS.textDark },
   subtitle: { marginTop: 3, color: COLORS.textMuted, fontSize: 13, lineHeight: 18 },
   hero: { borderRadius: 28, padding: 20, overflow: "hidden", marginBottom: 14 },
   heroTop: { flexDirection: "row", alignItems: "center", gap: 12 },
@@ -130,22 +130,22 @@ const styles = StyleSheet.create({
   progressText: { color: "rgba(255,255,255,0.76)", marginTop: 8, fontSize: 12, fontWeight: "700" },
   quickGrid: { flexDirection: "row", gap: 10, marginBottom: 14 },
   statCard: { flex: 1, borderRadius: 20, backgroundColor: "#fff", padding: 14, minHeight: 104, shadowColor: "#160B26", shadowOpacity: 0.07, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 2 },
-  statValue: { marginTop: 8, fontSize: 20, fontWeight: "900", color: COLORS.text },
+  statValue: { marginTop: 8, fontSize: 20, fontWeight: "900", color: COLORS.textDark },
   statLabel: { marginTop: 4, color: COLORS.textMuted, fontSize: 11, fontWeight: "700" },
   card: { backgroundColor: "#fff", borderRadius: 22, padding: 18, marginBottom: 14, shadowColor: "#160B26", shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 5 }, elevation: 2 },
   sectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
-  sectionTitle: { color: COLORS.text, fontSize: 18, fontWeight: "900" },
+  sectionTitle: { color: COLORS.textDark, fontSize: 18, fontWeight: "900" },
   xpRow: { flexDirection: "row", alignItems: "center", minHeight: 58 },
   xpDivider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: "#EEE9F2" },
   xpIcon: { width: 34, height: 34, borderRadius: 12, backgroundColor: "#F2EAF7", alignItems: "center", justifyContent: "center", marginRight: 10 },
-  xpRowLabel: { flex: 1, color: COLORS.text, fontSize: 14, fontWeight: "700" },
+  xpRowLabel: { flex: 1, color: COLORS.textDark, fontSize: 14, fontWeight: "700" },
   xpRowValue: { color: COLORS.primary, fontSize: 14, fontWeight: "900" },
   leaderRow: { flexDirection: "row", alignItems: "center", minHeight: 66, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: "#EEE9F2" },
   position: { width: 32, color: COLORS.textMuted, fontWeight: "800", fontSize: 12 },
   positionMe: { color: COLORS.primary },
   leaderAvatar: { width: 38, height: 38, borderRadius: 13, backgroundColor: "#EEE5F5", alignItems: "center", justifyContent: "center", marginRight: 10 },
   leaderInitial: { color: COLORS.primary, fontWeight: "900" },
-  leaderName: { color: COLORS.text, fontSize: 14, fontWeight: "800" },
+  leaderName: { color: COLORS.textDark, fontSize: 14, fontWeight: "800" },
   leaderMeta: { color: COLORS.textMuted, fontSize: 11, marginTop: 3 },
   leaderXp: { color: COLORS.primary, fontSize: 13, fontWeight: "900" },
   empty: { color: COLORS.textMuted, fontSize: 13, lineHeight: 19, marginTop: 4 },

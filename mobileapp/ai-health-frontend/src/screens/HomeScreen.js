@@ -17,7 +17,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { COLORS } from "../constants/theme";
 import CircularProgressRing from "../components/CircularProgressRing";
 import WeeklyInsightCard from "../components/WeeklyInsightCard";
-import { StepsIcon, SleepIcon, ManualLogIcon, MotivationSkyIllustration } from "../components/icons/MotionIcons";
+import { StepsIcon, SleepIcon, ManualLogIcon, MotivationSkyIllustration, getMotivationCopy } from "../components/icons/MotionIcons";
 import { useReplayOnFocus } from "../hooks/useReplayOnFocus";
 import { useActiveCalorieGoal } from "../hooks/useActiveCalorieGoal";
 import AiCoachFab from "../components/AiCoachFab";
@@ -99,6 +99,7 @@ function getDailyQuote() {
 
 function MotivationCard({ iconTrigger }) {
   const quote = useMemo(getDailyQuote, []);
+  const { label, hint, Icon } = useMemo(getMotivationCopy, []);
   const shimmer = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -122,7 +123,7 @@ function MotivationCard({ iconTrigger }) {
   return (
     <View style={styles.motivationCard}>
       <View pointerEvents="none" style={styles.motivationScene}>
-        <MotivationSkyIllustration trigger={iconTrigger} width={width - 40} height={148} />
+        <MotivationSkyIllustration trigger={iconTrigger} width={width - 40} height={172} />
         <Animated.View style={[styles.motivationGlow, glowStyle]} />
         <View style={styles.motivationScrim} />
       </View>
@@ -130,14 +131,14 @@ function MotivationCard({ iconTrigger }) {
       <View style={styles.motivationContent}>
         <View style={styles.motivationTopRow}>
           <View style={styles.motivationIconWrap}>
-            <Ionicons name="sparkles" size={15} color="#FFFFFF" />
+            <Icon size={15} color="#FFFFFF" />
           </View>
-          <Text style={styles.motivationLabel}>TODAY'S MOTIVATION</Text>
+          <Text style={styles.motivationLabel}>{label}</Text>
         </View>
         <Text style={styles.motivationQuote}>{quote}</Text>
         <View style={styles.motivationHint}>
           <Ionicons name="sunny-outline" size={13} color="rgba(255,255,255,0.85)" />
-          <Text style={styles.motivationHintText}>A new moment. A new chance to move.</Text>
+          <Text style={styles.motivationHintText}>{hint}</Text>
         </View>
       </View>
     </View>
@@ -489,7 +490,7 @@ const styles = StyleSheet.create({
 
   // ── Motivation card ────────────────────────────────────────────────────────
   motivationCard: {
-    minHeight: 148,
+    minHeight: 172,
     borderRadius: 24,
     marginBottom: 22,
     overflow: "hidden",
@@ -513,7 +514,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(23, 15, 54, 0.30)",
   },
   motivationContent: {
-    minHeight: 148,
+    minHeight: 172,
     padding: 18,
     justifyContent: "space-between",
   },
