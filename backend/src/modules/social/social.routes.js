@@ -9,6 +9,7 @@ const duel = require("./duel.controller");
 const achievement = require("./achievement.controller");
 const streak = require("./streak.controller");
 const follow = require("./follow.controller");
+const gamification = require("./gamification.controller");
 
 // ── Social profiles / follow ────────────────────────────────────────────────
 router.get("/discover", auth, follow.discoverProfiles);
@@ -35,6 +36,9 @@ router.post("/duels/:id/cancel", auth, duel.cancelDuel);
 
 // ── Achievements ─────────────────────────────────────────────────────────────
 router.get("/achievements", auth, achievement.listAchievements);
+router.get("/gamification/me", auth, gamification.getMyGamification);
+router.get("/gamification/leaderboard", auth, gamification.getFriendsLeaderboard);
+
 router.post("/achievements/check", auth, achievement.checkNow);
 
 // ── Streak Battles ───────────────────────────────────────────────────────────

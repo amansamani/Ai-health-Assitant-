@@ -2,6 +2,7 @@
 
 const DietProgress = require("../nutrition/dietProgress.model");
 const DietPlan = require("../nutrition/dietPlan.model");
+const { awardXp } = require("../social/gamification.service");
 
 const MEAL_TYPES = [
   "breakfast",
@@ -687,6 +688,15 @@ const logDailyDiet = async (
             true,
         }
       );
+
+    if (resolvedCalories > 0) {
+      awardXp(
+        userId,
+        "mealLogged",
+        `meal-log:${logDate}`,
+        { calories: resolvedCalories }
+      ).catch(() => {});
+    }
 
     res.json({
       ...log.toObject(),

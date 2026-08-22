@@ -2,6 +2,8 @@ const DailyLog = require("../../models/DailyLog");
 const WorkoutLog = require("../../models/WorkoutLog");
 const HealthProfile = require("../health/health.model");
 const Achievement = require("./achievement.model");
+const { awardXp } = require("./gamification.service");
+
 
 const MILESTONES = [3, 7, 14, 30, 60, 100]; // days
 
@@ -144,6 +146,7 @@ async function checkAndAwardStreakAchievements(userId) {
           value: highestCrossed,
         });
         awarded.push(doc);
+        awardXp(userId, "achievementEarned", `achievement-xp:${doc._id}`, { achievementId: doc._id.toString(), title: doc.title }).catch(() => {});
 
         // Lazy require, not a top-of-file import: engagement.service.js
         // already requires *this* file (for computeWorkoutStreak/STEP_GOAL),

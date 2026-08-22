@@ -68,6 +68,7 @@ export default function AppLayout() {
       <Stack.Screen name="social/create-duel" options={{ animation: "slide_from_bottom", animationDuration: 200 }} />
       <Stack.Screen name="social/duel-detail" options={{ animation: "slide_from_right", animationDuration: 180 }} />
       <Stack.Screen name="social/achievements" options={{ animation: "slide_from_right", animationDuration: 180 }} />
+      <Stack.Screen name="social/gamification" options={{ animation: "slide_from_right", animationDuration: 180 }} />
       <Stack.Screen name="social/streaks" options={{ animation: "slide_from_right", animationDuration: 180 }} />
     </Stack>
   );

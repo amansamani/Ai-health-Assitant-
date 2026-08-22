@@ -9,6 +9,7 @@ import { COLORS } from "../../constants/theme";
 import ScreenHeader from "../../components/ScreenHeader";
 import FadeSlideIn from "../../components/FadeSlideIn";
 import Avatar from "../../components/Avatar";
+import { LinearGradient } from "expo-linear-gradient";
 
 function HubTile({ icon, color, title, subtitle, badge, onPress, delay }) {
   return (
@@ -97,6 +98,14 @@ export default function CompeteHubScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
+      <Pressable style={styles.greatnessCard} onPress={() => router.push("/(app)/social/gamification")}>
+        <LinearGradient colors={[COLORS.primaryDark, COLORS.primary, COLORS.primaryLight]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.greatnessInner}>
+          <View style={styles.greatnessIcon}><Ionicons name="barbell-outline" size={22} color="#fff" /></View>
+          <View style={{ flex: 1 }}><Text style={styles.greatnessEyebrow}>YOUR GREATNESS</Text><Text style={styles.greatnessTitle}>Build your Dumbbell rank</Text><Text style={styles.greatnessSub}>Earn XP from real fitness actions and climb with friends.</Text></View>
+          <Ionicons name="chevron-forward" size={20} color="#fff" />
+        </LinearGradient>
+      </Pressable>
+
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <ScreenHeader title="Compete" subtitle="Build your FitLip identity" />
 
@@ -173,4 +182,10 @@ const styles = StyleSheet.create({
   tileBadgeText: { color: "#fff", fontSize: 11, fontWeight: "800" },
   tileTitle: { fontSize: 15, fontWeight: "800", color: COLORS.textDark, marginBottom: 3 },
   tileSubtitle: { fontSize: 11.5, color: COLORS.textMuted, fontWeight: "600" },
+  greatnessCard: { marginBottom: 16, borderRadius: 22, overflow: "hidden" },
+  greatnessInner: { padding: 16, flexDirection: "row", alignItems: "center", gap: 12 },
+  greatnessIcon: { width: 46, height: 46, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.14)", alignItems: "center", justifyContent: "center" },
+  greatnessEyebrow: { color: "rgba(255,255,255,0.72)", fontSize: 10, fontWeight: "900", letterSpacing: 1.1 },
+  greatnessTitle: { color: "#fff", fontSize: 18, fontWeight: "900", marginTop: 2 },
+  greatnessSub: { color: "rgba(255,255,255,0.78)", fontSize: 11, lineHeight: 16, marginTop: 3 },
 });

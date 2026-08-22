@@ -18,6 +18,10 @@ const {
   "../modules/social/achievement.service"
 );
 
+const { awardXp } = require(
+  "../modules/social/gamification.service"
+);
+
 const {
   getDayRange,
   getRelativeDateKey,
@@ -427,6 +431,29 @@ exports.saveTodayTracking =
       ).catch(
         () => {}
       );
+
+      const HealthProfile = require("../modules/health/health.model");
+      const profile = await HealthProfile.findOne({ user: req.user.id }).select("activeCalorieGoal").lean();
+      const activeGoal = Number(profile?.activeCalorieGoal) || 400;
+      const dateKey = startOfToday.toISOString().slice(0, 10);
+
+      if (Number(track.steps || 0) >= 10000) {
+        awardXp(
+          req.user.id,
+          "stepsGoal",
+          `steps-goal:${dateKey}`,
+          { value: Number(track.steps || 0) }
+        ).catch(() => {});
+      }
+
+      if (Number(track.caloriesBurned || 0) >= activeGoal) {
+        awardXp(
+          req.user.id,
+          "activeBurnGoal",
+          `active-burn-goal:${dateKey}`,
+          { value: Number(track.caloriesBurned || 0), goal: activeGoal }
+        ).catch(() => {});
+      }
 
       return res
         .status(200)

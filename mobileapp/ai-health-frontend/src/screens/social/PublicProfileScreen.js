@@ -108,6 +108,14 @@ export default function PublicProfileScreen() {
           </LinearGradient>
         </FadeSlideIn>
 
+        <FadeSlideIn delay={70}>
+          <View style={styles.rankStrip}>
+            <View style={styles.rankStripIcon}><Ionicons name={profile.rankIcon || "barbell-outline"} size={19} color={COLORS.primary} /></View>
+            <View style={{ flex: 1 }}><Text style={styles.rankStripTitle}>{profile.rankTitle || "Bronze Dumbbell"}</Text><Text style={styles.rankStripMeta}>Level {profile.level || 1} · {profile.totalXp || 0} XP</Text></View>
+            <View style={styles.rankPill}><Text style={styles.rankPillText}>{profile.levelTitle || "Rookie"}</Text></View>
+          </View>
+        </FadeSlideIn>
+
         <FadeSlideIn delay={90}>
           <View style={styles.statsCard}>
             <Stat value={profile.followerCount ?? 0} label="Followers" />
@@ -160,6 +168,12 @@ const styles = StyleSheet.create({
   followBtn: { minWidth: 132, minHeight: 44, paddingHorizontal: 18, borderRadius: 15, backgroundColor: COLORS.primaryDark, marginTop: 18, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7 },
   followBtnSecondary: { backgroundColor: "#fff" },
   followBtnText: { color: "#fff", fontSize: 13.5, fontWeight: "850" },
+  rankStrip: { marginTop: 10, flexDirection: "row", alignItems: "center", backgroundColor: COLORS.surface, borderRadius: 18, borderWidth: 1, borderColor: COLORS.border, padding: 12 },
+  rankStripIcon: { width: 38, height: 38, borderRadius: 13, backgroundColor: COLORS.surfaceMuted, alignItems: "center", justifyContent: "center", marginRight: 10 },
+  rankStripTitle: { fontSize: 14, fontWeight: "900", color: COLORS.textDark },
+  rankStripMeta: { marginTop: 2, fontSize: 11, color: COLORS.textMuted, fontWeight: "700" },
+  rankPill: { paddingHorizontal: 9, paddingVertical: 6, borderRadius: 10, backgroundColor: COLORS.surfaceMuted },
+  rankPillText: { color: COLORS.primary, fontSize: 10.5, fontWeight: "900" },
   statsCard: { marginTop: 12, flexDirection: "row", alignItems: "center", backgroundColor: COLORS.surface, borderRadius: 18, borderWidth: 1, borderColor: COLORS.border, paddingVertical: 14 },
   stat: { flex: 1, alignItems: "center" },
   statValue: { fontSize: 17, fontWeight: "900", color: COLORS.textDark },

@@ -1,6 +1,8 @@
 const DailyLog = require("../../models/DailyLog");
 const WorkoutLog = require("../../models/WorkoutLog");
 const { awardDuelWin } = require("./achievement.service");
+const { awardXp } = require("./gamification.service");
+
 const { sendEventNotification } = require("../../notifications/engagement.service");
 
 /**
@@ -72,6 +74,7 @@ async function resolveDuelIfExpired(duel) {
 
   if (duel.winner) {
     await awardDuelWin(duel.winner, duel);
+    awardXp(duel.winner, "duelWin", `duel-win:${duel._id}`, { duelId: duel._id.toString(), metric: duel.metric }).catch(() => {});
 
     const winnerIsChallenger = duel.winner.toString() === challengerId.toString();
     const loserId = winnerIsChallenger ? opponentId : challengerId;

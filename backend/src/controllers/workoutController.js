@@ -7,6 +7,7 @@ const HealthProfile = require("../modules/health/health.model");
 const User = require("../models/User");
 const { addEstimatedCaloriesForToday } = require("./trackingController");
 const { checkAndAwardStreakAchievements } = require("../modules/social/achievement.service");
+const { awardXp } = require("../modules/social/gamification.service");
 const { getDayRange } = require("../utils/date");
 
 // MET estimates by workout style. These remain fallback estimates only —
@@ -339,7 +340,24 @@ exports.confirmExercises = async (req, res) => {
       const calorieLog = await addEstimatedCaloriesForToday(req.user.id, selectedCalories);
       if (calorieLog?.source === "estimated") caloriesAdded = selectedCalories;
     }
-    if (attempt.completed) checkAndAwardStreakAchievements(req.user.id).catch(() => {});
+    for (const exercise of newExercises) {
+      awardXp(
+        req.user.id,
+        "exerciseConfirmed",
+        `exercise:${log._id}:attempt:${attempt.attemptNumber}:${exerciseKey(exercise)}`,
+        { workoutPlanId, planType, exercise: exercise.name }
+      ).catch(() => {});
+    }
+
+    if (attempt.completed) {
+      awardXp(
+        req.user.id,
+        "workoutCompleted",
+        `workout:${log._id}:attempt:${attempt.attemptNumber}:completed`,
+        { workoutPlanId, planType }
+      ).catch(() => {});
+      checkAndAwardStreakAchievements(req.user.id).catch(() => {});
+    }
 
     return res.status(200).json({
       message: attempt.completed ? "Exercises recorded — workout complete" : "Exercises recorded",

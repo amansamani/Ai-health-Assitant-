@@ -284,6 +284,20 @@ export default function ProfileScreen() {
           </FadeSlideIn>
         )}
 
+        <FadeSlideIn delay={180}>
+          <Pressable onPress={() => router.push("/(app)/social/gamification")} style={styles.greatnessCard}>
+            <LinearGradient colors={[COLORS.primaryDark, COLORS.primary, COLORS.primaryLight]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.greatnessInner}>
+              <View style={styles.greatnessIcon}><Ionicons name="barbell-outline" size={21} color="#fff" /></View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.greatnessEyebrow}>YOUR GREATNESS</Text>
+                <Text style={styles.greatnessTitle}>Level up your FitLip identity</Text>
+                <Text style={styles.greatnessSub}>Earn XP, unlock Dumbbell ranks and compete with friends.</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#fff" />
+            </LinearGradient>
+          </Pressable>
+        </FadeSlideIn>
+
         <FadeSlideIn delay={200}>
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Social identity</Text>
@@ -434,6 +448,12 @@ const styles = StyleSheet.create({
   goalCard: { flex: 1, minHeight: 108, borderRadius: 16, borderWidth: 1.5, borderColor: COLORS.border, backgroundColor: COLORS.background, alignItems: "center", justifyContent: "center", padding: 10 },
   goalLabel: { marginTop: 7, fontSize: 13.5, fontWeight: "900", color: COLORS.textDark },
   goalDesc: { marginTop: 2, fontSize: 10.5, fontWeight: "600", color: COLORS.textMuted, textAlign: "center" },
+  greatnessCard: { marginBottom: 16, borderRadius: 22, overflow: "hidden" },
+  greatnessInner: { padding: 16, flexDirection: "row", alignItems: "center", gap: 12 },
+  greatnessIcon: { width: 44, height: 44, borderRadius: 15, backgroundColor: "rgba(255,255,255,0.14)", alignItems: "center", justifyContent: "center" },
+  greatnessEyebrow: { color: "rgba(255,255,255,0.72)", fontSize: 10, fontWeight: "900", letterSpacing: 1.05 },
+  greatnessTitle: { color: "#fff", fontSize: 16, fontWeight: "900", marginTop: 2 },
+  greatnessSub: { color: "rgba(255,255,255,0.78)", fontSize: 11, lineHeight: 16, marginTop: 3 },
   logoutBtn: { height: 50, borderRadius: 15, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.error + "35", alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8 },
   logoutText: { fontSize: 14, fontWeight: "800", color: COLORS.error },
 });

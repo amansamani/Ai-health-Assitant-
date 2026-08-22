@@ -1,8 +1,9 @@
 const logger = require("../../config/logger");
 const User = require("../../models/User");
 const Follow = require("./follow.model");
+const { getGamificationSnapshot } = require("./gamification.config");
 
-const PROFILE_FIELDS = "name username picture bio profileVisibility profileImageUpdatedAt";
+const PROFILE_FIELDS = "name username picture bio profileVisibility profileImageUpdatedAt totalXp";
 
 function normalizeUsername(value) {
   return String(value || "")
@@ -25,6 +26,7 @@ function publicUser(user) {
     profileVisibility: user.profileVisibility,
     hasProfilePhoto: Boolean(user.profileImageUpdatedAt),
     profileImageUpdatedAt: user.profileImageUpdatedAt || null,
+    ...getGamificationSnapshot(user.totalXp || 0),
   };
 }
 
