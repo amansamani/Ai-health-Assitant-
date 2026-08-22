@@ -101,31 +101,69 @@ function MotivationCard({ iconTrigger }) {
   const quote = useMemo(getDailyQuote, []);
   const { label, hint, Icon } = useMemo(getMotivationCopy, []);
   const shimmer = useRef(new Animated.Value(0)).current;
+  const breathe = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     shimmer.setValue(0);
-    const loop = Animated.loop(
+    breathe.setValue(0);
+
+    const shineLoop = Animated.loop(
       Animated.sequence([
-        Animated.timing(shimmer, { toValue: 1, duration: 2400, useNativeDriver: true }),
-        Animated.delay(900),
-        Animated.timing(shimmer, { toValue: 0, duration: 1800, useNativeDriver: true }),
+        Animated.delay(700),
+        Animated.timing(shimmer, {
+          toValue: 1,
+          duration: 1800,
+          easing: undefined,
+          useNativeDriver: true,
+        }),
+        Animated.delay(1200),
+        Animated.timing(shimmer, {
+          toValue: 0,
+          duration: 900,
+          useNativeDriver: true,
+        }),
       ])
     );
-    loop.start();
-    return () => loop.stop();
+
+    const breatheLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(breathe, { toValue: 1, duration: 2200, useNativeDriver: true }),
+        Animated.timing(breathe, { toValue: 0, duration: 2200, useNativeDriver: true }),
+      ])
+    );
+
+    shineLoop.start();
+    breatheLoop.start();
+
+    return () => {
+      shineLoop.stop();
+      breatheLoop.stop();
+    };
   }, []);
 
   const glowStyle = {
-    opacity: shimmer.interpolate({ inputRange: [0, 1], outputRange: [0.12, 0.26] }),
-    transform: [{ translateX: shimmer.interpolate({ inputRange: [0, 1], outputRange: [-80, 80] }) }],
+    opacity: shimmer.interpolate({ inputRange: [0, 1], outputRange: [0.04, 0.20] }),
+    transform: [
+      { translateX: shimmer.interpolate({ inputRange: [0, 1], outputRange: [-130, 180] }) },
+      { rotate: "-18deg" },
+    ],
+  };
+
+  const breatheStyle = {
+    opacity: breathe.interpolate({ inputRange: [0, 1], outputRange: [0.10, 0.20] }),
+    transform: [{
+      scale: breathe.interpolate({ inputRange: [0, 1], outputRange: [0.96, 1.04] }),
+    }],
   };
 
   return (
     <View style={styles.motivationCard}>
       <View pointerEvents="none" style={styles.motivationScene}>
         <MotivationSkyIllustration trigger={iconTrigger} width={width - 40} height={172} />
+        <Animated.View style={[styles.motivationAtmosphere, breatheStyle]} />
         <Animated.View style={[styles.motivationGlow, glowStyle]} />
         <View style={styles.motivationScrim} />
+        <View pointerEvents="none" style={styles.motivationVignette} />
       </View>
 
       <View style={styles.motivationContent}>
@@ -234,9 +272,25 @@ export default function HomeScreen() {
               accessibilityRole="button"
               accessibilityLabel="Open profile"
             >
-              <LinearGradient colors={[COLORS.primary, COLORS.primaryDark]} style={styles.avatar}>
-                <Text style={styles.avatarText}>{(firstName ?? "A")[0].toUpperCase()}</Text>
-              </LinearGradient>
+              {getHomeProfileImage(profile, token) ? (
+            <Image
+              source={getHomeProfileImage(profile, token)}
+              style={styles.avatar}
+              resizeMode="cover"
+              onError={(event) => {
+                console.log("Home profile image failed:", event.nativeEvent?.error);
+              }}
+            />
+          ) : (
+            <LinearGradient
+              colors={[COLORS.primary, COLORS.primaryDark]}
+              style={styles.avatar}
+            >
+              <Text style={styles.avatarText}>
+                {(firstName ?? "A")[0].toUpperCase()}
+              </Text>
+            </LinearGradient>
+          )}
             </Pressable>
           </View>
         </FadeSlideIn>
@@ -382,7 +436,7 @@ const styles = StyleSheet.create({
   greetingRow: { flexDirection: "row", alignItems: "center" },
   greeting:   { fontSize: 22, fontWeight: "800", color: COLORS.textDark, letterSpacing: -0.5 },
   subtitle:   { fontSize: 14, color: COLORS.textLight, marginTop: 3 },
-  avatar: {
+  avatar: { overflow: "hidden",
     width: 44, height: 44, borderRadius: 22,
     justifyContent: "center", alignItems: "center",
   },
@@ -500,18 +554,29 @@ const styles = StyleSheet.create({
   motivationScene: {
     ...StyleSheet.absoluteFillObject,
   },
+  motivationAtmosphere: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(255,255,255,0.16)",
+    transform: [{ scale: 1 }],
+  },
   motivationGlow: {
     position: "absolute",
-    width: 110,
-    height: 220,
-    borderRadius: 55,
+    width: 150,
+    height: 270,
+    borderRadius: 75,
     backgroundColor: "#FFFFFF",
-    top: -35,
-    left: "35%",
+    top: -52,
+    left: "30%",
   },
   motivationScrim: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(23, 15, 54, 0.30)",
+    backgroundColor: "rgba(23, 15, 54, 0.18)",
+  },
+  motivationVignette: {
+    ...StyleSheet.absoluteFillObject,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.16)",
+    borderRadius: 24,
   },
   motivationContent: {
     minHeight: 172,
