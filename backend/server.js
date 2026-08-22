@@ -11,6 +11,8 @@ const logger = require("./src/config/logger");
 const authRoutes = require("./src/routes/authRoutes");
 const userRoutes = require("./src/routes/userRoutes");
 const workoutRoutes = require("./src/routes/workoutRoutes");
+const customWorkoutRoutes = require("./src/routes/customWorkoutRoutes");
+const exerciseRoutes = require("./src/routes/exerciseRoutes");
 const trackingRoutes = require("./src/routes/trackingRoutes");
 
 const scheduleWeeklyJob = require("./src/jobs/scheduleWeekly");
@@ -173,6 +175,16 @@ app.use(
 );
 
 app.use(
+  "/api/custom-workouts",
+  customWorkoutRoutes
+);
+
+app.use(
+  "/api/exercises",
+  exerciseRoutes
+);
+
+app.use(
   "/api/track",
   trackingRoutes
 );
@@ -329,6 +341,24 @@ const startServer = async () => {
      * Connect MongoDB before accepting API traffic.
      */
     await connectDB();
+
+    try {
+      const WorkoutLog = require("./src/models/WorkoutLog");
+      await WorkoutLog.syncIndexes();
+      logger.info("WorkoutLog indexes synchronized");
+    } catch (error) {
+      logger.error({ err: error }, "WorkoutLog index synchronization failed");
+    }
+
+    try {
+      const { seedWorkoutExerciseLibrary, migrateWorkoutPlansToExerciseIds } = require("./src/services/workoutLibrarySeed.service");
+      const seedResult = await seedWorkoutExerciseLibrary();
+      logger.info(seedResult, "Workout exercise library synchronized");
+      const migrationResult = await migrateWorkoutPlansToExerciseIds();
+      logger.info(migrationResult, "Standard workout plans migrated to exercise IDs");
+    } catch (error) {
+      logger.error({ err: error }, "Workout exercise library synchronization failed");
+    }
 
     /*
      * Schedule repeatable jobs.

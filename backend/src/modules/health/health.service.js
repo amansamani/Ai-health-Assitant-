@@ -28,6 +28,19 @@ const VALID_DIET_TYPES = [
   "vegan",
 ];
 
+// Canonical calorie-engine constants. Keep all calorie calculations
+// in this module so nutrition/workout features consume one source of truth.
+const MIN_DAILY_CALORIES = {
+  female: 1200,
+  male: 1500,
+};
+const MAX_DAILY_CALORIES = 10000;
+const GOAL_CALORIE_ADJUSTMENTS = {
+  lose: -400,
+  maintain: 0,
+  gain: 300,
+};
+
 /**
  * Calculate BMR using the Mifflin-St Jeor equation.
  */
@@ -324,23 +337,24 @@ function generateCalorieProfile(
    * gain      -> 300 kcal surplus
    */
   let targetCalories =
-    maintenanceCalories;
-
-  if (goal === "lose") {
-    targetCalories -= 400;
-  }
-
-  if (goal === "gain") {
-    targetCalories += 300;
-  }
+    maintenanceCalories +
+    GOAL_CALORIE_ADJUSTMENTS[goal];
 
   /*
    * Never allow an accidental negative/near-zero
    * calorie target.
    */
-  targetCalories = Math.max(
-    targetCalories,
-    1200
+  const minimumCalories =
+    MIN_DAILY_CALORIES[
+      numericData.gender
+    ];
+
+  targetCalories = Math.min(
+    Math.max(
+      targetCalories,
+      minimumCalories
+    ),
+    MAX_DAILY_CALORIES
   );
 
   const macros =
@@ -413,6 +427,9 @@ function mapHealthGoalToUserGoal(
 
 module.exports = {
   ACTIVITY_MULTIPLIERS,
+  MIN_DAILY_CALORIES,
+  MAX_DAILY_CALORIES,
+  GOAL_CALORIE_ADJUSTMENTS,
   calculateBMR,
   calculateMaintenanceCalories,
   calculateActiveCalorieGoal,

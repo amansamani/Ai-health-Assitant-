@@ -5,6 +5,7 @@ const DailyLog = require("../models/DailyLog");
 const MealLog = require("../modules/nutrition/mealLog.model");
 const WorkoutLog = require("../models/WorkoutLog");
 const logger = require("../config/logger");
+const { calculateMacros } = require("../modules/health/health.service");
 
 const MIN_ACTIVE_DAYS = 5;
 const LOOKBACK_DAYS = 7;
@@ -38,36 +39,22 @@ function recalculateMacros(profile) {
   const { targetCalories, weight, goal } = profile;
 
   if (!weight || weight <= 0) {
-    logger.warn({ userId: profile.user }, "Missing weight for user, skipping macro recalculation");
+    logger.warn(
+      { userId: profile.user },
+      "Missing weight for user, skipping macro recalculation"
+    );
     return;
   }
 
-  const proteinGrams = Math.round(weight * 2);
-  const proteinCalories = proteinGrams * 4;
+  const macros = calculateMacros({
+    weight: Number(weight),
+    targetCalories: Number(targetCalories),
+    goal,
+  });
 
-  let carbPercent = 0.4;
-  let fatPercent = 0.3;
-
-  if (goal === "lose") {
-    carbPercent = 0.35;
-    fatPercent = 0.25;
-  }
-
-  if (goal === "gain") {
-    carbPercent = 0.5;
-    fatPercent = 0.2;
-  }
-
-  const remainingCalories = targetCalories - proteinCalories;
-
-  if (remainingCalories <= 0) return;
-
-  const carbCalories = remainingCalories * carbPercent;
-  const fatCalories = remainingCalories * fatPercent;
-
-  profile.proteinTarget = proteinGrams;
-  profile.carbTarget = Math.round(carbCalories / 4);
-  profile.fatTarget = Math.round(fatCalories / 9);
+  profile.proteinTarget = macros.proteinTarget;
+  profile.carbTarget = macros.carbTarget;
+  profile.fatTarget = macros.fatTarget;
 }
 
 async function runWeeklyAdjustments() {

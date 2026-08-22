@@ -45,6 +45,10 @@ export default function AppLayout() {
         options={{ animation: "slide_from_right", animationDuration: 180 }}
       />
       <Stack.Screen
+        name="custom-workout"
+        options={{ animation: "slide_from_right", animationDuration: 180 }}
+      />
+      <Stack.Screen
         name="nutrition/meal-logger"
         options={{ headerShown: true, title: "Log Meal", headerBackTitle: "Home" }}
       />

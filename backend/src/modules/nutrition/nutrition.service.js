@@ -16,6 +16,12 @@ const {
 } = require("../../utils/pushNotification");
 
 const logger = require("../../config/logger");
+const {
+  generateCalorieProfile,
+  calculateMacros,
+  MIN_DAILY_CALORIES,
+  MAX_DAILY_CALORIES,
+} = require("../health/health.service");
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GOAL NORMALIZATION
@@ -247,13 +253,6 @@ const CALORIE_SPLIT = {
   snack: 0.07,
 };
 
-const MIN_DAILY_CALORIES = {
-  female: 1200,
-  male: 1500,
-};
-
-const MAX_DAILY_CALORIES = 10000;
-
 const DAILY_CALORIE_TOLERANCE = 75;
 
 const WEEK_DAYS = 7;
@@ -274,109 +273,45 @@ function computeTargetCalories(
     );
   }
 
-  const weight = toFiniteNumber(
-    profile.weightKg ??
-      profile.weight
+  /*
+   * HealthProfile.targetCalories is the persisted canonical value.
+   * This matters for adaptive weekly adjustments: once the health
+   * profile is adjusted, diet generation must use that exact target.
+   */
+  const persistedTarget = toFiniteNumber(
+    profile.targetCalories
   );
 
-  const height = toFiniteNumber(
-    profile.heightCm ??
-      profile.height
-  );
-
-  const age = toFiniteNumber(
-    profile.age
-  );
-
-  const gender =
-    normalizeGender(
-      profile.gender
+  if (
+    persistedTarget !== null &&
+    persistedTarget > 0
+  ) {
+    return Math.min(
+      Math.max(
+        Math.round(persistedTarget),
+        MIN_DAILY_CALORIES[
+          normalizeGender(profile.gender)
+        ]
+      ),
+      MAX_DAILY_CALORIES
     );
+  }
 
-  const activityLevel =
-    normalizeActivityLevel(
+  /*
+   * No persisted target exists (for example, legacy data).
+   * Delegate the calculation to the canonical health engine.
+   */
+  return generateCalorieProfile({
+    ...profile,
+    goal: normalizeGoal(profile.goal),
+    gender: normalizeGender(profile.gender),
+    activityLevel: normalizeActivityLevel(
       profile.activityLevel
-    );
-
-  const goal =
-    normalizeGoal(
-      profile.goal
-    );
-
-  if (
-    weight === null ||
-    height === null ||
-    age === null
-  ) {
-    throw new Error(
-      "Profile must include valid age, gender, weight, and height."
-    );
-  }
-
-  if (
-    weight <= 0 ||
-    height <= 0 ||
-    age <= 0 ||
-    age > 120
-  ) {
-    throw new Error(
-      "Profile contains invalid age, height, or weight."
-    );
-  }
-
-  const bmr =
-    gender ===
-    "female"
-      ? 10 * weight +
-        6.25 * height -
-        5 * age -
-        161
-      : 10 * weight +
-        6.25 * height -
-        5 * age +
-        5;
-
-  const ACTIVITY_MULTIPLIERS =
-    {
-      sedentary: 1.2,
-      light: 1.375,
-      moderate: 1.55,
-      active: 1.725,
-    };
-
-  let tdee =
-    bmr *
-    ACTIVITY_MULTIPLIERS[
-      activityLevel
-    ];
-
-  if (
-    goal === "lose"
-  ) {
-    tdee -= 500;
-  }
-
-  if (
-    goal === "gain"
-  ) {
-    tdee += 400;
-  }
-
-  const floor =
-    MIN_DAILY_CALORIES[
-      gender
-    ];
-
-  const calculated =
-    Math.round(tdee);
-
-  return Math.min(
-    Math.max(
-      calculated,
-      floor
     ),
-    MAX_DAILY_CALORIES
-  );
+    dietType: normalizeDietType(
+      profile.dietType
+    ),
+  }).targetCalories;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -393,105 +328,42 @@ function computeMacroTargets(
     );
   }
 
-  const calories =
-    toFiniteNumber(
-      targetCalories
-    );
+  const calories = toFiniteNumber(targetCalories);
 
-  if (
-    calories === null ||
-    calories <= 0
-  ) {
+  if (calories === null || calories <= 0) {
     throw new Error(
       "Target calories must be a positive number."
     );
   }
 
-  const weight =
-    toFiniteNumber(
-      profile.weightKg ??
-        profile.weight,
-      70
-    );
+  const weight = toFiniteNumber(
+    profile.weightKg ?? profile.weight
+  );
 
-  if (
-    weight <= 0
-  ) {
+  if (weight === null || weight <= 0) {
     throw new Error(
       "Weight must be greater than zero."
     );
   }
 
   /*
-   * IMPORTANT FIX:
-   *
-   * The old code used profile.goal directly.
-   *
-   * So:
-   *
-   * lean → maintain multiplier
-   * bulk → maintain multiplier
-   * fit  → maintain multiplier
-   *
-   * because the multiplier object only contained:
-   *
-   * lose / gain / maintain
-   *
-   * We normalize first.
+   * Macro calculation is also delegated to the canonical health engine.
+   * This prevents nutrition from silently using different protein/carb/fat
+   * rules than the HealthProfile values shown elsewhere in the app.
    */
-  const goal =
-    normalizeGoal(
-      profile.goal
-    );
-
-  const proteinMultipliers =
-    {
-      lose: 2.0,
-      gain: 2.2,
-      maintain: 1.8,
-    };
-
-  const proteinPerKg =
-    proteinMultipliers[
-      goal
-    ];
-
-  const proteinG =
-    Math.round(
-      weight *
-        proteinPerKg
-    );
-
-  const proteinCal =
-    proteinG * 4;
-
-  const remaining =
-    Math.max(
-      calories -
-        proteinCal,
-      0
-    );
-
-  const carbsG =
-    Math.round(
-      (remaining *
-        0.55) /
-        4
-    );
-
-  const fatsG =
-    Math.round(
-      (remaining *
-        0.45) /
-        9
-    );
+  const result = calculateMacros({
+    weight,
+    targetCalories: calories,
+    goal: normalizeGoal(profile.goal),
+  });
 
   return {
-    proteinG,
-    carbsG,
-    fatsG,
+    proteinG: result.proteinTarget,
+    carbsG: result.carbTarget,
+    fatsG: result.fatTarget,
   };
 }
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TEMPLATE HELPERS
