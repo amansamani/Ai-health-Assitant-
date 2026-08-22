@@ -30,9 +30,14 @@ const getProfile =
      *
      * Password is excluded by the middleware query.
      */
+    const profile = req.user.toObject();
+    profile.hasProfilePhoto = Boolean(req.user.profileImageUpdatedAt);
+    delete profile.profileImageData;
+    delete profile.profileImageContentType;
+
     return res
       .status(200)
-      .json(req.user);
+      .json(profile);
   };
 
 /**

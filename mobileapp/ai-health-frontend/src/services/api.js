@@ -19,7 +19,8 @@ export const clearTokenCache = () => {
 const isValidToken = (token) =>
   token && token !== "undefined" && token !== "null";
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
+export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:5000/api";
+const API_URL = API_BASE_URL;
 
 if (!API_URL && __DEV__) {
   console.warn(

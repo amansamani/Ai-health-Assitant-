@@ -8,6 +8,17 @@ const friendship = require("./friendship.controller");
 const duel = require("./duel.controller");
 const achievement = require("./achievement.controller");
 const streak = require("./streak.controller");
+const follow = require("./follow.controller");
+
+// ── Social profiles / follow ────────────────────────────────────────────────
+router.get("/discover", auth, follow.discoverProfiles);
+router.get("/profile/:identifier", auth, follow.getPublicProfile);
+router.post("/follow/:userId", auth, follow.followUser);
+router.delete("/follow/:userId", auth, follow.unfollowUser);
+router.get("/following", auth, follow.listFollowers);
+router.get("/followers", auth, follow.listFollowing);
+router.get("/follow-requests", auth, follow.listFollowRequests);
+router.post("/follow-requests/:requestId/respond", auth, follow.respondFollowRequest);
 
 // ── Friends ──────────────────────────────────────────────────────────────────
 router.get("/friends/code", auth, friendship.getMyCode);

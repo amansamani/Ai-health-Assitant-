@@ -145,13 +145,20 @@ export default function FriendsScreen() {
           friends.map((f, i) => (
             <FadeSlideIn key={f._id} delay={100 + i * 40}>
               <View style={styles.friendRow}>
-                <Avatar name={f.name} size={42} />
-                <View style={{ flex: 1, marginLeft: 12 }}>
-                  <Text style={styles.friendName}>{f.name}</Text>
-                  <Text style={styles.friendSince}>
-                    Friends since {new Date(f.since).toLocaleDateString("en-IN", { month: "short", year: "numeric" })}
-                  </Text>
-                </View>
+                <Pressable
+                  onPress={() => router.push({ pathname: "/(app)/social/profile", params: { identifier: f.username || f._id } })}
+                  style={({ pressed }) => [styles.friendMain, pressed && { opacity: 0.82 }]}
+                >
+                  <Avatar name={f.name} size={42} />
+                  <View style={{ flex: 1, marginLeft: 12 }}>
+                    <Text style={styles.friendName}>{f.name}</Text>
+                    {!!f.username && <Text style={styles.friendHandle}>@{f.username}</Text>}
+                    <Text style={styles.friendSince}>
+                      Friends since {new Date(f.since).toLocaleDateString("en-IN", { month: "short", year: "numeric" })}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={17} color={COLORS.textMuted} />
+                </Pressable>
                 <Pressable
                   onPress={() => router.push({ pathname: "/(app)/social/create-duel", params: { opponentId: f._id, opponentName: f.name } })}
                   style={styles.friendActionBtn}
@@ -220,7 +227,9 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface, borderRadius: 16, padding: 12,
     marginBottom: 10, borderWidth: 1, borderColor: COLORS.border,
   },
+  friendMain: { flex: 1, flexDirection: "row", alignItems: "center" },
   friendName: { fontSize: 15, fontWeight: "700", color: COLORS.textDark },
+  friendHandle: { fontSize: 11, color: COLORS.primary, marginTop: 1, fontWeight: "700" },
   friendSince: { fontSize: 11.5, color: COLORS.textMuted, marginTop: 2 },
   friendActionBtn: {
     width: 34, height: 34, borderRadius: 17, backgroundColor: COLORS.surfaceMuted,

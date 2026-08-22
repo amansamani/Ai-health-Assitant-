@@ -23,7 +23,7 @@ function canonicalPair(idA, idB) {
   return a < b ? [a, b] : [b, a];
 }
 
-const PUBLIC_FIELDS = "name picture";
+const PUBLIC_FIELDS = "name username picture bio profileVisibility profileImageUpdatedAt";
 
 exports.getMyCode = async (req, res) => {
   try {

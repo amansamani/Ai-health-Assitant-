@@ -99,16 +99,47 @@ function getDailyQuote() {
 
 function MotivationCard({ iconTrigger }) {
   const quote = useMemo(getDailyQuote, []);
+  const shimmer = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    shimmer.setValue(0);
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(shimmer, { toValue: 1, duration: 2400, useNativeDriver: true }),
+        Animated.delay(900),
+        Animated.timing(shimmer, { toValue: 0, duration: 1800, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, []);
+
+  const glowStyle = {
+    opacity: shimmer.interpolate({ inputRange: [0, 1], outputRange: [0.12, 0.26] }),
+    transform: [{ translateX: shimmer.interpolate({ inputRange: [0, 1], outputRange: [-80, 80] }) }],
+  };
+
   return (
     <View style={styles.motivationCard}>
-      <View style={{ flex: 1, paddingRight: 10 }}>
-        <View style={styles.motivationIconWrap}>
-          <Ionicons name="sparkles-outline" size={16} color={COLORS.primary} />
-        </View>
-        <Text style={styles.motivationLabel}>TODAY'S MOTIVATION</Text>
-        <Text style={styles.motivationQuote}>{quote}</Text>
+      <View pointerEvents="none" style={styles.motivationScene}>
+        <MotivationSkyIllustration trigger={iconTrigger} width={width - 40} height={148} />
+        <Animated.View style={[styles.motivationGlow, glowStyle]} />
+        <View style={styles.motivationScrim} />
       </View>
-      <MotivationSkyIllustration trigger={iconTrigger} />
+
+      <View style={styles.motivationContent}>
+        <View style={styles.motivationTopRow}>
+          <View style={styles.motivationIconWrap}>
+            <Ionicons name="sparkles" size={15} color="#FFFFFF" />
+          </View>
+          <Text style={styles.motivationLabel}>TODAY'S MOTIVATION</Text>
+        </View>
+        <Text style={styles.motivationQuote}>{quote}</Text>
+        <View style={styles.motivationHint}>
+          <Ionicons name="sunny-outline" size={13} color="rgba(255,255,255,0.85)" />
+          <Text style={styles.motivationHintText}>A new moment. A new chance to move.</Text>
+        </View>
+      </View>
     </View>
   );
 }
@@ -458,23 +489,73 @@ const styles = StyleSheet.create({
 
   // ── Motivation card ────────────────────────────────────────────────────────
   motivationCard: {
-    flexDirection: "row", alignItems: "flex-start", gap: 12,
-    backgroundColor: COLORS.surface, borderRadius: 18,
-    padding: 16, marginBottom: 22,
-    boxShadow: "0px 2px 10px rgba(23, 15, 54, 0.06)",
+    minHeight: 148,
+    borderRadius: 24,
+    marginBottom: 22,
+    overflow: "hidden",
+    position: "relative",
+    boxShadow: "0px 10px 26px rgba(23, 15, 54, 0.18)",
+  },
+  motivationScene: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  motivationGlow: {
+    position: "absolute",
+    width: 110,
+    height: 220,
+    borderRadius: 55,
+    backgroundColor: "#FFFFFF",
+    top: -35,
+    left: "35%",
+  },
+  motivationScrim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(23, 15, 54, 0.30)",
+  },
+  motivationContent: {
+    minHeight: 148,
+    padding: 18,
+    justifyContent: "space-between",
+  },
+  motivationTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 9,
   },
   motivationIconWrap: {
-    width: 30, height: 30, borderRadius: 10,
-    backgroundColor: COLORS.surfaceMuted,
-    justifyContent: "center", alignItems: "center",
-    marginBottom: 10,
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    backgroundColor: "rgba(255,255,255,0.18)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.26)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   motivationLabel: {
-    fontSize: 10, fontWeight: "800", color: COLORS.textMuted,
-    letterSpacing: 0.8, marginBottom: 4,
+    fontSize: 10,
+    fontWeight: "900",
+    color: "rgba(255,255,255,0.88)",
+    letterSpacing: 1,
   },
   motivationQuote: {
-    fontSize: 14, fontWeight: "600", color: COLORS.textDark,
-    lineHeight: 20,
+    fontSize: 20,
+    fontWeight: "900",
+    color: "#FFFFFF",
+    lineHeight: 27,
+    maxWidth: "88%",
+    letterSpacing: -0.3,
+    marginTop: 8,
+  },
+  motivationHint: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 10,
+  },
+  motivationHintText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "rgba(255,255,255,0.82)",
   },
 });

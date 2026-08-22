@@ -1,0 +1,175 @@
+import { useCallback, useEffect, useState } from "react";
+import { View, Text, StyleSheet, Pressable, ScrollView, ActivityIndicator, Alert, Image } from "react-native";
+import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import API, { API_BASE_URL } from "../../services/api";
+import { getToken } from "../../utils/secureToken";
+import { COLORS, SHADOW } from "../../constants/theme";
+import FadeSlideIn from "../../components/FadeSlideIn";
+
+function initials(name) {
+  return String(name || "User").split(" ").filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "U";
+}
+
+function Stat({ value, label }) {
+  return <View style={styles.stat}><Text style={styles.statValue}>{value}</Text><Text style={styles.statLabel}>{label}</Text></View>;
+}
+
+export default function PublicProfileScreen() {
+  const router = useRouter();
+  const { identifier } = useLocalSearchParams();
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [token, setToken] = useState(null);
+
+  const load = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [profileRes, currentToken] = await Promise.all([
+        API.get(`/social/profile/${encodeURIComponent(identifier)}`),
+        getToken(),
+      ]);
+      setProfile(profileRes.data);
+      setToken(currentToken);
+    } catch (err) {
+      Alert.alert("Profile unavailable", err.response?.data?.message || "This profile could not be loaded.", [
+        { text: "Back", onPress: () => router.back() },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  }, [identifier, router]);
+
+  useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  const toggleFollow = async () => {
+    if (!profile || profile.isSelf) return;
+    try {
+      setBusy(true);
+      if (profile.followStatus) {
+        await API.delete(`/social/follow/${profile._id}`);
+        setProfile((prev) => ({ ...prev, isFollowing: false, followStatus: null, followerCount: Math.max(0, (prev.followerCount || 0) - (prev.isFollowing ? 1 : 0)) }));
+      } else {
+        const { data } = await API.post(`/social/follow/${profile._id}`);
+        setProfile((prev) => ({
+          ...prev,
+          followStatus: data.status,
+          isFollowing: data.status === "accepted",
+          followerCount: data.status === "accepted" ? (prev.followerCount || 0) + 1 : prev.followerCount,
+        }));
+      }
+    } catch (err) {
+      Alert.alert("Couldn't update follow", err.response?.data?.message || "Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (loading || !profile) {
+    return <View style={styles.center}><ActivityIndicator size="large" color={COLORS.primary} /></View>;
+  }
+
+  const imageSource = profile.hasProfilePhoto && token ? {
+    uri: `${API_BASE_URL}/user/profile/photo/${profile._id}?v=${encodeURIComponent(profile.profileImageUpdatedAt || "1")}`,
+    headers: { Authorization: `Bearer ${token}` },
+  } : null;
+
+  return (
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+        <View style={styles.topBar}>
+          <Pressable style={styles.topBtn} onPress={() => router.back()}><Ionicons name="chevron-back" size={22} color={COLORS.textDark} /></Pressable>
+          <Text style={styles.topTitle}>Profile</Text>
+          <View style={{ width: 40 }} />
+        </View>
+
+        <FadeSlideIn delay={0}>
+          <LinearGradient colors={[COLORS.primaryDark, COLORS.primary, COLORS.primaryLight]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
+            <View style={styles.heroAvatarWrap}>
+              {imageSource ? <Image source={imageSource} style={styles.heroAvatar} /> : <View style={styles.heroFallback}><Text style={styles.heroInitials}>{initials(profile.name)}</Text></View>}
+            </View>
+            <Text style={styles.name}>{profile.name}</Text>
+            <Text style={styles.username}>@{profile.username}</Text>
+            {!!profile.bio && <Text style={styles.bio}>{profile.bio}</Text>}
+
+            {!profile.isSelf && (
+              <Pressable onPress={toggleFollow} disabled={busy} style={[styles.followBtn, profile.followStatus && styles.followBtnSecondary]}>
+                {busy ? <ActivityIndicator size="small" color={profile.followStatus ? COLORS.primary : "#fff"} /> : <>
+                  <Ionicons name={profile.isFollowing ? "checkmark" : profile.followStatus === "pending" ? "time-outline" : "person-add-outline"} size={16} color={profile.followStatus ? COLORS.primary : "#fff"} />
+                  <Text style={[styles.followBtnText, profile.followStatus && { color: COLORS.primary }]}>
+                    {profile.isFollowing ? "Following" : profile.followStatus === "pending" ? "Requested" : profile.profileVisibility === "private" ? "Request to follow" : "Follow"}
+                  </Text>
+                </>}
+              </Pressable>
+            )}
+          </LinearGradient>
+        </FadeSlideIn>
+
+        <FadeSlideIn delay={90}>
+          <View style={styles.statsCard}>
+            <Stat value={profile.followerCount ?? 0} label="Followers" />
+            <View style={styles.divider} />
+            <Stat value={profile.followingCount ?? 0} label="Following" />
+            <View style={styles.divider} />
+            <Stat value={profile.profileVisibility === "public" ? "Public" : "Private"} label="Visibility" />
+          </View>
+        </FadeSlideIn>
+
+        {profile.canView ? (
+          <FadeSlideIn delay={130}>
+            <View style={styles.infoCard}>
+              <Ionicons name="fitness-outline" size={24} color={COLORS.primary} />
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                <Text style={styles.infoTitle}>{profile.isSelf ? "Your public identity" : "FitLip profile"}</Text>
+                <Text style={styles.infoText}>{profile.isSelf ? "This is how other FitLip users can recognize you." : "Fitness activity can be shared here as you build your FitLip identity."}</Text>
+              </View>
+            </View>
+          </FadeSlideIn>
+        ) : (
+          <FadeSlideIn delay={130}>
+            <View style={styles.privateCard}>
+              <View style={styles.lockCircle}><Ionicons name="lock-closed" size={22} color={COLORS.primary} /></View>
+              <Text style={styles.privateTitle}>Private profile</Text>
+              <Text style={styles.privateText}>Follow this account and wait for approval to see their shared activity.</Text>
+            </View>
+          </FadeSlideIn>
+        )}
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: COLORS.background },
+  scroll: { padding: 16, paddingBottom: 40 },
+  center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.background },
+  topBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 },
+  topBtn: { width: 40, height: 40, borderRadius: 14, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, alignItems: "center", justifyContent: "center" },
+  topTitle: { fontSize: 17, fontWeight: "900", color: COLORS.textDark },
+  hero: { borderRadius: 28, alignItems: "center", paddingHorizontal: 24, paddingTop: 26, paddingBottom: 28, ...SHADOW, shadowColor: COLORS.primaryDark, shadowOpacity: 0.25 },
+  heroAvatarWrap: { width: 102, height: 102, borderRadius: 51, padding: 3, backgroundColor: "rgba(255,255,255,0.22)", marginBottom: 13 },
+  heroAvatar: { width: 96, height: 96, borderRadius: 48 },
+  heroFallback: { width: 96, height: 96, borderRadius: 48, backgroundColor: "rgba(23,15,54,0.5)", alignItems: "center", justifyContent: "center" },
+  heroInitials: { color: "#fff", fontSize: 32, fontWeight: "900" },
+  name: { fontSize: 25, fontWeight: "900", color: "#fff" },
+  username: { marginTop: 2, color: "rgba(255,255,255,0.76)", fontSize: 13, fontWeight: "700" },
+  bio: { marginTop: 12, maxWidth: 290, color: "rgba(255,255,255,0.9)", fontSize: 13, lineHeight: 19, fontWeight: "500", textAlign: "center" },
+  followBtn: { minWidth: 132, minHeight: 44, paddingHorizontal: 18, borderRadius: 15, backgroundColor: COLORS.primaryDark, marginTop: 18, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7 },
+  followBtnSecondary: { backgroundColor: "#fff" },
+  followBtnText: { color: "#fff", fontSize: 13.5, fontWeight: "850" },
+  statsCard: { marginTop: 12, flexDirection: "row", alignItems: "center", backgroundColor: COLORS.surface, borderRadius: 18, borderWidth: 1, borderColor: COLORS.border, paddingVertical: 14 },
+  stat: { flex: 1, alignItems: "center" },
+  statValue: { fontSize: 17, fontWeight: "900", color: COLORS.textDark },
+  statLabel: { marginTop: 2, fontSize: 10.5, color: COLORS.textMuted, fontWeight: "700" },
+  divider: { width: 1, height: 28, backgroundColor: COLORS.border },
+  infoCard: { marginTop: 12, backgroundColor: COLORS.surface, borderRadius: 20, borderWidth: 1, borderColor: COLORS.border, padding: 18, flexDirection: "row" },
+  infoTitle: { fontSize: 15, fontWeight: "850", color: COLORS.textDark },
+  infoText: { marginTop: 5, color: COLORS.textMuted, fontSize: 12.5, lineHeight: 18, fontWeight: "600" },
+  privateCard: { marginTop: 12, backgroundColor: COLORS.surface, borderRadius: 22, borderWidth: 1, borderColor: COLORS.border, alignItems: "center", padding: 28 },
+  lockCircle: { width: 54, height: 54, borderRadius: 27, backgroundColor: COLORS.surfaceMuted, alignItems: "center", justifyContent: "center", marginBottom: 12 },
+  privateTitle: { fontSize: 17, fontWeight: "900", color: COLORS.textDark },
+  privateText: { marginTop: 6, maxWidth: 290, textAlign: "center", color: COLORS.textMuted, fontSize: 12.5, lineHeight: 18, fontWeight: "600" },
+});

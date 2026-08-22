@@ -351,11 +351,31 @@ const startServer = async () => {
     }
 
     try {
+      const User = require("./src/models/User");
+      await User.syncIndexes();
+      logger.info("User social-profile indexes synchronized");
+    } catch (error) {
+      logger.error({ err: error }, "User index synchronization failed");
+    }
+
+    try {
       const { seedWorkoutExerciseLibrary, migrateWorkoutPlansToExerciseIds } = require("./src/services/workoutLibrarySeed.service");
       const seedResult = await seedWorkoutExerciseLibrary();
       logger.info(seedResult, "Workout exercise library synchronized");
       const migrationResult = await migrateWorkoutPlansToExerciseIds();
       logger.info(migrationResult, "Standard workout plans migrated to exercise IDs");
+
+      const { migrateSocialProfiles } = require("./src/services/socialProfileMigration.service");
+      const socialProfileResult = await migrateSocialProfiles();
+      logger.info(socialProfileResult, "Social profiles synchronized");
+
+      try {
+        const { migrateProfileImagesToCloudinary } = require("./src/services/socialProfileMediaMigration.service");
+        const mediaResult = await migrateProfileImagesToCloudinary();
+        logger.info(mediaResult, "Social profile images synchronized with Cloudinary");
+      } catch (mediaError) {
+        logger.error({ err: mediaError }, "Cloudinary profile image migration failed");
+      }
     } catch (error) {
       logger.error({ err: error }, "Workout exercise library synchronization failed");
     }

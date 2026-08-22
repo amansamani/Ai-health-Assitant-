@@ -146,8 +146,70 @@ const userSchema = new mongoose.Schema(
     },
 
     // -------------------------------------------------------------------------
-    // Social
+    // Social profile
     // -------------------------------------------------------------------------
+
+    username: {
+      type: String,
+      unique: true,
+      sparse: true,
+      lowercase: true,
+      trim: true,
+      minlength: 3,
+      maxlength: 30,
+      match: /^[a-z0-9](?:[a-z0-9_.]{1,28}[a-z0-9])?$/,
+      index: true,
+    },
+
+    bio: {
+      type: String,
+      trim: true,
+      maxlength: 160,
+      default: "",
+    },
+
+    profileVisibility: {
+      type: String,
+      enum: ["public", "private"],
+      default: "private",
+      index: true,
+    },
+
+    /*
+     * Social profile media is stored in Cloudinary. MongoDB stores only
+     * the Cloudinary URL/public ID and a timestamp.
+     *
+     * The legacy binary fields remain select:false temporarily so existing
+     * users can be migrated safely on startup instead of losing old photos.
+     */
+    profileImageUrl: {
+      type: String,
+      select: false,
+      default: undefined,
+    },
+
+    profileImagePublicId: {
+      type: String,
+      select: false,
+      default: undefined,
+    },
+
+    profileImageData: {
+      type: Buffer,
+      select: false,
+      default: undefined,
+    },
+
+    profileImageContentType: {
+      type: String,
+      select: false,
+      default: undefined,
+    },
+
+    profileImageUpdatedAt: {
+      type: Date,
+      default: undefined,
+    },
 
     /*
      * Generated lazily for the friend-code system.

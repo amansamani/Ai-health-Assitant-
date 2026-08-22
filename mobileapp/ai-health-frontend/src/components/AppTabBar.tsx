@@ -9,6 +9,7 @@ import Animated, {
   useSharedValue,
   withSpring,
   withTiming,
+  interpolateColor,
 } from "react-native-reanimated";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { COLORS } from "@/src/constants/theme";
@@ -43,11 +44,17 @@ function TabButton({
   const press = useSharedValue(1);
 
   useEffect(() => {
-    progress.value = withSpring(focused ? 1 : 0, { damping: 16, stiffness: 220 });
+    progress.value = focused
+      ? withSpring(1, { damping: 17, stiffness: 240, mass: 0.65 })
+      : withTiming(0, { duration: 150 });
   }, [focused]);
 
   const chipStyle = useAnimatedStyle(() => ({
-    backgroundColor: focused ? COLORS.primary : "transparent",
+    backgroundColor: interpolateColor(
+      progress.value,
+      [0, 1],
+      ["rgba(255,255,255,0)", COLORS.primary]
+    ),
     transform: [
       { scale: press.value },
       { translateY: progress.value * -2 },
@@ -218,9 +225,9 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   chip: {
-    width: 46,
-    height: 30,
-    borderRadius: 15,
+    width: 50,
+    height: 32,
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
   },
