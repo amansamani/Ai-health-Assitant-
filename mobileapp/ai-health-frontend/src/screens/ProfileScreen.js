@@ -285,7 +285,13 @@ export default function ProfileScreen() {
         )}
 
         <FadeSlideIn delay={180}>
-          <Pressable\n  onPress={() => router.push("/social/gamification")}\n  accessibilityRole="button"\n  accessibilityLabel="Open FitLip identity and XP progress"\n  android_ripple={{ color: "rgba(255,255,255,0.12)" }}\n  style={({ pressed }) => [styles.greatnessCard, pressed && styles.greatnessPressed]}\n>
+          <Pressable
+  onPress={() => router.push("/social/gamification")}
+  accessibilityRole="button"
+  accessibilityLabel="Open FitLip identity and XP progress"
+  android_ripple={{ color: "rgba(255,255,255,0.12)" }}
+  style={({ pressed }) => [styles.greatnessCard, pressed && styles.greatnessPressed]}
+>
             <LinearGradient colors={[COLORS.primaryDark, COLORS.primary, COLORS.primaryLight]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.greatnessInner}>
               <View style={styles.greatnessIcon}><Ionicons name="barbell-outline" size={21} color="#fff" /></View>
               <View style={{ flex: 1 }}>
@@ -448,7 +454,8 @@ const styles = StyleSheet.create({
   goalCard: { flex: 1, minHeight: 108, borderRadius: 16, borderWidth: 1.5, borderColor: COLORS.border, backgroundColor: COLORS.background, alignItems: "center", justifyContent: "center", padding: 10 },
   goalLabel: { marginTop: 7, fontSize: 13.5, fontWeight: "900", color: COLORS.textDark },
   goalDesc: { marginTop: 2, fontSize: 10.5, fontWeight: "600", color: COLORS.textMuted, textAlign: "center" },
-  greatnessCard: { marginBottom: 16, borderRadius: 24, overflow: "hidden", ...SHADOW },\n  greatnessPressed: { transform: [{ scale: 0.985 }], opacity: 0.96 },
+  greatnessCard: { marginBottom: 16, borderRadius: 24, overflow: "hidden", ...SHADOW },
+  greatnessPressed: { transform: [{ scale: 0.985 }], opacity: 0.96 },
   greatnessInner: { minHeight: 104, padding: 17, flexDirection: "row", alignItems: "center", gap: 12 },
   greatnessIcon: { width: 48, height: 48, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.14)", alignItems: "center", justifyContent: "center" },
   greatnessEyebrow: { color: "rgba(255,255,255,0.72)", fontSize: 10, fontWeight: "900", letterSpacing: 1.05 },

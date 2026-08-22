@@ -98,7 +98,7 @@ export default function CompeteHubScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <Pressable style={styles.greatnessCard} onPress={() => router.push("/(app)/social/gamification")}>
+      <Pressable style={styles.greatnessCard} onPress={() => router.push("/social/gamification")}>
         <LinearGradient colors={[COLORS.primaryDark, COLORS.primary, COLORS.primaryLight]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.greatnessInner}>
           <View style={styles.greatnessIcon}><Ionicons name="barbell-outline" size={22} color="#fff" /></View>
           <View style={{ flex: 1 }}><Text style={styles.greatnessEyebrow}>YOUR GREATNESS</Text><Text style={styles.greatnessTitle}>Build your Dumbbell rank</Text><Text style={styles.greatnessSub}>Earn XP from real fitness actions and climb with friends.</Text></View>
