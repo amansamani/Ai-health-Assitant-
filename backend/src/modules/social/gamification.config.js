@@ -21,6 +21,8 @@ const XP_VALUES = {
   activeBurnGoal: 20,
   duelWin: 100,
   achievementEarned: 50,
+  runCompleted: 30,   
+  runFiveKPlus: 40,  
 };
 
 const RANKS = [

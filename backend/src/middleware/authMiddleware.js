@@ -90,6 +90,15 @@ const protect = async (
           "User not found",
       });
     }
+    if (
+      (decoded.tokenVersion ?? 0) !==
+      (user.tokenVersion ?? 0)
+    ) {
+      return res.status(401).json({
+        message:
+          "Session expired. Please login again.",
+      });
+    }
 
     /*
      * Mobile app sends its current IANA timezone
