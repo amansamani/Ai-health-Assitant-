@@ -839,9 +839,18 @@ dietPlanSchema.index(
 // PRE-VALIDATE
 // ─────────────────────────────────────────────────────────────────────────────
 
+/*
+ * NOTE: no `next` param here. Mongoose 9's Kareem runs a document
+ * pre-hook as synchronous when the function takes 0 declared
+ * arguments, and treats a thrown error the same way `next(err)`
+ * used to work. A 1-arg `function (next)` signature is the OLD
+ * callback style — Kareem no longer supplies that argument, so
+ * calling `next()` throws "next is not a function" on every save,
+ * success path included (this is what was crashing swapFood).
+ */
 dietPlanSchema.pre(
   "validate",
-  function (next) {
+  function () {
     /*
      * Keep summary.targetCalories synchronized with the
      * canonical top-level targetCalories.
@@ -878,16 +887,12 @@ dietPlanSchema.pre(
           meals.length ===
             0
         ) {
-          return next(
-            new Error(
-              `Active diet plan must contain at least one ${mealType} meal.`
-            )
+          throw new Error(
+            `Active diet plan must contain at least one ${mealType} meal.`
           );
         }
       }
     }
-
-    next();
   }
 );
 

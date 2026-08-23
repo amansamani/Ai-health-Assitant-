@@ -411,9 +411,12 @@ mealLogSchema.index(
 // PRE-VALIDATE
 // ─────────────────────────────────────────────────────────────────────────────
 
+// NOTE: no `next` param — see dietPlan.model.js for why (Mongoose 9
+// runs a 0-arg document pre-hook synchronously; the old `function
+// (next)` callback style no longer receives a real `next`).
 mealLogSchema.pre(
   "validate",
-  function (next) {
+  function () {
     /*
      * Normalize the meal type.
      */
@@ -459,8 +462,6 @@ mealLogSchema.pre(
             .toLowerCase();
       }
     }
-
-    next();
   }
 );
 
