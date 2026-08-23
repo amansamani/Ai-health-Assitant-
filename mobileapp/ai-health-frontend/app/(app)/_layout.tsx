@@ -70,6 +70,9 @@ export default function AppLayout() {
       <Stack.Screen name="social/achievements" options={{ animation: "slide_from_right", animationDuration: 180 }} />
       <Stack.Screen name="social/gamification" options={{ animation: "slide_from_right", animationDuration: 180 }} />
       <Stack.Screen name="social/streaks" options={{ animation: "slide_from_right", animationDuration: 180 }} />
+      <Stack.Screen name="run-tracking" options={{ animation: "slide_from_bottom", animationDuration: 200 }} />
+      <Stack.Screen name="run-summary" options={{ animation: "slide_from_right", animationDuration: 180 }} />
+      <Stack.Screen name="run-feed" options={{ animation: "slide_from_right", animationDuration: 180 }} />
     </Stack>
   );
 }

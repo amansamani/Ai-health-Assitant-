@@ -15,6 +15,7 @@
       }
     },
     "android": {
+      "config": { "googleMaps": { "apiKey": "AIzaSyAhIey2i2hhzLESXJVIiPxJU4kiw0Sx-Yg" } },
       "package": "com.amansamani.aihealthfrontend",
       "permissions": [
         "android.permission.CAMERA",
@@ -37,6 +38,7 @@
     },
     "plugins": [
       "expo-router",
+      ["expo-location", { "locationWhenInUsePermission": "Allow Fitlip to track your run." }],
       [
         "expo-splash-screen",
         {

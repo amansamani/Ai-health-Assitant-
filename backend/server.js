@@ -217,6 +217,11 @@ app.use(
   )
 );
 
+app.use(
+  "/api/runs",
+  require("./src/modules/running/run.routes")
+);
+
 /*
  * ---------------------------------------------------------------------------
  * Root endpoint
