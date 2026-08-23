@@ -466,6 +466,130 @@ function getEligibleMeals(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// MEAL SAFETY CHECK
+//
+// Used by the swapFood controller as the last line of defense before a
+// user-picked meal gets written into their active plan. Never trust the
+// frontend's own filtering for this — it re-validates diet type the same
+// way getEligibleMeals does, then checks declared allergies against the
+// meal's ingredient names/tags (FoodTemplate has no dedicated allergen
+// field, so ingredient-name keyword matching is the only signal we have).
+// ─────────────────────────────────────────────────────────────────────────────
+
+function isMealAllowed(
+  meal,
+  profile
+) {
+  if (
+    !meal ||
+    !profile
+  ) {
+    return false;
+  }
+
+  const normalizedDiet =
+    normalizeDietType(
+      profile.dietType
+    );
+
+  const mealDiet =
+    normalizeDietType(
+      meal.dietType
+    );
+
+  let eligibleDietTypes;
+
+  if (
+    normalizedDiet ===
+    "non-veg"
+  ) {
+    eligibleDietTypes = [
+      "veg",
+      "eggetarian",
+      "non-veg",
+    ];
+  } else if (
+    normalizedDiet ===
+    "eggetarian"
+  ) {
+    eligibleDietTypes = [
+      "veg",
+      "eggetarian",
+    ];
+  } else if (
+    normalizedDiet ===
+    "vegan"
+  ) {
+    eligibleDietTypes = [
+      "vegan",
+    ];
+  } else {
+    eligibleDietTypes = [
+      "veg",
+    ];
+  }
+
+  if (
+    !eligibleDietTypes.includes(
+      mealDiet
+    )
+  ) {
+    return false;
+  }
+
+  const allergies =
+    normalizeArray(
+      profile.allergies
+    ).map((allergy) =>
+      allergy.toLowerCase()
+    );
+
+  if (
+    allergies.length ===
+    0
+  ) {
+    return true;
+  }
+
+  const itemNames = Array.isArray(
+    meal.items
+  )
+    ? meal.items.map(
+        (item) =>
+          String(
+            item?.name || ""
+          ).toLowerCase()
+      )
+    : [];
+
+  const mealTags = Array.isArray(
+    meal.tags
+  )
+    ? meal.tags.map(
+        (tag) =>
+          String(
+            tag
+          ).toLowerCase()
+      )
+    : [];
+
+  const haystack = [
+    ...itemNames,
+    ...mealTags,
+  ].join(" | ");
+
+  const hasAllergen = allergies.some(
+    (allergy) =>
+      allergy &&
+      haystack.includes(
+        allergy
+      )
+  );
+
+  return !hasAllergen;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // MEAL SCORING
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -2861,5 +2985,9 @@ module.exports = {
 
   getWeeklyInsightHistory,
 
+  isMealAllowed,
+
   normalizeGoal,
+
+  scaleMealToCalories,
 };
