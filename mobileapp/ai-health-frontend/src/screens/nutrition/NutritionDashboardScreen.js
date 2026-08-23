@@ -229,9 +229,9 @@ function SwapModal({ visible, mealType, combo, onClose, onSwapped }) {
                         <Text style={sw.servingLine}>{item.cuisine} · {item.difficulty}</Text>
                       )}
                       {item.dietType && (
-                        <View style={[sw.badge, { backgroundColor: item.dietType === "veg" ? "#e8f5e9" : "#fce4ec" }]}>
-                          <Text style={[sw.badgeText, { color: item.dietType === "veg" ? "#2e7d32" : "#c62828" }]}>
-                            {item.dietType === "veg" ? "🌱 Veg" : item.dietType === "eggetarian" ? "🥚 Eggetarian" : "🍗 Non-veg"}
+                        <View style={[sw.badge, { backgroundColor: item.dietType === "vegan" || item.dietType === "veg" ? "#e8f5e9" : "#fce4ec" }]}>
+                          <Text style={[sw.badgeText, { color: item.dietType === "vegan" || item.dietType === "veg" ? "#2e7d32" : "#c62828" }]}>
+                            {item.dietType === "vegan" ? "🌱 Vegan" : item.dietType === "veg" ? "🥗 Veg" : item.dietType === "eggetarian" ? "🥚 Eggetarian" : "🍗 Non-veg"}
                           </Text>
                         </View>
                       )}
