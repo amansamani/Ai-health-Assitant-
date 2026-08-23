@@ -2751,8 +2751,18 @@ async function runSmartWeeklyAdjustment(
           targetCalories:
             summary.targetCalories,
 
-          macroSplit:
-            summary.macroTargets,
+          // See nutrition.controller.js's plan-creation endpoint for
+          // why this can't be `summary.macroTargets` directly — key
+          // names don't match the macroSplitSchema (protein/carbs/fats
+          // vs proteinG/carbsG/fatsG).
+          macroSplit: {
+            protein:
+              summary.macroTargets.proteinG,
+            carbs:
+              summary.macroTargets.carbsG,
+            fats:
+              summary.macroTargets.fatsG,
+          },
 
           meals,
 

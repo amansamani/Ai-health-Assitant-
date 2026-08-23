@@ -1,6 +1,7 @@
 "use strict";
 
 const mongoose = require("mongoose");
+const logger = require("../../config/logger");
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONSTANTS
@@ -851,6 +852,52 @@ dietPlanSchema.index(
 dietPlanSchema.pre(
   "validate",
   function () {
+    /*
+     * Backfill macroSplit on legacy documents.
+     *
+     * Some existing plans predate macroSplit being required (or were
+     * inserted outside the normal create() path) and have no value
+     * for it at all. Rather than let every save() on those documents
+     * 500 forever, fall back to a generic 30/40/30 protein/carbs/fat
+     * split derived from targetCalories. It's not as tailored as
+     * computeMacroTargets(profile, calories) — this hook has no
+     * access to the user's HealthProfile — but it's a safe one-time
+     * self-heal. Logged so it's easy to find and properly regenerate
+     * these plans later if you want the personalized split back.
+     */
+    const hasValidMacroSplit =
+      this.macroSplit &&
+      Number.isFinite(this.macroSplit.protein) &&
+      Number.isFinite(this.macroSplit.carbs) &&
+      Number.isFinite(this.macroSplit.fats);
+
+    if (!hasValidMacroSplit) {
+      const calories =
+        Number(this.targetCalories) || 0;
+
+      if (calories > 0) {
+        logger.warn(
+          {
+            planId: this._id,
+            user: this.user,
+          },
+          "DietPlan missing macroSplit — backfilling with a default 30/40/30 split"
+        );
+
+        this.macroSplit = {
+          protein: Math.round(
+            (calories * 0.3) / 4
+          ),
+          carbs: Math.round(
+            (calories * 0.4) / 4
+          ),
+          fats: Math.round(
+            (calories * 0.3) / 9
+          ),
+        };
+      }
+    }
+
     /*
      * Keep summary.targetCalories synchronized with the
      * canonical top-level targetCalories.

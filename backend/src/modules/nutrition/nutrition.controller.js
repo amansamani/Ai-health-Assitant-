@@ -456,8 +456,18 @@ const generatePlan = async (
         targetCalories:
           summary.targetCalories,
 
-        macroSplit:
-          summary.macroTargets,
+        // macroSplit stores the canonical protein/carbs/fats keys
+        // (see dietPlan.model.js macroSplitSchema) — summary.macroTargets
+        // uses proteinG/carbsG/fatsG, so it must be remapped here rather
+        // than passed straight through.
+        macroSplit: {
+          protein:
+            summary.macroTargets.proteinG,
+          carbs:
+            summary.macroTargets.carbsG,
+          fats:
+            summary.macroTargets.fatsG,
+        },
 
         meals,
 
