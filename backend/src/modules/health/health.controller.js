@@ -118,24 +118,27 @@ exports.createOrUpdateHealthProfile =
         ...incoming,
       };
 
-      /*
-       * If the User model's goal was used by an older
-       * client, convert it to the HealthProfile representation.
-       */
-      if (
-        !merged.goal &&
-        req.user.goal
-      ) {
-        const mappedGoal =
-          mapUserGoalToHealthGoal(
-            req.user.goal
-          );
+      const validHealthGoals = [
+  "lose",
+  "maintain",
+  "gain",
+];
 
-        if (mappedGoal) {
-          merged.goal =
-            mappedGoal;
-        }
-      }
+if (
+  !validHealthGoals.includes(merged.goal)
+) {
+  const mappedGoal =
+    mapUserGoalToHealthGoal(
+      merged.goal
+    ) ||
+    mapUserGoalToHealthGoal(
+      req.user.goal
+    );
+
+  if (mappedGoal) {
+    merged.goal = mappedGoal;
+  }
+}
 
       /*
        * Normalize arrays before calculation/storage.
