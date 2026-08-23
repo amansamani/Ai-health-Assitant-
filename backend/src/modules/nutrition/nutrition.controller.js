@@ -701,7 +701,7 @@ const getSwapOptions =
 
      const profile =
   await HealthProfile.findOne({
-    user: userId,
+    user: req.user.id,
   }).lean();
 
       if (!profile) {
