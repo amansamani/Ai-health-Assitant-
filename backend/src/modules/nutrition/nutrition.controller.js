@@ -699,13 +699,10 @@ const getSwapOptions =
           });
       }
 
-      const profile =
-        await HealthProfile.findOne(
-          {
-            user:
-              req.user.id,
-          }
-        );
+     const profile =
+  await HealthProfile.findOne({
+    user: userId,
+  }).lean();
 
       if (!profile) {
         return res

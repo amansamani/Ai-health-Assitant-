@@ -297,21 +297,22 @@ function computeTargetCalories(
     );
   }
 
-  /*
-   * No persisted target exists (for example, legacy data).
-   * Delegate the calculation to the canonical health engine.
-   */
-  return generateCalorieProfile({
-    ...profile,
-    goal: normalizeGoal(profile.goal),
-    gender: normalizeGender(profile.gender),
-    activityLevel: normalizeActivityLevel(
-      profile.activityLevel
-    ),
-    dietType: normalizeDietType(
-      profile.dietType
-    ),
-  }).targetCalories;
+  const profileData =
+  typeof profile.toObject === "function"
+    ? profile.toObject()
+    : profile;
+
+return generateCalorieProfile({
+  ...profileData,
+  goal: normalizeGoal(profileData.goal),
+  gender: normalizeGender(profileData.gender),
+  activityLevel: normalizeActivityLevel(
+    profileData.activityLevel
+  ),
+  dietType: normalizeDietType(
+    profileData.dietType
+  ),
+}).targetCalories;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1616,43 +1617,21 @@ async function generateDietPlan(
     );
   }
 
-  /*
-   * Normalize before BOTH calorie and macro calculations.
-   */
-  const normalizedProfile =
-    {
-      ...profile,
+  const profileData =
+  typeof profile.toObject === "function"
+    ? profile.toObject()
+    : profile;
 
-      goal:
-        normalizeGoal(
-          profile.goal
-        ),
+const normalizedProfile = {
+  ...profileData,
 
-      dietType:
-        normalizeDietType(
-          profile.dietType
-        ),
-
-      gender:
-        normalizeGender(
-          profile.gender
-        ),
-
-      activityLevel:
-        normalizeActivityLevel(
-          profile.activityLevel
-        ),
-
-      diseases:
-        normalizeArray(
-          profile.diseases
-        ),
-
-      allergies:
-        normalizeArray(
-          profile.allergies
-        ),
-    };
+  goal: normalizeGoal(profileData.goal),
+  dietType: normalizeDietType(profileData.dietType),
+  gender: normalizeGender(profileData.gender),
+  activityLevel: normalizeActivityLevel(profileData.activityLevel),
+  diseases: normalizeArray(profileData.diseases),
+  allergies: normalizeArray(profileData.allergies),
+};
 
   const targetCalories =
     computeTargetCalories(
