@@ -70,6 +70,10 @@ export default function RegisterScreen() {
     setError("");
     setLoading(true);
     try {
+      if (password.length < 8) {
+        setError("Password must be at least 8 characters");
+        return;
+      }
       const { data } = await API.post("/auth/register", { name, email, password, goal });
       router.push({
         pathname: "/(auth)/health-profile",

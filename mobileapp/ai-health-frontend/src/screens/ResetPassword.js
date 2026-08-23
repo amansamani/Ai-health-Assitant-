@@ -24,8 +24,8 @@ export default function ResetPassword() {
       setError("Passwords do not match");
       return;
     }
-    if (newPassword.length < 6) {
-      setError("Password must be at least 6 characters");
+    if (newPassword.length < 8) {
+      setError("Password must be at least 8 characters");
       return;
     }
     setError("");
@@ -50,7 +50,7 @@ export default function ResetPassword() {
       <AuthHero
         icon="lock-closed-outline"
         title="New password"
-        subtitle="Make it at least 6 characters"
+        subtitle="Make it at least 8 characters"
         size="compact"
       />
 

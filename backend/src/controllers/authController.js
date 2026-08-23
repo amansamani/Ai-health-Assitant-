@@ -30,13 +30,16 @@ const isValidEmail = (email) =>
 /**
  * Create the application's JWT.
  */
-const createAuthToken = (userId) => {
+const createAuthToken = (user) => {
   if (!process.env.JWT_SECRET) {
     throw new Error("JWT_SECRET is not configured");
   }
 
   return jwt.sign(
-    { id: userId },
+    { 
+      id: user._id, 
+      tokenVersion: user.tokenVersion ?? 0,
+    },
     process.env.JWT_SECRET,
     { expiresIn: "30d" }
   );
@@ -91,9 +94,9 @@ const registerUser = async (req, res) => {
       });
     }
 
-    if (password.length < 6 || password.length > 128) {
+    if (password.length < 8 || password.length > 128) {
       return res.status(400).json({
-        message: "Password must be between 6 and 128 characters",
+        message: "Password must be between 8 and 128 characters",
       });
     }
 
@@ -116,7 +119,7 @@ const registerUser = async (req, res) => {
       goal: validGoals.includes(goal) ? goal : "fit",
     });
 
-    const token = createAuthToken(user._id);
+    const token = createAuthToken(user);
 
     return res.status(201).json({
       message: "User registered successfully",
@@ -184,7 +187,7 @@ const loginUser = async (req, res) => {
       });
     }
 
-    const token = createAuthToken(user._id);
+    const token = createAuthToken(user);
 
     const healthProfile = await HealthProfile.findOne({
       user: user._id,
@@ -480,12 +483,12 @@ const resetPassword = async (req, res) => {
     }
 
     if (
-      newPassword.length < 6 ||
+      newPassword.length < 8 ||
       newPassword.length > 128
     ) {
       return res.status(400).json({
         message:
-          "Password must be between 6 and 128 characters.",
+          "Password must be between 8 and 128 characters.",
       });
     }
 
@@ -549,6 +552,9 @@ const resetPassword = async (req, res) => {
     );
 
     user.password = hashedPassword;
+    
+    user.tokenVersion =
+      (user.tokenVersion ?? 0) + 1;
 
     /*
      * IMPORTANT:
@@ -708,7 +714,7 @@ const googleLogin = async (req, res) => {
         .select("_id")
         .lean();
 
-    const token = createAuthToken(user._id);
+    const token = createAuthToken(user);
 
     return res.status(200).json({
       message: "Google login successful",
