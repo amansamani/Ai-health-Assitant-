@@ -465,128 +465,38 @@ function getEligibleMeals(
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MEAL SAFETY CHECK
-//
-// Used by the swapFood controller as the last line of defense before a
-// user-picked meal gets written into their active plan. Never trust the
-// frontend's own filtering for this — it re-validates diet type the same
-// way getEligibleMeals does, then checks declared allergies against the
-// meal's ingredient names/tags (FoodTemplate has no dedicated allergen
-// field, so ingredient-name keyword matching is the only signal we have).
-// ─────────────────────────────────────────────────────────────────────────────
+function isMealAllergySafe(meal, profile) {
+  if (!meal || !profile) return true;
 
-function isMealAllowed(
-  meal,
-  profile
-) {
-  if (
-    !meal ||
-    !profile
-  ) {
-    return false;
-  }
+  const allergies = normalizeArray(profile.allergies).map((a) => a.toLowerCase());
+  if (allergies.length === 0) return true;
 
-  const normalizedDiet =
-    normalizeDietType(
-      profile.dietType
-    );
+  const itemNames = Array.isArray(meal.items)
+    ? meal.items.map((item) => String(item?.name || "").toLowerCase())
+    : [];
+  const mealTags = Array.isArray(meal.tags)
+    ? meal.tags.map((tag) => String(tag).toLowerCase())
+    : [];
+  const haystack = [...itemNames, ...mealTags].join(" | ");
 
-  const mealDiet =
-    normalizeDietType(
-      meal.dietType
-    );
+  return !allergies.some((allergy) => allergy && haystack.includes(allergy));
+}
+
+function isMealAllowed(meal, profile) {
+  if (!meal || !profile) return false;
+
+  const normalizedDiet = normalizeDietType(profile.dietType);
+  const mealDiet = normalizeDietType(meal.dietType);
 
   let eligibleDietTypes;
+  if (normalizedDiet === "non-veg") eligibleDietTypes = ["veg", "eggetarian", "non-veg"];
+  else if (normalizedDiet === "eggetarian") eligibleDietTypes = ["veg", "eggetarian"];
+  else if (normalizedDiet === "vegan") eligibleDietTypes = ["vegan"];
+  else eligibleDietTypes = ["veg"];
 
-  if (
-    normalizedDiet ===
-    "non-veg"
-  ) {
-    eligibleDietTypes = [
-      "veg",
-      "eggetarian",
-      "non-veg",
-    ];
-  } else if (
-    normalizedDiet ===
-    "eggetarian"
-  ) {
-    eligibleDietTypes = [
-      "veg",
-      "eggetarian",
-    ];
-  } else if (
-    normalizedDiet ===
-    "vegan"
-  ) {
-    eligibleDietTypes = [
-      "vegan",
-    ];
-  } else {
-    eligibleDietTypes = [
-      "veg",
-    ];
-  }
+  if (!eligibleDietTypes.includes(mealDiet)) return false;
 
-  if (
-    !eligibleDietTypes.includes(
-      mealDiet
-    )
-  ) {
-    return false;
-  }
-
-  const allergies =
-    normalizeArray(
-      profile.allergies
-    ).map((allergy) =>
-      allergy.toLowerCase()
-    );
-
-  if (
-    allergies.length ===
-    0
-  ) {
-    return true;
-  }
-
-  const itemNames = Array.isArray(
-    meal.items
-  )
-    ? meal.items.map(
-        (item) =>
-          String(
-            item?.name || ""
-          ).toLowerCase()
-      )
-    : [];
-
-  const mealTags = Array.isArray(
-    meal.tags
-  )
-    ? meal.tags.map(
-        (tag) =>
-          String(
-            tag
-          ).toLowerCase()
-      )
-    : [];
-
-  const haystack = [
-    ...itemNames,
-    ...mealTags,
-  ].join(" | ");
-
-  const hasAllergen = allergies.some(
-    (allergy) =>
-      allergy &&
-      haystack.includes(
-        allergy
-      )
-  );
-
-  return !hasAllergen;
+  return isMealAllergySafe(meal, profile);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -764,133 +674,52 @@ function pickMeal(
   goal,
   dietType,
   usedMealIds,
-  targetMealCals
+  targetMealCals,
+  profile = null
 ) {
-  let candidates =
-    getEligibleMeals(
-      allMeals,
-      mealType,
-      goal,
-      dietType
-    ).filter(
-      (meal) =>
-        !usedMealIds.has(
-          meal.id
-        )
+  const filterAllergySafe = (list) =>
+    profile ? list.filter((meal) => isMealAllergySafe(meal, profile)) : list;
+
+  let candidates = filterAllergySafe(
+    getEligibleMeals(allMeals, mealType, goal, dietType)
+  ).filter((meal) => !usedMealIds.has(meal.id));
+
+  if (!candidates.length) {
+    candidates = filterAllergySafe(
+      getEligibleMeals(allMeals, mealType, goal, dietType)
     );
-
-  /*
-   * If every eligible meal has already been used, allow reuse.
-   */
-  if (
-    !candidates.length
-  ) {
-    candidates =
-      getEligibleMeals(
-        allMeals,
-        mealType,
-        goal,
-        dietType
-      );
   }
 
-  /*
-   * Emergency fallback:
-   * ignore goal but continue respecting diet.
-   */
-  if (
-    !candidates.length
-  ) {
-    const normalizedDiet =
-      normalizeDietType(
-        dietType
-      );
-
+  // Emergency fallback: ignore goal, still respect diet + allergies
+  if (!candidates.length) {
+    const normalizedDiet = normalizeDietType(dietType);
     let dietTypes;
+    if (normalizedDiet === "non-veg") dietTypes = ["veg", "eggetarian", "non-veg"];
+    else if (normalizedDiet === "eggetarian") dietTypes = ["veg", "eggetarian"];
+    else if (normalizedDiet === "vegan") dietTypes = ["vegan"];
+    else dietTypes = ["veg"];
 
-    if (
-      normalizedDiet ===
-      "non-veg"
-    ) {
-      dietTypes = [
-        "veg",
-        "eggetarian",
-        "non-veg",
-      ];
-    } else if (
-      normalizedDiet ===
-      "eggetarian"
-    ) {
-      dietTypes = [
-        "veg",
-        "eggetarian",
-      ];
-    } else if (
-      normalizedDiet ===
-      "vegan"
-    ) {
-      dietTypes = [
-        "vegan",
-      ];
-    } else {
-      dietTypes = [
-        "veg",
-      ];
-    }
-
-    candidates =
+    candidates = filterAllergySafe(
       allMeals.filter(
         (meal) =>
-          meal.mealType ===
-            mealType &&
-          dietTypes.includes(
-            normalizeDietType(
-              meal.dietType
-            )
-          )
-      );
+          meal.mealType === mealType &&
+          dietTypes.includes(normalizeDietType(meal.dietType))
+      )
+    );
   }
 
-  /*
-   * Final fallback:
-   * if no compatible food exists, use the meal type.
-   *
-   * This should be rare. The caller can still detect an incomplete
-   * result.
-   */
-  if (
-    !candidates.length
-  ) {
-    candidates =
-      allMeals.filter(
-        (meal) =>
-          meal.mealType ===
-          mealType
-      );
+  // Final fallback: relax diet type too, but allergies are NEVER relaxed
+  if (!candidates.length) {
+    candidates = filterAllergySafe(
+      allMeals.filter((meal) => meal.mealType === mealType)
+    );
   }
 
-  if (
-    !candidates.length
-  ) {
-    return null;
-  }
+  if (!candidates.length) return null;
 
   return candidates
-    .map(
-      (meal) => ({
-        meal,
-        score: scoreMeal(
-          meal,
-          goal,
-          targetMealCals
-        ),
-      })
-    )
-    .sort(
-      (a, b) =>
-        b.score -
-        a.score
-    )[0].meal;
+    .map((meal) => ({ meal, score: scoreMeal(meal, goal, targetMealCals) }))
+    .sort((a, b) => b.score - a.score)[0].meal;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1190,7 +1019,8 @@ async function generateTemplateMeals(
         goal,
         dietType,
         usedMealIds,
-        calBudget
+        calBudget,
+        profile
       );
 
     if (
@@ -1935,67 +1765,24 @@ async function generateDietPlan(
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function getTemplateMealSwaps(
-  mealType,
-  goal,
-  dietType,
-  excludeId,
-  targetMealCals = null
+  mealType, goal, dietType, excludeId, targetMealCals = null, profile = null
 ) {
-  const allMeals =
-    await getTemplate();
+  const allMeals = await getTemplate();
+  const normalizedGoal = normalizeGoal(goal);
+  const normalizedDiet = normalizeDietType(dietType);
 
-  const normalizedGoal =
-    normalizeGoal(
-      goal
-    );
+  let eligible = getEligibleMeals(allMeals, mealType, normalizedGoal, normalizedDiet);
 
-  const normalizedDiet =
-    normalizeDietType(
-      dietType
-    );
-
-  const eligible =
-    getEligibleMeals(
-      allMeals,
-      mealType,
-      normalizedGoal,
-      normalizedDiet
-    );
+  if (profile) {
+    eligible = eligible.filter((meal) => isMealAllowed(meal, profile));
+  }
 
   return eligible
-    .filter(
-      (meal) =>
-        String(
-          meal.id
-        ) !==
-        String(
-          excludeId
-        )
-    )
-    .map(
-      (meal) => ({
-        ...meal,
-
-        _score:
-          scoreMeal(
-            meal,
-            normalizedGoal,
-            targetMealCals
-          ),
-      })
-    )
-    .sort(
-      (a, b) =>
-        b._score -
-        a._score
-    )
+    .filter((meal) => String(meal.id) !== String(excludeId))
+    .map((meal) => ({ ...meal, _score: scoreMeal(meal, normalizedGoal, targetMealCals) }))
+    .sort((a, b) => b._score - a._score)
     .slice(0, 6)
-    .map(
-      ({
-        _score,
-        ...meal
-      }) => meal
-    );
+    .map(({ _score, ...meal }) => meal);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
