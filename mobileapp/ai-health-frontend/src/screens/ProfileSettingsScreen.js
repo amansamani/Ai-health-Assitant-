@@ -298,7 +298,7 @@ const styles = StyleSheet.create({
   back: {
     width: 42,
     height: 42,
-    borderRadius: 14,
+    borderRadius: 12,
     backgroundColor: COLORS.surface,
     borderWidth: 1,
     borderColor: COLORS.border,
@@ -313,7 +313,7 @@ const styles = StyleSheet.create({
 
   headerTitle: {
     fontSize: 23,
-    fontWeight: "900",
+    fontWeight: "800",
     color: COLORS.textDark,
   },
 
@@ -329,7 +329,7 @@ const styles = StyleSheet.create({
     marginBottom: 9,
     fontSize: 10.5,
     letterSpacing: 1,
-    fontWeight: "900",
+    fontWeight: "800",
     color: COLORS.textMuted,
   },
 
@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
   icon: {
     width: 40,
     height: 40,
-    borderRadius: 13,
+    borderRadius: 12,
     backgroundColor: COLORS.surfaceMuted,
     alignItems: "center",
     justifyContent: "center",
@@ -370,7 +370,7 @@ const styles = StyleSheet.create({
 
   title: {
     fontSize: 14.5,
-    fontWeight: "900",
+    fontWeight: "800",
     color: COLORS.textDark,
   },
 

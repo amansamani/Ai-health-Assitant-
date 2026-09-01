@@ -168,6 +168,6 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "baseline", justifyContent: "center", gap: 10,
     marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: COLORS.border,
   },
-  scoreText: { fontSize: 20, fontWeight: "900", color: COLORS.textDark },
+  scoreText: { fontSize: 20, fontWeight: "800", color: COLORS.textDark },
   scoreVs: { fontSize: 11, fontWeight: "700", color: COLORS.textLight },
 });

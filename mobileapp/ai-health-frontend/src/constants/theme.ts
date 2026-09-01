@@ -1,85 +1,114 @@
-/**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
- */
-
 import { Platform } from 'react-native';
 
-const tintColorLight = '#6E3482';
-const tintColorDark = '#fff';
-
-// Fitlip brand palette — anchored on #49225B (the deep purple used in the
-// app icon / native splash) so in-app UI actually matches the brand instead
-// of the generic template green it shipped with.
+// FitLip design system: restrained, data-first, and consistent across screens.
+// Keep these tokens as the single source of truth for new UI.
 export const BRAND = {
-  900: "#170F36", // near-black purple, high-emphasis text on light bg
-  800: "#49225B", // brand anchor — icon/splash color
-  700: "#5C2B6E",
-  600: "#6E3482", // primary interactive color (buttons, links)
-  500: "#844A9A",
-  400: "#975CAE",
-  300: "#A56ABD",
-  200: "#C9AADE",
-  100: "#EDE9FE", // selected-state tints, chip fills
-  50: "#F5F3FF", // subtle tinted backgrounds
+  900: '#26142F',
+  800: '#49225B',
+  700: '#5C2B6E',
+  600: '#6E3482',
+  500: '#844A9A',
+  400: '#975CAE',
+  300: '#B887C7',
+  200: '#DCC8E3',
+  100: '#F0E8F3',
+  50: '#F8F5F9',
 };
 
 export const COLORS = {
-  // legacy flat keys — kept so already-shipped screens keep working;
-  // values now point at the real brand instead of placeholder green/blue.
   primary: BRAND[600],
   secondary: BRAND[400],
-  background: "#F5EBFA",
-  card: "#FFFFFF",
-  textDark: "#1B1730",
-  textLight: "#6B667D",
-  accent: "#F59E0B",
-  border: "#E7DBEF",
-
-  // semantic tokens for new/redesigned screens
   primaryDark: BRAND[800],
   primaryLight: BRAND[300],
-  onPrimary: "#FFFFFF",
-  surface: "#FFFFFF",
-  surfaceMuted: BRAND[50],
-  textMuted: "#9A94AE",
-  error: "#DC2626",
-  errorBg: "#FEF2F2",
-  errorBorder: "#FECACA",
-  success: "#16A34A",
-  warning: "#D97706",
+  onPrimary: '#FFFFFF',
+
+  // Soft warm-neutral canvas; avoids the flat white / saturated AI-template look.
+  background: '#F7F7F5',
+  surface: '#FFFFFF',
+  surfaceMuted: '#F3F3F0',
+  card: '#FFFFFF',
+
+  textDark: '#18181B',
+  textLight: '#52525B',
+  textMuted: '#71717A',
+  textFaint: '#A1A1AA',
+  border: '#E4E4E1',
+  borderSubtle: 'rgba(24, 24, 27, 0.06)',
+
+  accent: '#D97706',
+  success: '#15803D',
+  successBg: '#F0FDF4',
+  warning: '#B45309',
+  warningBg: '#FFFBEB',
+  error: '#B91C1C',
+  errorBg: '#FEF2F2',
+  errorBorder: '#FECACA',
+};
+
+export const SPACING = {
+  xxs: 4,
+  xs: 8,
+  sm: 12,
+  md: 16,
+  lg: 20,
+  xl: 24,
+  xxl: 32,
+  xxxl: 40,
+  huge: 48,
+  section: 28,
+};
+
+export const RADIUS = {
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 20,
+  pill: 999,
+};
+
+export const TYPOGRAPHY = {
+  display: { fontSize: 32, lineHeight: 38, fontWeight: '800' as const, letterSpacing: -0.8 },
+  h1: { fontSize: 26, lineHeight: 32, fontWeight: '800' as const, letterSpacing: -0.5 },
+  h2: { fontSize: 20, lineHeight: 26, fontWeight: '700' as const, letterSpacing: -0.2 },
+  h3: { fontSize: 16, lineHeight: 22, fontWeight: '600' as const },
+  body: { fontSize: 15, lineHeight: 22, fontWeight: '400' as const },
+  bodyMedium: { fontSize: 15, lineHeight: 22, fontWeight: '500' as const },
+  caption: { fontSize: 12, lineHeight: 16, fontWeight: '500' as const },
+  label: { fontSize: 11, lineHeight: 14, fontWeight: '600' as const, letterSpacing: 0.3 },
+  metric: { fontSize: 28, lineHeight: 32, fontWeight: '800' as const, letterSpacing: -0.6 },
 };
 
 export const SHADOW = {
-  shadowColor: "#000",
+  shadowColor: '#18181B',
   shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.08,
-  shadowRadius: 6,
-  elevation: 3,
+  shadowOpacity: 0.06,
+  shadowRadius: 8,
+  elevation: 2,
 };
-
 
 export const Fonts = Platform.select({
   ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
+    sans: 'system-ui', serif: 'ui-serif', rounded: 'ui-rounded', mono: 'ui-monospace',
   },
   default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
+    // Android system sans keeps metrics stable without adding a font dependency.
+    sans: 'sans-serif', serif: 'serif', rounded: 'sans-serif', mono: 'monospace',
   },
   web: {
-    sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+    sans: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
     serif: "Georgia, 'Times New Roman', serif",
-    rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
-    mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+    rounded: "Inter, system-ui, sans-serif",
+    mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace",
   },
 });
+
+
+export const COMPONENTS = {
+  screenPadding: SPACING.lg,
+  sectionGap: SPACING.section,
+  cardRadius: RADIUS.lg,
+  controlRadius: RADIUS.md,
+  buttonHeight: 48,
+  inputHeight: 48,
+  borderWidth: 1,
+};

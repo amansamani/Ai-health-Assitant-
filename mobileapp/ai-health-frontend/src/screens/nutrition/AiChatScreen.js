@@ -9,6 +9,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { AuthContext } from "../../context/AuthContext";
 import API from "../../services/api";
+import { COLORS, RADIUS, SPACING, TYPOGRAPHY, SHADOW } from "../../constants/theme";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -52,7 +53,7 @@ function TypingDots() {
 
 const td = StyleSheet.create({
   wrap: { flexDirection: "row", alignItems: "center", gap: 4, paddingVertical: 6 },
-  dot:  { width: 7, height: 7, borderRadius: 4, backgroundColor: "#6E3482" },
+  dot:  { width: 7, height: 7, borderRadius: 4, backgroundColor: COLORS.primary },
 });
 
 // ─── Message Bubble ───────────────────────────────────────────────────────────
@@ -98,19 +99,20 @@ const mb = StyleSheet.create({
   rowAi:      { justifyContent: "flex-start" },
   avatar: {
     width: 32, height: 32, borderRadius: 16,
-    backgroundColor: "#EDE9FE",
+    backgroundColor: COLORS.surfaceMuted,
+    borderWidth: 1, borderColor: COLORS.borderSubtle,
     justifyContent: "center", alignItems: "center",
   },
   avatarTxt:  { fontSize: 16 },
   bubble: {
-    maxWidth: "78%", borderRadius: 18, paddingHorizontal: 14, paddingVertical: 10,
+    maxWidth: "78%", borderRadius: 16, paddingHorizontal: 14, paddingVertical: 10,
   },
   bubbleUser: {
-    backgroundColor: "#6E3482",
+    backgroundColor: COLORS.primary,
     borderBottomRightRadius: 4,
   },
   bubbleAi: {
-    backgroundColor: "#fff",
+    backgroundColor: COLORS.surface,
     borderBottomLeftRadius: 4,
     shadowColor: "#000", shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
@@ -120,7 +122,7 @@ const mb = StyleSheet.create({
   textAi:   { color: "#49225B", fontWeight: "400" },
   time:     { fontSize: 10, marginTop: 4 },
   timeUser: { color: "rgba(255,255,255,0.6)", textAlign: "right" },
-  timeAi:   { color: "#9A94AE" },
+  timeAi:   { color: COLORS.textMuted },
 });
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
@@ -320,66 +322,62 @@ export default function AiChatScreen({ navigation }) {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F5F3FF" },
+  container: { flex: 1, backgroundColor: COLORS.background },
 
   header: {
     flexDirection: "row", alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16, paddingVertical: 12,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1, borderBottomColor: "#EDE9FE",
-    shadowColor: "#000", shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05, shadowRadius: 4, elevation: 2,
+    backgroundColor: COLORS.surface,
+    borderBottomWidth: 1, borderBottomColor: COLORS.borderSubtle,
   },
   backBtn: {
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: "#EDE9FE",
+    backgroundColor: COLORS.surfaceMuted,
     justifyContent: "center", alignItems: "center",
   },
-  backIcon:     { fontSize: 18, color: "#1B1730", fontWeight: "700" },
+  backIcon:     { fontSize: 18, color: COLORS.textDark, fontWeight: "700" },
   headerCenter: { flexDirection: "row", alignItems: "center", gap: 10 },
   headerIconWrap: {
     width: 40, height: 40, borderRadius: 12,
-    backgroundColor: "#EDE9FE",
+    backgroundColor: COLORS.surfaceMuted,
     justifyContent: "center", alignItems: "center",
   },
   headerIcon:  { fontSize: 20 },
-  headerTitle: { fontSize: 15, fontWeight: "800", color: "#1B1730" },
-  headerSub:   { fontSize: 11, color: "#6E3482", fontWeight: "500", marginTop: 1 },
+  headerTitle: { fontSize: 15, fontWeight: "800", color: COLORS.textDark },
+  headerSub:   { fontSize: 11, color: COLORS.primary, fontWeight: "500", marginTop: 1 },
 
   messageList: { padding: 16, paddingBottom: 8 },
   typingRow:   { flexDirection: "row", alignItems: "flex-end", gap: 8, paddingHorizontal: 16, marginBottom: 8 },
 
   quickWrap:  { paddingTop: 8, paddingBottom: 4 },
-  quickLabel: { fontSize: 11, fontWeight: "700", color: "#9A94AE", paddingHorizontal: 16, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 },
+  quickLabel: { fontSize: 11, fontWeight: "700", color: COLORS.textMuted, paddingHorizontal: 16, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 },
   quickChip: {
-    backgroundColor: "#fff", borderRadius: 20,
+    backgroundColor: COLORS.surface, borderRadius: 12,
     paddingHorizontal: 14, paddingVertical: 9,
-    borderWidth: 1.5, borderColor: "#E7DBEF",
-    shadowColor: "#000", shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04, shadowRadius: 3, elevation: 1,
+    borderWidth: 1, borderColor: COLORS.borderSubtle,
   },
-  quickChipTxt: { fontSize: 12, color: "#6B667D", fontWeight: "600" },
+  quickChipTxt: { fontSize: 12, color: COLORS.textLight, fontWeight: "600" },
 
   inputBar: {
     flexDirection: "row", alignItems: "flex-end",
     paddingHorizontal: 12, paddingVertical: 10,
-    backgroundColor: "#fff",
-    borderTopWidth: 1, borderTopColor: "#EDE9FE",
+    backgroundColor: COLORS.surface,
+    borderTopWidth: 1, borderTopColor: COLORS.borderSubtle,
     gap: 8,
   },
   input: {
-    flex: 1, backgroundColor: "#F5F3FF",
-    borderRadius: 22, borderWidth: 1.5, borderColor: "#E7DBEF",
+    flex: 1, backgroundColor: COLORS.background,
+    borderRadius: 16, borderWidth: 1.5, borderColor: COLORS.border,
     paddingHorizontal: 16, paddingVertical: 10,
-    fontSize: 14, color: "#1B1730", fontWeight: "500",
+    fontSize: 14, color: COLORS.textDark, fontWeight: "500",
     maxHeight: 100,
   },
   sendBtn: {
-    width: 44, height: 44, borderRadius: 22,
-    backgroundColor: "#6E3482",
+    width: 44, height: 44, borderRadius: 16,
+    backgroundColor: COLORS.primary,
     justifyContent: "center", alignItems: "center",
   },
-  sendBtnDisabled: { backgroundColor: "#A56ABD" },
+  sendBtnDisabled: { backgroundColor: COLORS.primaryLight },
   sendIcon:        { fontSize: 16, color: "#fff", fontWeight: "800" },
 });

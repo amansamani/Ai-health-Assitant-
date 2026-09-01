@@ -306,14 +306,11 @@ export default function HomeScreen() {
                   }}
                 />
               ) : (
-                <LinearGradient
-                  colors={[COLORS.primary, COLORS.primaryDark]}
-                  style={styles.avatar}
-                >
+                <View style={[styles.avatar, { backgroundColor: COLORS.primaryDark }]}>
                   <Text style={styles.avatarText}>
                     {(firstName ?? "A")[0].toUpperCase()}
                   </Text>
-                </LinearGradient>
+                </View>
               )}
             </Pressable>
           </View>
@@ -326,12 +323,7 @@ export default function HomeScreen() {
 
         {/* ── HERO CARD ── */}
         <FadeSlideIn delay={110}>
-          <LinearGradient
-            colors={["#170F36", "#49225B", "#170F36"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.heroCard}
-          >
+          <View style={[styles.heroCard, { backgroundColor: COLORS.primaryDark }]}>
             <View style={styles.heroDecorRing} />
             <View style={styles.heroLeft}>
               <View style={styles.heroBadgeWrap}>
@@ -356,7 +348,7 @@ export default function HomeScreen() {
                 <Text style={styles.heroPctLabel}>Done</Text>
               </View>
             </View>
-          </LinearGradient>
+          </View>
         </FadeSlideIn>
 
         {/* ── TODAY'S STATS ── */}
@@ -450,25 +442,25 @@ export default function HomeScreen() {
 // ─── STYLES ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container:     { flex: 1, backgroundColor: COLORS.background },
-  scrollContent: { padding: 20, paddingTop: 8 },
+  scrollContent: { padding: 20, paddingTop: 12 },
 
   headerRow: {
     flexDirection: "row", justifyContent: "space-between",
     alignItems: "center", marginBottom: 22,
   },
   greetingRow: { flexDirection: "row", alignItems: "center" },
-  greeting:   { fontSize: 22, fontWeight: "800", color: COLORS.textDark, letterSpacing: -0.5 },
+  greeting:   { fontSize: 22, fontWeight: "700", color: COLORS.textDark, letterSpacing: -0.5 },
   subtitle:   { fontSize: 14, color: COLORS.textLight, marginTop: 3 },
   avatar: { overflow: "hidden",
-    width: 44, height: 44, borderRadius: 22,
+    width: 44, height: 44, borderRadius: 16,
     justifyContent: "center", alignItems: "center",
   },
   avatarText: { color: "#fff", fontWeight: "800", fontSize: 18 },
 
   heroCard: {
-    borderRadius: 24, padding: 24, marginBottom: 22,
+    borderRadius: 16, padding: 20, marginBottom: 22,
     flexDirection: "row", alignItems: "center", overflow: "hidden",
-    boxShadow: "0px 8px 20px rgba(23, 15, 54, 0.35)",
+    boxShadow: "0px 6px 16px rgba(73, 34, 91, 0.18)",
   },
   heroDecorRing: {
     position: "absolute", width: 220, height: 220, borderRadius: 110,
@@ -483,18 +475,18 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(34,197,94,0.1)",
     justifyContent: "center", alignItems: "center",
   },
-  heroPctNum:   { fontSize: 22, fontWeight: "900", color: "#fff", letterSpacing: -0.5 },
+  heroPctNum:   { fontSize: 22, fontWeight: "800", color: "#fff", letterSpacing: -0.5 },
   heroPctLabel: { fontSize: 11, color: "#22C55E", fontWeight: "700", marginTop: 2 },
   heroBadgeWrap: {
     flexDirection: "row", alignItems: "center", gap: 5,
     backgroundColor: "rgba(250,204,21,0.15)",
     borderWidth: 1, borderColor: "rgba(250,204,21,0.3)",
-    borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4,
+    borderRadius: 16, paddingHorizontal: 10, paddingVertical: 4,
     alignSelf: "flex-start", marginBottom: 10,
   },
   heroBadge:    { color: "#FACC15", fontSize: 11, fontWeight: "800", letterSpacing: 0.5 },
   heroTitle:    { fontSize: 14, color: "#B8AFD6", fontWeight: "600", marginBottom: 4 },
-  heroBig:      { fontSize: 36, fontWeight: "900", color: "#fff", letterSpacing: -1 },
+  heroBig:      { fontSize: 36, fontWeight: "800", color: "#fff", letterSpacing: -1 },
   heroUnit:     { fontSize: 13, color: "#9186B0", marginTop: 2, marginBottom: 14 },
   heroBarBg:    { height: 6, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.1)", marginBottom: 8, overflow: "hidden" },
   heroBarFill:  { height: "100%", borderRadius: 3, backgroundColor: "#22C55E", maxWidth: "100%" },
@@ -507,14 +499,14 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 18, fontWeight: "800", color: COLORS.textDark, letterSpacing: -0.3 },
   editBtn:      {
     flexDirection: "row", alignItems: "center", gap: 4,
-    backgroundColor: COLORS.surfaceMuted, borderRadius: 20,
+    backgroundColor: COLORS.surfaceMuted, borderRadius: 16,
     paddingHorizontal: 14, paddingVertical: 7, minHeight: 30,
   },
   editBtnText:  { fontSize: 13, fontWeight: "700", color: COLORS.primary },
 
   statRow:      { flexDirection: "row", justifyContent: "space-between", marginBottom: 22 },
   statSquare: {
-    backgroundColor: COLORS.surface, borderRadius: 20,
+    backgroundColor: COLORS.surface, borderRadius: 16,
     paddingVertical: 16, paddingHorizontal: 8, alignItems: "center",
     boxShadow: "0px 2px 10px rgba(23, 15, 54, 0.08)",
   },
@@ -524,7 +516,7 @@ const styles = StyleSheet.create({
 
   logFoodCard: {
     flexDirection: "row", alignItems: "center", gap: 12,
-    backgroundColor: COLORS.surface, borderRadius: 18,
+    backgroundColor: COLORS.surface, borderRadius: 16,
     padding: 16, marginBottom: 14,
     overflow: "hidden",
     boxShadow: "0px 2px 10px rgba(23, 15, 54, 0.06)",
@@ -534,7 +526,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.accent,
   },
   logFoodIconWrap: {
-    width: 42, height: 42, borderRadius: 13,
+    width: 42, height: 42, borderRadius: 12,
     backgroundColor: COLORS.accent + "18",
     justifyContent: "center", alignItems: "center",
   },
@@ -543,7 +535,7 @@ const styles = StyleSheet.create({
 
   competeCard: {
     flexDirection: "row", alignItems: "center", gap: 12,
-    backgroundColor: COLORS.surface, borderRadius: 18,
+    backgroundColor: COLORS.surface, borderRadius: 16,
     padding: 16, marginBottom: 14,
     overflow: "hidden",
     boxShadow: "0px 2px 10px rgba(23, 15, 54, 0.06)",
@@ -553,7 +545,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#F97316",
   },
   competeIconWrap: {
-    width: 42, height: 42, borderRadius: 13,
+    width: 42, height: 42, borderRadius: 12,
     backgroundColor: "#F9731618",
     justifyContent: "center", alignItems: "center",
   },
@@ -562,7 +554,7 @@ const styles = StyleSheet.create({
 
   motivationCard: {
     minHeight: 172,
-    borderRadius: 24,
+    borderRadius: 16,
     marginBottom: 22,
     overflow: "hidden",
     position: "relative",
@@ -594,7 +586,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.16)",
-    borderRadius: 24,
+    borderRadius: 16,
   },
   motivationContent: {
     minHeight: 172,
@@ -618,13 +610,13 @@ const styles = StyleSheet.create({
   },
   motivationLabel: {
     fontSize: 10,
-    fontWeight: "900",
+    fontWeight: "800",
     color: "rgba(255,255,255,0.88)",
     letterSpacing: 1,
   },
   motivationQuote: {
     fontSize: 20,
-    fontWeight: "900",
+    fontWeight: "800",
     color: "#FFFFFF",
     lineHeight: 27,
     maxWidth: "88%",

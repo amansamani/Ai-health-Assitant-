@@ -3,7 +3,6 @@ import { View, Pressable, StyleSheet, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { LinearGradient } from "expo-linear-gradient";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -133,14 +132,9 @@ function CameraTabButton({
         accessibilityLabel="Log meal with camera"
       >
         <Animated.View style={[styles.cameraButton, buttonStyle]}>
-          <LinearGradient
-            colors={[COLORS.primaryLight, COLORS.primary, COLORS.primaryDark]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.cameraGradient}
-          >
-            <Ionicons name="camera" size={26} color="#fff" />
-          </LinearGradient>
+          <View style={styles.cameraGradient}>
+            <Ionicons name="camera" size={24} color="#fff" />
+          </View>
         </Animated.View>
       </Pressable>
     </View>
@@ -208,10 +202,9 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
 const styles = StyleSheet.create({
   wrap: {
     backgroundColor: COLORS.surface,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    paddingTop: 10,
-    boxShadow: "0px -6px 24px rgba(23, 15, 54, 0.10)",
+    borderTopWidth: 1,
+    borderTopColor: COLORS.borderSubtle,
+    paddingTop: 6,
   },
   bar: {
     flexDirection: "row",
@@ -225,9 +218,9 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   chip: {
-    width: 50,
-    height: 32,
-    borderRadius: 16,
+    width: 44,
+    height: 30,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -244,18 +237,19 @@ const styles = StyleSheet.create({
     justifyContent: "flex-start",
   },
   cameraButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    marginTop: -28,
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    marginTop: -22,
     borderWidth: 4,
     borderColor: COLORS.background,
     overflow: "hidden",
-    boxShadow: "0px 6px 16px rgba(76, 46, 150, 0.45)",
+    boxShadow: "0px 5px 14px rgba(73, 34, 91, 0.22)",
   },
   cameraGradient: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: COLORS.primary,
   },
 });

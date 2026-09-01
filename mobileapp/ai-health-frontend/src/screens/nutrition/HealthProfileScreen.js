@@ -1,3 +1,4 @@
+import { COLORS } from "../../constants/theme";
 import React, { useState, useRef, useEffect, useContext } from "react";
 import {
   View, Text, TextInput, StyleSheet, ScrollView,
@@ -203,7 +204,7 @@ export default function HealthProfileScreen({ navigation, route }) {
             <View style={styles.stepRow}>
               <View style={styles.stepDone}><Text style={styles.stepDoneText}>✓</Text></View>
               <View style={styles.stepLine} />
-              <LinearGradient colors={["#6E3482", "#6339B8"]} style={styles.stepActive}>
+              <LinearGradient colors={[COLORS.primary, COLORS.primaryDark]} style={styles.stepActive}>
                 <Text style={styles.stepActiveText}>2</Text>
               </LinearGradient>
             </View>
@@ -405,13 +406,13 @@ const styles = StyleSheet.create({
     width: 32, height: 32, borderRadius: 16,
     justifyContent: "center", alignItems: "center",
   },
-  stepActiveText: { color: "#fff", fontSize: 14, fontWeight: "900" },
+  stepActiveText: { color: "#fff", fontSize: 14, fontWeight: "800" },
   stepLabel:  { fontSize: 12, color: "#9A94AE", fontWeight: "700", letterSpacing: 0.5, marginBottom: 8 },
-  title:      { fontSize: 26, fontWeight: "900", color: "#1B1730", letterSpacing: -0.6, marginBottom: 6 },
+  title:      { fontSize: 26, fontWeight: "800", color: "#1B1730", letterSpacing: -0.6, marginBottom: 6 },
   subtitle:   { fontSize: 14, color: "#9A94AE", fontWeight: "500" },
 
   sectionCard: {
-    backgroundColor: "#fff", borderRadius: 22,
+    backgroundColor: "#fff", borderRadius: 20,
     padding: 18, marginBottom: 14,
     boxShadow: "0px 2px 12px rgba(15,23,42,0.07)",
   },
@@ -428,7 +429,7 @@ const styles = StyleSheet.create({
   metricsRow: { flexDirection: "row", marginBottom: 12 },
   inputWrap: {
     flexDirection: "row", alignItems: "center",
-    backgroundColor: "#F5F3FF", borderRadius: 14,
+    backgroundColor: "#F5F3FF", borderRadius: 12,
     borderWidth: 1.5, marginBottom: 0,
     paddingHorizontal: 12, paddingVertical: 2,
   },
@@ -441,7 +442,7 @@ const styles = StyleSheet.create({
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   chip: {
     flexDirection: "row", alignItems: "center",
-    backgroundColor: "#F5F3FF", borderRadius: 24,
+    backgroundColor: "#F5F3FF", borderRadius: 20,
     borderWidth: 1.5, borderColor: "#E7DBEF",
     paddingVertical: 10, paddingHorizontal: 18, gap: 6,
   },
@@ -464,10 +465,10 @@ const styles = StyleSheet.create({
   activityDesc:  { fontSize: 10, color: "#9A94AE", textAlign: "center", fontWeight: "500" },
 
   submitBtn: {
-    borderRadius: 18, paddingVertical: 17,
+    borderRadius: 16, paddingVertical: 17,
     alignItems: "center", justifyContent: "center",
     boxShadow: "0px 6px 18px rgba(99,102,241,0.38)",
   },
   submittingRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  submitBtnText: { color: "#fff", fontSize: 16, fontWeight: "900", letterSpacing: 0.3 },
+  submitBtnText: { color: "#fff", fontSize: 16, fontWeight: "800", letterSpacing: 0.3 },
 });

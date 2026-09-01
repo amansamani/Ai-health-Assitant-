@@ -319,7 +319,7 @@ const styles = StyleSheet.create({
   typeBadgeText: { color: "#fff", fontSize: 13, fontWeight: "800" },
 
   heroLabel: { color: "rgba(255,255,255,0.5)", fontSize: 11, fontWeight: "800", letterSpacing: 1.5, marginBottom: 6 },
-  heroValue: { fontSize: 52, fontWeight: "900", color: "#fff", letterSpacing: -1.5, lineHeight: 58 },
+  heroValue: { fontSize: 52, fontWeight: "800", color: "#fff", letterSpacing: -1.5, lineHeight: 58 },
   heroUnit:  { fontSize: 20, fontWeight: "600", color: "rgba(255,255,255,0.7)" },
   heroGoal:  { fontSize: 13, color: "rgba(255,255,255,0.45)", marginTop: 4, marginBottom: 18 },
 
@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
 
   // Chart
   chartCard: {
-    backgroundColor: COLORS.surface, borderRadius: 22,
+    backgroundColor: COLORS.surface, borderRadius: 20,
     padding: 20, marginHorizontal: 20, marginBottom: 20,
     boxShadow: "0px 2px 12px rgba(23,15,54,0.07)",
   },
@@ -377,7 +377,7 @@ const styles = StyleSheet.create({
   goalBadge:     { flexDirection: "row", alignItems: "center", gap: 4, borderRadius: 12, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 4 },
   goalBadgeText: { fontSize: 11, fontWeight: "700" },
   logBottom:     { gap: 10 },
-  logValue:      { fontSize: 28, fontWeight: "900", letterSpacing: -0.8 },
+  logValue:      { fontSize: 28, fontWeight: "800", letterSpacing: -0.8 },
   logUnit:       { fontSize: 14, fontWeight: "600" },
   logProgress:   { flexDirection: "row", alignItems: "center", gap: 10 },
   logBarBg:      { flex: 1, height: 5, backgroundColor: COLORS.surfaceMuted, borderRadius: 3, overflow: "hidden" },
@@ -387,7 +387,7 @@ const styles = StyleSheet.create({
   // Empty
   emptyCard: {
     marginHorizontal: 20, backgroundColor: COLORS.surface,
-    borderRadius: 22, padding: 32, alignItems: "center",
+    borderRadius: 20, padding: 32, alignItems: "center",
     boxShadow: "0px 2px 10px rgba(23,15,54,0.06)",
   },
   emptyText: { fontSize: 16, fontWeight: "800", color: COLORS.textDark, marginBottom: 6 },

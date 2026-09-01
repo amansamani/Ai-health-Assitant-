@@ -259,8 +259,7 @@ function ActiveBurnCard({ value, goal, source, syncing, onQuickAdd, onManualChan
         accessibilityRole="button"
         accessibilityLabel="Start a run"
       >
-        <LinearGradient
-          colors={["#0D0D0F", "#2A2A2E", "#55555A"]}
+        <View
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={styles.runCtaGradient}
@@ -273,7 +272,7 @@ function ActiveBurnCard({ value, goal, source, syncing, onQuickAdd, onManualChan
             <Text style={styles.runCtaSub}>Track distance, pace & calories</Text>
           </View>
           <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
-        </LinearGradient>
+        </View>
       </Pressable>
 
       {editing ? (
@@ -660,7 +659,7 @@ export default function TrackingScreen() {
 
           {/* ── HERO PROGRESS ── */}
           <FadeSlideIn delay={80}>
-            <LinearGradient colors={["#170F36", "#49225B", "#170F36"]} style={styles.heroCard}>
+            <View style={[styles.heroCard, { backgroundColor: COLORS.primaryDark }]}>
               <View style={styles.heroDecor} />
               <View style={styles.heroBadgeRow}>
                 <Ionicons name="calendar-outline" size={12} color="#FACC15" />
@@ -689,7 +688,7 @@ export default function TrackingScreen() {
                   <Text style={styles.heroStat}>{sleep || "0"}h</Text>
                 </View>
               </View>
-            </LinearGradient>
+            </View>
           </FadeSlideIn>
 
           {errorMsg ? (
@@ -763,15 +762,7 @@ export default function TrackingScreen() {
               accessibilityState={{ disabled: saving, busy: saving }}
               accessibilityLabel="Save today's data">
               <Animated.View style={{ transform: [{ scale: btnScale }] }}>
-                <LinearGradient
-                  colors={saved
-                    ? ["#22C55E", "#16A34A"]
-                    : saving
-                    ? [COLORS.textLight, COLORS.textLight]
-                    : [COLORS.primaryDark, COLORS.primary, COLORS.primaryLight]}
-                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                  style={styles.saveBtn}
-                >
+                <View style={[styles.saveBtn, { backgroundColor: saved ? COLORS.success : saving ? COLORS.textLight : COLORS.primaryDark }]}>
                   {saving
                     ? <ActivityIndicator color="#fff" size="small" />
                     : (
@@ -781,7 +772,7 @@ export default function TrackingScreen() {
                       </View>
                     )
                   }
-                </LinearGradient>
+                </View>
               </Animated.View>
             </Pressable>
           </FadeSlideIn>
@@ -826,7 +817,7 @@ const styles = StyleSheet.create({
     flexDirection: "row", justifyContent: "space-between",
     alignItems: "center", marginBottom: 20,
   },
-  title:    { fontSize: 26, fontWeight: "900", color: COLORS.textDark, letterSpacing: -0.6 },
+  title:    { fontSize: 26, fontWeight: "800", color: COLORS.textDark, letterSpacing: -0.6 },
   subtitle: { fontSize: 14, color: COLORS.textMuted, marginTop: 3, fontWeight: "500" },
   overallBadge: {
     backgroundColor: COLORS.surface, borderRadius: 16,
@@ -834,12 +825,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     boxShadow: "0px 2px 10px rgba(23,15,54,0.08)",
   },
-  overallNum:   { fontSize: 20, fontWeight: "900", color: COLORS.primary, letterSpacing: -0.5 },
+  overallNum:   { fontSize: 20, fontWeight: "800", color: COLORS.primary, letterSpacing: -0.5 },
   overallLabel: { fontSize: 10, color: COLORS.textMuted, fontWeight: "700", textTransform: "uppercase" },
 
   // Hero
   heroCard: {
-    borderRadius: 22, padding: 20,
+    borderRadius: 16, padding: 20,
     marginBottom: 16, overflow: "hidden",
     boxShadow: "0px 6px 20px rgba(23,15,54,0.3)",
   },
@@ -873,7 +864,7 @@ const styles = StyleSheet.create({
   // Sync status banner
   syncBanner: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    backgroundColor: "#22C55E14", borderRadius: 14, padding: 12, marginBottom: 16,
+    backgroundColor: "#22C55E14", borderRadius: 12, padding: 12, marginBottom: 16,
     gap: 10,
   },
   syncBannerLeft: { flexDirection: "row", alignItems: "center", gap: 8, flex: 1 },
@@ -889,7 +880,7 @@ const styles = StyleSheet.create({
 
   // Track input card
   trackCard: {
-    backgroundColor: COLORS.surface, borderRadius: 20,
+    backgroundColor: COLORS.surface, borderRadius: 16,
     marginBottom: 12, overflow: "hidden",
     borderWidth: 1.5,
     boxShadow: "0px 2px 10px rgba(23,15,54,0.07)",
@@ -897,7 +888,7 @@ const styles = StyleSheet.create({
   trackAccent:    { height: 3 },
   trackCardInner: { flexDirection: "row", alignItems: "center", padding: 14, gap: 12 },
   trackIconWrap:  {
-    width: 46, height: 46, borderRadius: 14,
+    width: 46, height: 46, borderRadius: 12,
     justifyContent: "center", alignItems: "center",
   },
   trackMid:   { flex: 1 },
@@ -910,7 +901,7 @@ const styles = StyleSheet.create({
   syncedPillText: { fontSize: 9, fontWeight: "800", textTransform: "uppercase", letterSpacing: 0.3 },
   trackEditLink: { fontSize: 11, color: COLORS.textMuted, fontWeight: "700", textDecorationLine: "underline" },
   trackInput: {
-    fontSize: 20, fontWeight: "900", color: COLORS.textDark,
+    fontSize: 20, fontWeight: "800", color: COLORS.textDark,
     padding: 0, letterSpacing: -0.5,
   },
   trackRight: { alignItems: "flex-end" },
@@ -924,7 +915,7 @@ const styles = StyleSheet.create({
 
   // Active Burn card
   burnCard: {
-    backgroundColor: COLORS.surface, borderRadius: 20,
+    backgroundColor: COLORS.surface, borderRadius: 16,
     padding: 16, marginBottom: 12,
     borderWidth: 1.5, borderColor: "#F9731630",
     boxShadow: "0px 2px 10px rgba(23,15,54,0.07)",
@@ -948,7 +939,7 @@ const styles = StyleSheet.create({
   quickAddChip: {
     flexDirection: "row", alignItems: "center", gap: 6,
     backgroundColor: "#F973160F", borderWidth: 1, borderColor: "#F9731630",
-    borderRadius: 20, paddingHorizontal: 12, paddingVertical: 8,
+    borderRadius: 16, paddingHorizontal: 12, paddingVertical: 8,
   },
   quickAddText: { fontSize: 12.5, fontWeight: "700", color: "#F97316" },
   runCta: {
@@ -958,6 +949,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   runCtaGradient: {
+    backgroundColor: COLORS.textDark,
     minHeight: 74,
     paddingHorizontal: 14,
     paddingVertical: 12,
@@ -968,23 +960,23 @@ const styles = StyleSheet.create({
   runCtaIcon: {
     width: 42,
     height: 42,
-    borderRadius: 13,
+    borderRadius: 12,
     backgroundColor: "rgba(255,255,255,0.10)",
     alignItems: "center",
     justifyContent: "center",
   },
   runCtaCopy: { flex: 1 },
-  runCtaTitle: { color: "#FFFFFF", fontSize: 16, fontWeight: "900" },
+  runCtaTitle: { color: "#FFFFFF", fontSize: 16, fontWeight: "800" },
   runCtaSub: { color: "#D7D7DB", fontSize: 11.5, fontWeight: "600", marginTop: 3 },
 
   activityHistory: { marginTop: 8, marginBottom: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: COLORS.border },
-  activityHistoryTitle: { fontSize: 10, fontWeight: "900", color: COLORS.textMuted, letterSpacing: 1, marginBottom: 8 },
+  activityHistoryTitle: { fontSize: 10, fontWeight: "800", color: COLORS.textMuted, letterSpacing: 1, marginBottom: 8 },
   activityHistoryRow: { flexDirection: "row", alignItems: "center", paddingVertical: 8 },
   activityHistoryIcon: { width: 30, height: 30, borderRadius: 10, backgroundColor: "#F9731618", alignItems: "center", justifyContent: "center", marginRight: 9 },
   activityHistoryCopy: { flex: 1 },
   activityHistoryName: { fontSize: 12.5, fontWeight: "800", color: COLORS.textDark },
   activityHistoryMeta: { marginTop: 2, fontSize: 10.5, color: COLORS.textMuted, fontWeight: "600" },
-  activityHistoryKcal: { fontSize: 12, fontWeight: "900", color: "#F97316" },
+  activityHistoryKcal: { fontSize: 12, fontWeight: "800", color: "#F97316" },
 
   burnEditRow: {
     flexDirection: "row", alignItems: "center", gap: 8,
@@ -999,17 +991,17 @@ const styles = StyleSheet.create({
 
   // Save button
   saveBtn: {
-    borderRadius: 18, paddingVertical: 17,
+    borderRadius: 16, paddingVertical: 17,
     alignItems: "center", justifyContent: "center",
     marginBottom: 20,
     boxShadow: "0px 6px 18px rgba(76,46,150,0.35)",
   },
   saveBtnRow:  { flexDirection: "row", alignItems: "center", gap: 8 },
-  saveBtnText: { color: "#fff", fontSize: 16, fontWeight: "900", letterSpacing: 0.3 },
+  saveBtnText: { color: "#fff", fontSize: 16, fontWeight: "800", letterSpacing: 0.3 },
 
   // Log card
   logCard: {
-    backgroundColor: COLORS.surface, borderRadius: 22,
+    backgroundColor: COLORS.surface, borderRadius: 16,
     padding: 18,
     boxShadow: "0px 2px 12px rgba(23,15,54,0.07)",
   },
@@ -1023,11 +1015,11 @@ const styles = StyleSheet.create({
   logDivider: { height: 1, backgroundColor: COLORS.border, marginVertical: 14 },
   logStat:  { flex: 1, alignItems: "center", gap: 8 },
   logStatIcon: {
-    width: 44, height: 44, borderRadius: 14,
+    width: 44, height: 44, borderRadius: 12,
     justifyContent: "center", alignItems: "center",
     marginBottom: 6,
   },
   logStatText:  { alignItems: "center" },
   logStatLabel: { fontSize: 11, color: COLORS.textMuted, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.4 },
-  logStatValue: { fontSize: 16, fontWeight: "900", marginTop: 2, letterSpacing: -0.3 },
+  logStatValue: { fontSize: 16, fontWeight: "800", marginTop: 2, letterSpacing: -0.3 },
 });

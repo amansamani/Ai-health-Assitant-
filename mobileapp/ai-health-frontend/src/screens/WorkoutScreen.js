@@ -1,3 +1,4 @@
+import { showToast } from "../services/uiFeedback";
 import {
   View, Text, FlatList, StyleSheet, Alert,
   ActivityIndicator, Pressable, Animated, Dimensions, Platform,
@@ -28,7 +29,7 @@ const shadow = (elevation = 4) =>
     ios: {
       shadowColor: COLORS.textDark,
       shadowOffset: { width: 0, height: elevation / 2 },
-      shadowOpacity: 0.12,
+      shadowOpacity: 0.045,
       shadowRadius: elevation,
     },
     android: { elevation },
@@ -176,7 +177,7 @@ export default function WorkoutScreen() {
             if (customPlans.length > 0) {
               choosePlanMode("custom");
             } else {
-              Alert.alert("No custom plan yet", "Create a custom plan from Profile first.");
+              showToast("Create a custom plan from Profile first.", { title: "No custom plan yet", type: "info" });
             }
           },
         },
@@ -264,7 +265,7 @@ export default function WorkoutScreen() {
                 </Pressable>
               </View>
 
-              <LinearGradient colors={["#170F36", "#49225B"]} style={[styles.statsBar, shadow(8)]}>
+              <View style={[styles.statsBar, shadow(2)]}>
                 <View style={styles.statItem}>
                   <Text style={styles.statNum}>{activePlan.days?.filter((d) => !d.isRestDay).length || 0}</Text>
                   <Text style={styles.statLabel}>Training Days</Text>
@@ -279,7 +280,7 @@ export default function WorkoutScreen() {
                   <Ionicons name="settings-outline" size={20} color="#B8AFD6" />
                   <Text style={styles.statLabel}>Manage</Text>
                 </Pressable>
-              </LinearGradient>
+              </View>
 
               <Text style={styles.sectionLabel}>THIS WEEK'S PLAN</Text>
             </>
@@ -298,7 +299,7 @@ export default function WorkoutScreen() {
                   const res = await API.get(`/custom-workouts/plans/${activePlan._id}/days/${item.dayOfWeek}`);
                   router.push({ pathname: "/(app)/workout-detail", params: { workout: JSON.stringify({ _id: activePlan._id, planType: "custom", dayOfWeek: item.dayOfWeek, day: item.dayOfWeek, title: res.data.title, goal: activePlan.goal, mode: activePlan.mode, exercises: res.data.exercises }) } });
                 } catch {
-                  Alert.alert("Couldn't open workout", "Please try again.");
+                  showToast("Please try again.", { title: "Couldn't open workout", type: "error" });
                 }
               }}
             />
@@ -446,7 +447,7 @@ export default function WorkoutScreen() {
 
             {/* Stats bar */}
             <FadeSlideIn delay={80}>
-              <LinearGradient colors={["#170F36", "#49225B"]} style={[styles.statsBar, shadow(8)]}>
+              <View style={[styles.statsBar, shadow(2)]}>
                 <View style={styles.statItem}>
                   <Text style={styles.statNum}>{workouts.length}</Text>
                   <Text style={styles.statLabel}>Days</Text>
@@ -467,7 +468,7 @@ export default function WorkoutScreen() {
                   />
                   <Text style={styles.statLabel}>Equipment</Text>
                 </View>
-              </LinearGradient>
+              </View>
             </FadeSlideIn>
 
             {/* Toggle */}
@@ -526,7 +527,7 @@ const styles = StyleSheet.create({
   loadingText: { marginTop: 12, color: COLORS.textMuted, fontSize: 14, fontWeight: "500" },
   errorText:   { fontSize: 15, color: COLORS.textLight, fontWeight: "600", marginBottom: 16, textAlign: "center", paddingHorizontal: 32 },
   retryBtn: {
-    backgroundColor: COLORS.primary, borderRadius: 14,
+    backgroundColor: COLORS.primary, borderRadius: 12,
     paddingHorizontal: 24, paddingVertical: 12, minHeight: 44, justifyContent: "center",
   },
   retryText: { color: "#fff", fontWeight: "700", fontSize: 14 },
@@ -536,23 +537,23 @@ const styles = StyleSheet.create({
     flexDirection: "row", justifyContent: "space-between",
     alignItems: "center", marginBottom: 18,
   },
-  screenTitle: { fontSize: 26, fontWeight: "900", color: COLORS.textDark, letterSpacing: -0.6 },
+  screenTitle: { fontSize: 26, fontWeight: "800", color: COLORS.textDark, letterSpacing: -0.6 },
   screenSub:   { fontSize: 14, color: COLORS.textMuted, marginTop: 3, fontWeight: "500" },
   goalChip: {
     flexDirection: "row", alignItems: "center",
     paddingHorizontal: 12, paddingVertical: 7,
-    borderRadius: 20, borderWidth: 1,
+    borderRadius: 16, borderWidth: 1,
   },
   goalChipText: { fontSize: 13, fontWeight: "800" },
 
   // Stats bar
   statsBar: {
-    borderRadius: 20, padding: 18,
+    borderRadius: 16, padding: 18,
     flexDirection: "row", justifyContent: "space-around",
     alignItems: "center", marginBottom: 16,
   },
   statItem:   { alignItems: "center" },
-  statNum:    { fontSize: 22, fontWeight: "900", color: "#fff", letterSpacing: -0.5 },
+  statNum:    { fontSize: 22, fontWeight: "800", color: "#fff", letterSpacing: -0.5 },
   statLabel:  { fontSize: 11, color: "#B8AFD6", marginTop: 3, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.4 },
   statDivider:{ width: 1, height: 32, backgroundColor: "rgba(255,255,255,0.08)" },
 
@@ -579,7 +580,7 @@ const styles = StyleSheet.create({
 
   // Workout card
   card: {
-    backgroundColor: COLORS.surface, borderRadius: 20,
+    backgroundColor: COLORS.surface, borderRadius: 16,
     marginBottom: 12, overflow: "hidden",
   },
   cardRest: { opacity: 0.68 },
@@ -593,7 +594,7 @@ const styles = StyleSheet.create({
     width: 52, height: 52, borderRadius: 16,
     alignItems: "center", justifyContent: "center",
   },
-  dayNum:  { fontSize: 20, fontWeight: "900", lineHeight: 22 },
+  dayNum:  { fontSize: 20, fontWeight: "800", lineHeight: 22 },
   dayWord: { fontSize: 9,  fontWeight: "800", letterSpacing: 1 },
 
   cardMid:   { flex: 1, marginRight: 14 },
@@ -609,33 +610,33 @@ const styles = StyleSheet.create({
   todayDoneText: { fontSize: 10, color: "#166534", fontWeight: "800" },
 
   choiceScreen: { flex: 1, padding: 20, paddingTop: 18 },
-  planChoiceCard: { backgroundColor: COLORS.surface, borderRadius: 22, padding: 18, marginBottom: 14, flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: COLORS.border },
+  planChoiceCard: { backgroundColor: COLORS.surface, borderRadius: 16, padding: 18, marginBottom: 14, flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: COLORS.border },
   choiceIcon: { width: 52, height: 52, borderRadius: 16, backgroundColor: "#F1EAFE", alignItems: "center", justifyContent: "center" },
   choiceCopy: { flex: 1, marginHorizontal: 14 },
-  choiceCardTitle: { fontSize: 16, fontWeight: "900", color: COLORS.textDark },
+  choiceCardTitle: { fontSize: 16, fontWeight: "800", color: COLORS.textDark },
   choiceCardText: { marginTop: 5, fontSize: 12, lineHeight: 17, color: COLORS.textMuted, fontWeight: "600" },
-  choiceTitle: { marginTop: 12, fontSize: 20, fontWeight: "900", color: COLORS.textDark, textAlign: "center" },
+  choiceTitle: { marginTop: 12, fontSize: 20, fontWeight: "800", color: COLORS.textDark, textAlign: "center" },
   choiceText: { marginTop: 7, fontSize: 13, lineHeight: 19, color: COLORS.textMuted, textAlign: "center", fontWeight: "600" },
   choiceHint: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 4, paddingHorizontal: 10 },
   choiceHintText: { flex: 1, fontSize: 11, lineHeight: 16, color: COLORS.textMuted, fontWeight: "600" },
   secondaryChoiceButton: { marginTop: 10, paddingHorizontal: 16, paddingVertical: 10 },
-  secondaryChoiceText: { color: COLORS.primary, fontSize: 12, fontWeight: "900" },
+  secondaryChoiceText: { color: COLORS.primary, fontSize: 12, fontWeight: "800" },
   customHeaderBtn: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: COLORS.primaryDark, paddingHorizontal: 11, paddingVertical: 8, borderRadius: 12 },
-  changePlanBtn: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: COLORS.primaryDark, paddingHorizontal: 12, paddingVertical: 9, borderRadius: 13 },
-  changePlanBtnText: { color: "#fff", fontSize: 11, fontWeight: "900" },
-  customHeaderBtnText: { color: "#fff", fontSize: 11, fontWeight: "900" },
-  customEmptyCard: { backgroundColor: COLORS.surface, borderRadius: 22, padding: 24, alignItems: "center", marginBottom: 18, borderWidth: 1, borderColor: "#E8DFFF" },
-  customEmptyTitle: { marginTop: 10, fontSize: 18, fontWeight: "900", color: COLORS.textDark },
+  changePlanBtn: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: COLORS.primaryDark, paddingHorizontal: 12, paddingVertical: 9, borderRadius: 12 },
+  changePlanBtnText: { color: "#fff", fontSize: 11, fontWeight: "800" },
+  customHeaderBtnText: { color: "#fff", fontSize: 11, fontWeight: "800" },
+  customEmptyCard: { backgroundColor: COLORS.surface, borderRadius: 16, padding: 24, alignItems: "center", marginBottom: 18, borderWidth: 1, borderColor: "#E8DFFF" },
+  customEmptyTitle: { marginTop: 10, fontSize: 18, fontWeight: "800", color: COLORS.textDark },
   customEmptyText: { marginTop: 6, fontSize: 12, lineHeight: 18, color: COLORS.textMuted, textAlign: "center", fontWeight: "600" },
-  primarySmallButton: { marginTop: 16, backgroundColor: COLORS.primaryDark, borderRadius: 13, paddingHorizontal: 16, paddingVertical: 11 },
-  primarySmallText: { color: "#fff", fontSize: 12, fontWeight: "900" },
-  customDayCard: { flexDirection: "row", alignItems: "center", backgroundColor: COLORS.surface, borderRadius: 18, padding: 14, marginBottom: 10, gap: 12 },
+  primarySmallButton: { marginTop: 16, backgroundColor: COLORS.primaryDark, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 11 },
+  primarySmallText: { color: "#fff", fontSize: 12, fontWeight: "800" },
+  customDayCard: { flexDirection: "row", alignItems: "center", backgroundColor: COLORS.surface, borderRadius: 16, padding: 14, marginBottom: 10, gap: 12 },
   customDayRest: { opacity: 0.65 },
-  customDayNum: { fontSize: 18, fontWeight: "900", color: COLORS.primary },
-  customDayWord: { fontSize: 8, fontWeight: "900", color: COLORS.primary, letterSpacing: 0.8 },
+  customDayNum: { fontSize: 18, fontWeight: "800", color: COLORS.primary },
+  customDayWord: { fontSize: 8, fontWeight: "800", color: COLORS.primary, letterSpacing: 0.8 },
   customDayMeta: { marginTop: 5, fontSize: 11, color: COLORS.textMuted, fontWeight: "700" },
   manageLink: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, padding: 16 },
-  manageLinkText: { color: COLORS.primary, fontSize: 12, fontWeight: "900" },
+  manageLinkText: { color: COLORS.primary, fontSize: 12, fontWeight: "800" },
 
   cardArrow: {
     width: 34, height: 34, borderRadius: 12,

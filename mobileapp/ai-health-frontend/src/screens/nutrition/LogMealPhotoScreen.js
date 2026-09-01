@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { showToast } from "../../services/uiFeedback";
 import {
   View,
   Text,
@@ -119,7 +120,7 @@ export default function LogMealPhotoScreen({ navigation, route }) {
   const pickFromCamera = async () => {
     const perm = await ImagePicker.requestCameraPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert("Camera access needed", "Enable camera access in settings to take a photo of your meal.");
+      showToast("Enable camera access in settings to take a photo of your meal.", { title: "Camera access needed", type: "warning" });
       return;
     }
     const result = await ImagePicker.launchCameraAsync({ quality: 0.8 });
@@ -131,7 +132,7 @@ export default function LogMealPhotoScreen({ navigation, route }) {
   const pickFromGallery = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert("Photo access needed", "Enable photo library access in settings to choose a meal photo.");
+      showToast("Enable photo library access in settings to choose a meal photo.", { title: "Photo access needed", type: "warning" });
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -151,7 +152,7 @@ export default function LogMealPhotoScreen({ navigation, route }) {
       setItems([]);
       setSelected({});
     } catch (err) {
-      Alert.alert("Couldn't process that photo", "Try a different photo.");
+      showToast("Try a different photo.", { title: "Couldn't process that photo", type: "error" });
       console.warn("Image prep failed:", err.message);
     }
   };
@@ -173,9 +174,9 @@ export default function LogMealPhotoScreen({ navigation, route }) {
       (data.items || []).forEach((_, i) => { initialSelection[i] = true; });
       setSelected(initialSelection);
     } catch (err) {
-      Alert.alert(
-        "Couldn't analyze that photo",
-        err.response?.data?.message || "Try a clearer photo, or log this meal manually instead."
+      showToast(
+        err.response?.data?.message || "Try a clearer photo, or log this meal manually instead.",
+        { title: "Couldn't analyze that photo", type: "error", duration: 4200 }
       );
     } finally {
       setAnalyzing(false);
@@ -225,28 +226,25 @@ export default function LogMealPhotoScreen({ navigation, route }) {
           },
         });
       }
-      Alert.alert(
-        "Logged! 🎉",
+      showToast(
         `${itemsToLog.length} item${itemsToLog.length === 1 ? "" : "s"} added to ${MEAL_META[mealType].label}.`,
-        [{
-          text: "Done",
-          onPress: () => {
-            // Pushed from Meal Logger — a real screen to return to. Opened
-            // directly from the Camera tab — no back-stack, so goBack()
-            // would silently no-op. Reset for the next capture instead.
-            if (navigation.canGoBack?.()) {
-              navigation.goBack();
-            } else {
-              setPhotos([]);
-              setResults(null);
-              setItems([]);
-              setSelected({});
-            }
-          },
-        }]
+        { title: "Meal logged", type: "success", duration: 1800 }
       );
+      setTimeout(() => {
+        // Pushed from Meal Logger — a real screen to return to. Opened
+        // directly from the Camera tab — no back-stack, so goBack()
+        // would silently no-op. Reset for the next capture instead.
+        if (navigation.canGoBack?.()) {
+          navigation.goBack();
+        } else {
+          setPhotos([]);
+          setResults(null);
+          setItems([]);
+          setSelected({});
+        }
+      }, 450);
     } catch (err) {
-      Alert.alert("Something went wrong", "Some items may not have logged. Check your meal log and try again for any missing ones.");
+      showToast("Some items may not have logged. Check your meal log and try again for any missing ones.", { title: "Something went wrong", type: "error", duration: 4200 });
       console.warn("Log selected items failed:", err.message);
     } finally {
       setLogging(false);
@@ -516,7 +514,7 @@ const s = StyleSheet.create({
   eyebrow: {
     fontSize: 10,
     lineHeight: 13,
-    fontWeight: "900",
+    fontWeight: "800",
     color: COLORS.textMuted,
     letterSpacing: 1.2,
     textTransform: "uppercase",
@@ -526,7 +524,7 @@ const s = StyleSheet.create({
   screenTitle: {
     fontSize: 24,
     lineHeight: 30,
-    fontWeight: "900",
+    fontWeight: "800",
     color: COLORS.textDark,
     letterSpacing: -0.7,
     marginBottom: 6,
@@ -586,7 +584,7 @@ const s = StyleSheet.create({
   // ============================================================
   captureCard: {
     backgroundColor: COLORS.card,
-    borderRadius: 24,
+    borderRadius: 20,
     paddingHorizontal: 22,
     paddingVertical: 28,
     alignItems: "center",
@@ -596,7 +594,7 @@ const s = StyleSheet.create({
   captureIconWrap: {
     width: 76,
     height: 76,
-    borderRadius: 24,
+    borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 18,
@@ -605,7 +603,7 @@ const s = StyleSheet.create({
   captureTitle: {
     fontSize: 21,
     lineHeight: 27,
-    fontWeight: "900",
+    fontWeight: "800",
     color: COLORS.textDark,
     textAlign: "center",
     marginBottom: 8,
@@ -627,7 +625,7 @@ const s = StyleSheet.create({
   // ============================================================
   previewCard: {
     backgroundColor: COLORS.card,
-    borderRadius: 24,
+    borderRadius: 20,
     padding: 16,
     ...SHADOW,
   },
@@ -657,7 +655,7 @@ const s = StyleSheet.create({
     right: -6,
     width: 28,
     height: 28,
-    borderRadius: 14,
+    borderRadius: 12,
     backgroundColor: "rgba(15, 23, 42, 0.82)",
     alignItems: "center",
     justifyContent: "center",
@@ -671,7 +669,7 @@ const s = StyleSheet.create({
   angleBtn: {
     minHeight: 46,
     backgroundColor: BRAND[50],
-    borderRadius: 14,
+    borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 11,
     alignItems: "center",
@@ -729,7 +727,7 @@ const s = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 13,
     lineHeight: 15,
-    fontWeight: "900",
+    fontWeight: "800",
   },
 
   // ============================================================
@@ -757,7 +755,7 @@ const s = StyleSheet.create({
   analyzingTitle: {
     fontSize: 15,
     lineHeight: 20,
-    fontWeight: "900",
+    fontWeight: "800",
     color: COLORS.textDark,
   },
 
@@ -816,7 +814,7 @@ const s = StyleSheet.create({
   sectionTitle: {
     fontSize: 10.5,
     lineHeight: 14,
-    fontWeight: "900",
+    fontWeight: "800",
     color: COLORS.textMuted,
     letterSpacing: 1.2,
     textTransform: "uppercase",
@@ -836,7 +834,7 @@ const s = StyleSheet.create({
   // ============================================================
   itemCard: {
     backgroundColor: COLORS.card,
-    borderRadius: 18,
+    borderRadius: 16,
     paddingHorizontal: 15,
     paddingVertical: 15,
     marginBottom: 12,
@@ -872,7 +870,7 @@ const s = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     lineHeight: 20,
-    fontWeight: "900",
+    fontWeight: "800",
     color: COLORS.textDark,
     marginRight: 10,
   },
@@ -887,7 +885,7 @@ const s = StyleSheet.create({
   confBadgeText: {
     fontSize: 9.5,
     lineHeight: 12,
-    fontWeight: "900",
+    fontWeight: "800",
   },
 
   itemMeta: {
@@ -954,7 +952,7 @@ const s = StyleSheet.create({
   gramBtnText: {
     fontSize: 18,
     lineHeight: 21,
-    fontWeight: "900",
+    fontWeight: "800",
     color: COLORS.primaryDark,
   },
 
@@ -962,7 +960,7 @@ const s = StyleSheet.create({
     minWidth: 52,
     fontSize: 14,
     lineHeight: 19,
-    fontWeight: "900",
+    fontWeight: "800",
     color: COLORS.textDark,
     textAlign: "center",
   },
@@ -984,7 +982,7 @@ const s = StyleSheet.create({
   // ============================================================
   emptyCard: {
     backgroundColor: COLORS.card,
-    borderRadius: 24,
+    borderRadius: 20,
     paddingHorizontal: 24,
     paddingVertical: 30,
     alignItems: "center",
@@ -994,7 +992,7 @@ const s = StyleSheet.create({
   emptyIconWrap: {
     width: 66,
     height: 66,
-    borderRadius: 22,
+    borderRadius: 20,
     backgroundColor: BRAND[50],
     alignItems: "center",
     justifyContent: "center",
@@ -1004,7 +1002,7 @@ const s = StyleSheet.create({
   emptyTitle: {
     fontSize: 17,
     lineHeight: 22,
-    fontWeight: "900",
+    fontWeight: "800",
     color: COLORS.textDark,
     textAlign: "center",
     marginBottom: 7,

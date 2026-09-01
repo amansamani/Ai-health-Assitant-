@@ -221,10 +221,10 @@ const mr = StyleSheet.create({
     borderWidth: 1, borderColor: "transparent",
   },
   check: {
-    width: 26, height: 26, borderRadius: 13,
+    width: 26, height: 26, borderRadius: 12,
     borderWidth: 2, justifyContent: "center", alignItems: "center",
   },
-  tick:    { color: "#fff", fontWeight: "900", fontSize: 13 },
+  tick:    { color: "#fff", fontWeight: "800", fontSize: 13 },
   iconWrap:{ width: 38, height: 38, borderRadius: 10, justifyContent: "center", alignItems: "center" },
   info:    { flex: 1 },
   name:    { fontSize: 14, fontWeight: "700", color: "#1a1a1a" },

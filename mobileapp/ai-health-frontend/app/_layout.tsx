@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { AuthProvider } from "@/src/context/AuthContext";
+import FeedbackToast from "@/src/components/ui/FeedbackToast";
+import AppLoading from "@/src/components/ui/AppLoading";
 // Registers the native GPS task at app startup, including headless/background launches.
 import "@/src/services/runLocationTask";
 
@@ -31,7 +33,7 @@ export default function RootLayout() {
   }, [appReady]);
 
   if (!appReady) {
-    return null;
+    return <AppLoading label="Loading FitLip" />;
   }
 
   return (
@@ -41,6 +43,7 @@ export default function RootLayout() {
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(app)" />
       </Stack>
+      <FeedbackToast />
     </AuthProvider>
   );
 }

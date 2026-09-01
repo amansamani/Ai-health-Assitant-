@@ -91,10 +91,10 @@ export default function FormField({
 
 const styles = StyleSheet.create({
   wrap: { marginBottom: 14 },
-  label: { fontSize: 13, fontWeight: "700", color: COLORS.textDark, marginBottom: 6, letterSpacing: 0.1 },
+  label: { fontSize: 12, fontWeight: "600", color: COLORS.textDark, marginBottom: 6, letterSpacing: 0.1 },
   inputWrap: {
     flexDirection: "row", alignItems: "center",
-    backgroundColor: COLORS.surfaceMuted, borderRadius: 14,
+    backgroundColor: COLORS.surfaceMuted, borderRadius: 12,
     borderWidth: 1.5, paddingHorizontal: 14,
     minHeight: 50,
   },

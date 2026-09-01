@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
 
 const wi = StyleSheet.create({
   card: {
-    borderRadius: 18,
+    borderRadius: 16,
     backgroundColor: "#fff",
     borderWidth: 1,
     borderColor: "#E0E7FF",
@@ -213,10 +213,10 @@ const wi = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
-  badgeTxt: { fontSize: 9, fontWeight: "900", letterSpacing: 0.5 },
+  badgeTxt: { fontSize: 9, fontWeight: "800", letterSpacing: 0.5 },
 
   body:      { padding: 16 },
-  deltaText: { fontSize: 28, fontWeight: "900", marginBottom: 4 },
+  deltaText: { fontSize: 28, fontWeight: "800", marginBottom: 4 },
   reasonText:{ fontSize: 14, color: "#1E1B4B", fontWeight: "600", lineHeight: 20 },
 
   statsRow: { flexDirection: "row", marginTop: 16, gap: 10 },

@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from "react";
+import { showToast } from "../../services/uiFeedback";
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   ActivityIndicator, Alert, RefreshControl,
@@ -194,7 +195,7 @@ export default function MealLoggerScreen({ navigation }) {
             await deleteMealLog(mealId);
             loadData();
           } catch {
-            Alert.alert("Error", "Could not delete meal.");
+            showToast("Could not delete meal.", { title: "Couldn't delete meal", type: "error" });
           }
         },
       },
@@ -406,7 +407,7 @@ const s = StyleSheet.create({
   sectionTitle: { fontSize: 12, fontWeight: "700", color: COLORS.textLight, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10, marginTop: 4 },
   photoEntryCard: {
     flexDirection: "row", alignItems: "center",
-    backgroundColor: "#EDE9FE", borderRadius: 18,
+    backgroundColor: "#EDE9FE", borderRadius: 16,
     borderWidth: 1.5, borderColor: "#A56ABD",
     paddingVertical: 14, paddingHorizontal: 16,
     marginBottom: 20,

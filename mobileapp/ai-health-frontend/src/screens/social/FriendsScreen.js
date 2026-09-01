@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { showToast } from "../../services/uiFeedback";
 import {
   View, Text, TextInput, Pressable, StyleSheet,
   ActivityIndicator, ScrollView, Share, Alert,
@@ -77,7 +78,7 @@ export default function FriendsScreen() {
               await API.delete(`/social/friends/${friend._id}`);
               setFriends((prev) => prev.filter((f) => f._id !== friend._id));
             } catch (err) {
-              Alert.alert("Error", err.response?.data?.message || "Failed to remove friend");
+              showToast(err.response?.data?.message || "Failed to remove friend", { title: "Couldn't remove friend", type: "error" });
             }
           },
         },
@@ -190,11 +191,11 @@ const styles = StyleSheet.create({
 
   codeCard: {
     flexDirection: "row", alignItems: "center",
-    backgroundColor: COLORS.surface, borderRadius: 18, padding: 16,
+    backgroundColor: COLORS.surface, borderRadius: 16, padding: 16,
     marginBottom: 20, borderWidth: 1, borderColor: COLORS.border,
   },
   codeLabel: { fontSize: 10.5, fontWeight: "800", color: COLORS.textLight, letterSpacing: 0.6, marginBottom: 4 },
-  codeValue: { fontSize: 22, fontWeight: "900", color: COLORS.textDark, letterSpacing: 2 },
+  codeValue: { fontSize: 22, fontWeight: "800", color: COLORS.textDark, letterSpacing: 2 },
   shareBtn: {
     flexDirection: "row", alignItems: "center", gap: 6,
     backgroundColor: COLORS.primary, borderRadius: 12,

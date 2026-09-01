@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { showToast } from "../../services/uiFeedback";
 import { View, Text, Pressable, StyleSheet, ActivityIndicator, ScrollView, Alert } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -45,9 +46,8 @@ export default function CreateDuelScreen() {
     setSending(true);
     try {
       await API.post("/social/duels", { opponentId, metric, durationDays });
-      Alert.alert("Challenge sent!", "They'll see it in their Duels list.", [
-        { text: "OK", onPress: () => router.replace("/(app)/social/duels") },
-      ]);
+      showToast("They'll see it in their Duels list.", { title: "Challenge sent", type: "success", duration: 1800 });
+      setTimeout(() => router.replace("/(app)/social/duels"), 450);
     } catch (err) {
       setErrorMsg(err.response?.data?.message || "Failed to send challenge");
     } finally {
@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
 
   selectedOpponent: {
     flexDirection: "row", alignItems: "center", gap: 12,
-    backgroundColor: COLORS.surface, borderRadius: 14, padding: 12,
+    backgroundColor: COLORS.surface, borderRadius: 12, padding: 12,
     borderWidth: 1.5, borderColor: COLORS.primary, marginBottom: 8,
   },
   selectedOpponentName: { fontSize: 15, fontWeight: "700", color: COLORS.textDark },
@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
 
   friendPick: {
     flexDirection: "row", alignItems: "center", gap: 12,
-    backgroundColor: COLORS.surface, borderRadius: 14, padding: 12,
+    backgroundColor: COLORS.surface, borderRadius: 12, padding: 12,
     borderWidth: 1.5, borderColor: COLORS.border, marginBottom: 8,
   },
   friendPickSelected: { borderColor: COLORS.primary, backgroundColor: COLORS.surfaceMuted },

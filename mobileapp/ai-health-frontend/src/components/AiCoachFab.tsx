@@ -4,7 +4,6 @@ import { useRouter, usePathname } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { LinearGradient } from "expo-linear-gradient";
 import Animated, {
   Easing,
   runOnJS,
@@ -97,14 +96,9 @@ export default function AiCoachFab() {
         accessibilityLabel="Open AI Coach chat"
       >
         <Animated.View style={buttonStyle}>
-          <LinearGradient
-            colors={[COLORS.primaryLight, COLORS.primary, COLORS.primaryDark]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.fab}
-          >
-            <Ionicons name="chatbubble-ellipses" size={26} color="#fff" />
-          </LinearGradient>
+          <View style={styles.fab}>
+            <Ionicons name="chatbubble-ellipses" size={24} color="#fff" />
+          </View>
         </Animated.View>
       </Pressable>
     </View>
@@ -128,9 +122,9 @@ const styles = StyleSheet.create({
   fab: {
     width: 56,
     height: 56,
-    borderRadius: 28,
+    borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
-    boxShadow: "0px 8px 20px rgba(76, 46, 150, 0.45)",
+    boxShadow: "0px 6px 16px rgba(73, 34, 91, 0.25)",
   },
 });

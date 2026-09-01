@@ -8,6 +8,7 @@
 // is unavailable.
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { showToast } from "../../services/uiFeedback";
 import {
   View,
   Text,
@@ -266,9 +267,9 @@ export default function RunTrackingScreen() {
     try {
       const result = await requestPermissionsAndLocation();
       if (!result) {
-        Alert.alert(
-          "Location permission needed",
-          "Fitlip needs precise location access to record your route."
+        showToast(
+          "Fitlip needs precise location access to record your route.",
+          { title: "Location permission needed", type: "warning", duration: 4000 }
         );
         return;
       }
@@ -293,9 +294,9 @@ export default function RunTrackingScreen() {
       await clearRunSession();
       phaseRef.current = "idle";
       setPhase("idle");
-      Alert.alert(
-        "Couldn't start GPS",
-        error?.message || "Please check Location Services and try again."
+      showToast(
+        error?.message || "Please check Location Services and try again.",
+        { title: "Couldn't start GPS", type: "error", duration: 4000 }
       );
     }
   };
@@ -317,7 +318,7 @@ export default function RunTrackingScreen() {
 
       const fg = await Location.getForegroundPermissionsAsync();
       if (!fg.granted) {
-        Alert.alert("Location permission needed", "Enable location to resume this run.");
+        showToast("Enable location to resume this run.", { title: "Location permission needed", type: "warning" });
         return;
       }
 
@@ -344,7 +345,7 @@ export default function RunTrackingScreen() {
       await pauseRunSession(Date.now());
       phaseRef.current = "paused";
       setPhase("paused");
-      Alert.alert("Couldn't resume GPS", "Please make sure Location Services are enabled and try again.");
+      showToast("Please make sure Location Services are enabled and try again.", { title: "Couldn't resume GPS", type: "error", duration: 4000 });
     }
   };
 
@@ -630,7 +631,7 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     flexDirection: "row",
     backgroundColor: COLORS.card,
-    borderRadius: 24,
+    borderRadius: 20,
     padding: 4,
     ...SHADOW,
   },
@@ -654,7 +655,7 @@ const styles = StyleSheet.create({
     gap: 7,
     paddingHorizontal: 13,
     paddingVertical: 8,
-    borderRadius: 18,
+    borderRadius: 16,
     backgroundColor: COLORS.card,
     ...SHADOW,
   },

@@ -5,9 +5,10 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { showToast } from "../../services/uiFeedback";
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, Alert, ActivityIndicator, Animated, Modal,
+  TextInput, ActivityIndicator, Animated, Modal,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
@@ -158,7 +159,7 @@ export default function WaterTrackingScreen() {
       const res = await API.post("/nutrition/water", { amount, label: selectedLabel });
       setLog(res.data);
     } catch (err) {
-      Alert.alert("Error", "Could not log water. Please try again.");
+      showToast("Could not log water. Please try again.", { title: "Couldn't log water", type: "error" });
     } finally {
       setAdding(false);
     }
@@ -167,7 +168,7 @@ export default function WaterTrackingScreen() {
   const handleCustom = () => {
     const ml = parseInt(customAmt, 10);
     if (!ml || ml < 10 || ml > 2000) {
-      Alert.alert("Invalid amount", "Enter a value between 10 and 2000 ml.");
+      showToast("Enter a value between 10 and 2000 ml.", { title: "Invalid amount", type: "warning" });
       return;
     }
     addWater(ml);
@@ -181,7 +182,7 @@ export default function WaterTrackingScreen() {
       const res = await API.delete("/nutrition/water/last");
       setLog(res.data);
     } catch {
-      Alert.alert("Error", "Undo failed. Please try again.");
+      showToast("Undo failed. Please try again.", { title: "Undo failed", type: "error" });
     } finally {
       setUndoing(false);
     }
@@ -190,7 +191,7 @@ export default function WaterTrackingScreen() {
   const handleSetGoal = async () => {
     const goal = parseInt(goalInput, 10);
     if (!goal || goal < 500 || goal > 6000) {
-      Alert.alert("Invalid goal", "Enter a value between 500 and 6000 ml.");
+      showToast("Enter a value between 500 and 6000 ml.", { title: "Invalid goal", type: "warning" });
       return;
     }
     try {
@@ -199,7 +200,7 @@ export default function WaterTrackingScreen() {
       setGoalInput("");
       fetchLog();
     } catch {
-      Alert.alert("Error", "Could not update goal.");
+      showToast("Could not update goal.", { title: "Couldn't update goal", type: "error" });
     }
   };
 
@@ -384,7 +385,7 @@ const g = StyleSheet.create({
   fill:    { width: "100%", position: "absolute", bottom: 0, borderRadius: 70 },
   wave:    { width: "130%", height: 18, position: "absolute", bottom: "45%", left: -15, borderRadius: 9 },
   overlay: { position: "absolute", alignItems: "center", justifyContent: "center", height: "100%", width: 140 },
-  pctTxt:  { fontSize: 32, fontWeight: "900", color: "#1E3A5F" },
+  pctTxt:  { fontSize: 32, fontWeight: "800", color: "#1E3A5F" },
   mlTxt:   { fontSize: 16, fontWeight: "700", color: "#1E3A5F" },
   goalTxt: { fontSize: 12, color: COLORS.textLight, fontWeight: "500" },
   doneRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 4 },
@@ -427,7 +428,7 @@ const s = StyleSheet.create({
 
   header:     { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
   titleRow:   { flexDirection: "row", alignItems: "center" },
-  title:      { fontSize: 24, fontWeight: "900", color: "#1E3A5F" },
+  title:      { fontSize: 24, fontWeight: "800", color: "#1E3A5F" },
   sub:        { fontSize: 13, color: COLORS.textLight, marginTop: 2 },
   goalBtn:    { backgroundColor: "#DBEAFE", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, minHeight: 34, justifyContent: "center" },
   goalBtnTxt: { fontSize: 12, fontWeight: "700", color: "#1D4ED8" },

@@ -1,4 +1,5 @@
 import { useState, useCallback, useContext } from "react";
+import { showToast } from "../../services/uiFeedback";
 import { View, Text, Pressable, StyleSheet, ActivityIndicator, ScrollView, Alert } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -46,7 +47,7 @@ export default function DuelDetailScreen() {
       await API.post(`/social/duels/${id}/respond`, { action });
       fetchDuel();
     } catch (err) {
-      Alert.alert("Error", err.response?.data?.message || "Failed to respond");
+      showToast(err.response?.data?.message || "Failed to respond", { title: "Something went wrong", type: "error" });
     } finally {
       setActing(false);
     }
@@ -58,7 +59,7 @@ export default function DuelDetailScreen() {
       await API.post(`/social/duels/${id}/cancel`);
       router.back();
     } catch (err) {
-      Alert.alert("Error", err.response?.data?.message || "Failed to cancel");
+      showToast(err.response?.data?.message || "Failed to cancel", { title: "Something went wrong", type: "error" });
       setActing(false);
     }
   };
@@ -178,17 +179,17 @@ const styles = StyleSheet.create({
   vsRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 24 },
   vsPlayer: { alignItems: "center", gap: 8 },
   vsName: { color: "#fff", fontWeight: "700", fontSize: 13 },
-  vsLabel: { color: "#B8AFD6", fontWeight: "900", fontSize: 13, letterSpacing: 1 },
+  vsLabel: { color: "#B8AFD6", fontWeight: "800", fontSize: 13, letterSpacing: 1 },
   metaRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 18 },
   metaText: { color: "#B8AFD6", fontSize: 12, fontWeight: "600" },
   daysLeft: { color: "#fff", fontSize: 12.5, fontWeight: "700", textAlign: "center", marginTop: 6 },
 
   scoreCard: {
-    backgroundColor: COLORS.surface, borderRadius: 18, padding: 18,
+    backgroundColor: COLORS.surface, borderRadius: 16, padding: 18,
     marginHorizontal: 16, marginTop: -14, borderWidth: 1, borderColor: COLORS.border,
   },
   scoreRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 10 },
-  scoreNum: { fontSize: 30, fontWeight: "900", color: COLORS.textDark },
+  scoreNum: { fontSize: 30, fontWeight: "800", color: COLORS.textDark },
   progressBarBg: { height: 8, borderRadius: 4, backgroundColor: COLORS.surfaceMuted, overflow: "hidden" },
   progressBarFill: { height: "100%", backgroundColor: "#F97316", borderRadius: 4 },
 

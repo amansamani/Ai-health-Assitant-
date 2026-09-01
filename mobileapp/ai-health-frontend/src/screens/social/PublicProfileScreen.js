@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { View, Text, StyleSheet, Pressable, ScrollView, ActivityIndicator, Alert, Image } from "react-native";
+import { showToast } from "../../services/uiFeedback";
+import { View, Text, StyleSheet, Pressable, ScrollView, ActivityIndicator, Image } from "react-native";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -47,9 +48,8 @@ export default function PublicProfileScreen() {
         setMyRuns([]);
       }
     } catch (err) {
-      Alert.alert("Profile unavailable", err.response?.data?.message || "This profile could not be loaded.", [
-        { text: "Back", onPress: () => router.back() },
-      ]);
+      showToast(err.response?.data?.message || "This profile could not be loaded.", { title: "Profile unavailable", type: "error", duration: 3500 });
+      setTimeout(() => router.back(), 400);
     } finally {
       setLoading(false);
     }
@@ -74,7 +74,7 @@ export default function PublicProfileScreen() {
         }));
       }
     } catch (err) {
-      Alert.alert("Couldn't update follow", err.response?.data?.message || "Please try again.");
+      showToast(err.response?.data?.message || "Please try again.", { title: "Couldn't update follow", type: "error" });
     } finally {
       setBusy(false);
     }
@@ -205,35 +205,35 @@ const styles = StyleSheet.create({
   scroll: { padding: 16, paddingBottom: 40 },
   center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.background },
   topBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 },
-  topBtn: { width: 40, height: 40, borderRadius: 14, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, alignItems: "center", justifyContent: "center" },
-  topTitle: { fontSize: 17, fontWeight: "900", color: COLORS.textDark },
+  topBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, alignItems: "center", justifyContent: "center" },
+  topTitle: { fontSize: 17, fontWeight: "800", color: COLORS.textDark },
   hero: { borderRadius: 28, alignItems: "center", paddingHorizontal: 24, paddingTop: 26, paddingBottom: 28, ...SHADOW, shadowColor: COLORS.primaryDark, shadowOpacity: 0.25 },
   heroAvatarWrap: { width: 102, height: 102, borderRadius: 51, padding: 3, backgroundColor: "rgba(255,255,255,0.22)", marginBottom: 13 },
   heroAvatar: { width: 96, height: 96, borderRadius: 48 },
   heroFallback: { width: 96, height: 96, borderRadius: 48, backgroundColor: "rgba(23,15,54,0.5)", alignItems: "center", justifyContent: "center" },
-  heroInitials: { color: "#fff", fontSize: 32, fontWeight: "900" },
-  name: { fontSize: 25, fontWeight: "900", color: "#fff" },
+  heroInitials: { color: "#fff", fontSize: 32, fontWeight: "800" },
+  name: { fontSize: 25, fontWeight: "800", color: "#fff" },
   username: { marginTop: 2, color: "rgba(255,255,255,0.76)", fontSize: 13, fontWeight: "700" },
   bio: { marginTop: 12, maxWidth: 290, color: "rgba(255,255,255,0.9)", fontSize: 13, lineHeight: 19, fontWeight: "500", textAlign: "center" },
   followBtn: { minWidth: 132, minHeight: 44, paddingHorizontal: 18, borderRadius: 15, backgroundColor: COLORS.primaryDark, marginTop: 18, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7 },
   followBtnSecondary: { backgroundColor: "#fff" },
   followBtnText: { color: "#fff", fontSize: 13.5, fontWeight: "850" },
-  rankStrip: { marginTop: 10, flexDirection: "row", alignItems: "center", backgroundColor: COLORS.surface, borderRadius: 18, borderWidth: 1, borderColor: COLORS.border, padding: 12 },
-  rankStripIcon: { width: 38, height: 38, borderRadius: 13, backgroundColor: COLORS.surfaceMuted, alignItems: "center", justifyContent: "center", marginRight: 10 },
-  rankStripTitle: { fontSize: 14, fontWeight: "900", color: COLORS.textDark },
+  rankStrip: { marginTop: 10, flexDirection: "row", alignItems: "center", backgroundColor: COLORS.surface, borderRadius: 16, borderWidth: 1, borderColor: COLORS.border, padding: 12 },
+  rankStripIcon: { width: 38, height: 38, borderRadius: 12, backgroundColor: COLORS.surfaceMuted, alignItems: "center", justifyContent: "center", marginRight: 10 },
+  rankStripTitle: { fontSize: 14, fontWeight: "800", color: COLORS.textDark },
   rankStripMeta: { marginTop: 2, fontSize: 11, color: COLORS.textMuted, fontWeight: "700" },
   rankPill: { paddingHorizontal: 9, paddingVertical: 6, borderRadius: 10, backgroundColor: COLORS.surfaceMuted },
-  rankPillText: { color: COLORS.primary, fontSize: 10.5, fontWeight: "900" },
-  statsCard: { marginTop: 12, flexDirection: "row", alignItems: "center", backgroundColor: COLORS.surface, borderRadius: 18, borderWidth: 1, borderColor: COLORS.border, paddingVertical: 14 },
+  rankPillText: { color: COLORS.primary, fontSize: 10.5, fontWeight: "800" },
+  statsCard: { marginTop: 12, flexDirection: "row", alignItems: "center", backgroundColor: COLORS.surface, borderRadius: 16, borderWidth: 1, borderColor: COLORS.border, paddingVertical: 14 },
   stat: { flex: 1, alignItems: "center" },
-  statValue: { fontSize: 17, fontWeight: "900", color: COLORS.textDark },
+  statValue: { fontSize: 17, fontWeight: "800", color: COLORS.textDark },
   statLabel: { marginTop: 2, fontSize: 10.5, color: COLORS.textMuted, fontWeight: "700" },
   divider: { width: 1, height: 28, backgroundColor: COLORS.border },
   infoCard: { marginTop: 12, backgroundColor: COLORS.surface, borderRadius: 20, borderWidth: 1, borderColor: COLORS.border, padding: 18, flexDirection: "row" },
   infoTitle: { fontSize: 15, fontWeight: "850", color: COLORS.textDark },
   infoText: { marginTop: 5, color: COLORS.textMuted, fontSize: 12.5, lineHeight: 18, fontWeight: "600" },
-  editProfileBtn:{alignSelf:"center",marginTop:10,minHeight:42,paddingHorizontal:16,borderRadius:14,backgroundColor:COLORS.primary,flexDirection:"row",alignItems:"center",justifyContent:"center",gap:7},editProfileBtnText:{color:"#fff",fontSize:12.5,fontWeight:"900"},postsCard:{marginTop:14,backgroundColor:COLORS.surface,borderRadius:22,borderWidth:1,borderColor:COLORS.border,padding:16},postsHeader:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",marginBottom:8},postsTitle:{fontSize:16,fontWeight:"900",color:COLORS.textDark},postsSubtitle:{marginTop:3,fontSize:11.5,color:COLORS.textMuted,fontWeight:"600"},seeAll:{fontSize:11.5,fontWeight:"900",color:COLORS.primary},emptyPosts:{alignItems:"center",paddingVertical:24,gap:8},emptyPostsText:{maxWidth:290,textAlign:"center",fontSize:12,color:COLORS.textMuted,lineHeight:17,fontWeight:"600"},postRow:{flexDirection:"row",alignItems:"center",paddingVertical:12,borderTopWidth:1,borderTopColor:COLORS.border},postIcon:{width:40,height:40,borderRadius:13,backgroundColor:COLORS.surfaceMuted,alignItems:"center",justifyContent:"center",marginRight:11},postActivity:{fontSize:14,fontWeight:"900",color:COLORS.textDark},postMeta:{marginTop:3,fontSize:11.5,color:COLORS.textLight,fontWeight:"700"},postTime:{marginTop:2,fontSize:10.5,color:COLORS.textMuted,fontWeight:"600"},postCaption:{marginTop:5,fontSize:11.5,color:COLORS.textLight,lineHeight:16,fontWeight:"600"},  privateCard: { marginTop: 12, backgroundColor: COLORS.surface, borderRadius: 22, borderWidth: 1, borderColor: COLORS.border, alignItems: "center", padding: 28 },
+  editProfileBtn:{alignSelf:"center",marginTop:10,minHeight:42,paddingHorizontal:16,borderRadius: 12,backgroundColor:COLORS.primary,flexDirection:"row",alignItems:"center",justifyContent:"center",gap:7},editProfileBtnText:{color:"#fff",fontSize:12.5,fontWeight: "800"},postsCard:{marginTop:14,backgroundColor:COLORS.surface,borderRadius: 20,borderWidth:1,borderColor:COLORS.border,padding:16},postsHeader:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",marginBottom:8},postsTitle:{fontSize:16,fontWeight: "800",color:COLORS.textDark},postsSubtitle:{marginTop:3,fontSize:11.5,color:COLORS.textMuted,fontWeight:"600"},seeAll:{fontSize:11.5,fontWeight: "800",color:COLORS.primary},emptyPosts:{alignItems:"center",paddingVertical:24,gap:8},emptyPostsText:{maxWidth:290,textAlign:"center",fontSize:12,color:COLORS.textMuted,lineHeight:17,fontWeight:"600"},postRow:{flexDirection:"row",alignItems:"center",paddingVertical:12,borderTopWidth:1,borderTopColor:COLORS.border},postIcon:{width:40,height:40,borderRadius: 12,backgroundColor:COLORS.surfaceMuted,alignItems:"center",justifyContent:"center",marginRight:11},postActivity:{fontSize:14,fontWeight: "800",color:COLORS.textDark},postMeta:{marginTop:3,fontSize:11.5,color:COLORS.textLight,fontWeight:"700"},postTime:{marginTop:2,fontSize:10.5,color:COLORS.textMuted,fontWeight:"600"},postCaption:{marginTop:5,fontSize:11.5,color:COLORS.textLight,lineHeight:16,fontWeight:"600"},  privateCard: { marginTop: 12, backgroundColor: COLORS.surface, borderRadius: 20, borderWidth: 1, borderColor: COLORS.border, alignItems: "center", padding: 28 },
   lockCircle: { width: 54, height: 54, borderRadius: 27, backgroundColor: COLORS.surfaceMuted, alignItems: "center", justifyContent: "center", marginBottom: 12 },
-  privateTitle: { fontSize: 17, fontWeight: "900", color: COLORS.textDark },
+  privateTitle: { fontSize: 17, fontWeight: "800", color: COLORS.textDark },
   privateText: { marginTop: 6, maxWidth: 290, textAlign: "center", color: COLORS.textMuted, fontSize: 12.5, lineHeight: 18, fontWeight: "600" },
 });

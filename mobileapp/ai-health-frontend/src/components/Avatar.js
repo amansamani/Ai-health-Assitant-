@@ -1,5 +1,4 @@
 import { View, Text, StyleSheet, Image } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { COLORS } from "../constants/theme";
 
 export default function Avatar({ name, size = 40, highlight = false, uri, imageSource }) {
@@ -19,12 +18,19 @@ export default function Avatar({ name, size = 40, highlight = false, uri, imageS
   }
 
   return (
-    <LinearGradient
-      colors={highlight ? ["#F97316", "#EA580C"] : [COLORS.primary, COLORS.primaryDark]}
-      style={[styles.circle, { width: size, height: size, borderRadius: size / 2 }]}
+    <View
+      style={[
+        styles.circle,
+        {
+          width: size,
+          height: size,
+          borderRadius: size / 2,
+          backgroundColor: highlight ? COLORS.accent : COLORS.primaryDark,
+        },
+      ]}
     >
       <Text style={[styles.text, { fontSize }]}>{initial}</Text>
-    </LinearGradient>
+    </View>
   );
 }
 

@@ -210,7 +210,7 @@ export default function WeeklySummaryScreen() {
 
         {/* Hero card */}
         <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
-          <LinearGradient colors={["#170F36", "#49225B"]} style={s.heroCard}>
+          <LinearGradient colors={[COLORS.primaryDark, COLORS[700]]} style={s.heroCard}>
             <View style={s.heroLeft}>
               <Text style={s.heroLabel}>CONSISTENCY</Text>
               <Text style={s.heroTitle}>Days Tracked</Text>
@@ -394,7 +394,7 @@ const s = StyleSheet.create({
   scoreLabel:   { fontSize: 11, fontWeight: "700", color: COLORS.textLight, letterSpacing: 1.5, marginBottom: 16, textTransform: "uppercase" },
   scoreInner:   { flexDirection: "row", alignItems: "center" },
   gradeCircle:  { width: 70, height: 70, borderRadius: 35, borderWidth: 3, justifyContent: "center", alignItems: "center" },
-  gradeText:    { fontSize: 28, fontWeight: "900" },
+  gradeText:    { fontSize: 28, fontWeight: "800" },
   scoreNum:     { fontSize: 28, fontWeight: "800" },
   scoreOf:      { fontSize: 14, color: COLORS.textMuted, fontWeight: "500" },
   scoreMsgRow:  { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 4 },

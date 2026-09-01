@@ -24,7 +24,7 @@ export default function AuthShell({ children, scroll = true }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  scroll: { padding: 24, paddingTop: 16, flexGrow: 1 },
+  scroll: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 32, flexGrow: 1 },
   blobTop: {
     position: "absolute", top: -110, right: -90,
     width: 260, height: 260, borderRadius: 130,

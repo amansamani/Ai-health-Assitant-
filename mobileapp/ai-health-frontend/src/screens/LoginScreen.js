@@ -104,16 +104,16 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: COLORS.surface, borderRadius: 24,
-    padding: 24, marginBottom: 4,
+    backgroundColor: COLORS.surface, borderRadius: 20,
+    padding: 20, marginBottom: 4,
     boxShadow: "0px 4px 20px rgba(23,15,54,0.08)",
   },
-  cardTitle: { fontSize: 22, fontWeight: "900", color: COLORS.textDark, letterSpacing: -0.5, marginBottom: 4 },
+  cardTitle: { fontSize: 22, fontWeight: "800", color: COLORS.textDark, letterSpacing: -0.5, marginBottom: 4 },
   cardSub: { fontSize: 14, color: COLORS.textMuted, marginBottom: 20, fontWeight: "500" },
   forgotWrap: { alignSelf: "flex-end", marginBottom: 16, minHeight: 30, justifyContent: "center" },
   forgotText: { color: COLORS.primary, fontWeight: "700", fontSize: 13 },
   registerCard: {
-    backgroundColor: COLORS.surface, borderRadius: 18,
+    backgroundColor: COLORS.surface, borderRadius: 16,
     boxShadow: "0px 2px 10px rgba(23,15,54,0.06)",
   },
 });

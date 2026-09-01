@@ -1,5 +1,6 @@
 "use strict";
 import React, { useEffect, useState, useCallback, useContext, useRef } from "react";
+import { showToast } from "../../services/uiFeedback";
 import {
   View, Text, ActivityIndicator, ScrollView, StyleSheet,
   TouchableOpacity, RefreshControl, Modal, FlatList, Alert, Animated,
@@ -170,7 +171,7 @@ function SwapModal({ visible, mealType, combo, onClose, onSwapped }) {
       onSwapped();
       onClose();
     } catch {
-      Alert.alert("Swap Failed", "Could not swap meal. Please try again.");
+      showToast("Could not swap meal. Please try again.", { title: "Swap failed", type: "error" });
     } finally {
       setSwapping(null);
     }
@@ -394,7 +395,7 @@ export default function NutritionDashboardScreen({ navigation }) {
       await fetchPlan();
     } catch (err) {
       console.error("Generate plan error:", err.response?.data || err.message);
-      Alert.alert("Error", "Could not generate plan. Please try again.");
+      showToast("Could not generate plan. Please try again.", { title: "Couldn't generate plan", type: "error" });
       setLoading(false);
     }
   };
@@ -413,7 +414,7 @@ export default function NutritionDashboardScreen({ navigation }) {
               await API.post("/nutrition/generate");
               await fetchPlan();
             } catch {
-              Alert.alert("Error", "Could not regenerate plan. Try again.");
+              showToast("Could not regenerate plan. Try again.", { title: "Couldn't regenerate plan", type: "error" });
               setLoading(false);
             }
           },
@@ -621,7 +622,7 @@ export default function NutritionDashboardScreen({ navigation }) {
 const ai = StyleSheet.create({
   wrap: {
     backgroundColor: "#F0F4FF",
-    borderRadius: 18,
+    borderRadius: 16,
     padding: 16,
     marginBottom: 14,
     borderWidth: 1.5,
@@ -641,8 +642,8 @@ const ai = StyleSheet.create({
     backgroundColor: "#6E3482", borderRadius: 8,
     paddingHorizontal: 7, paddingVertical: 2,
   },
-  badgeTxt:   { fontSize: 9, fontWeight: "900", color: "#fff", letterSpacing: 0.5 },
-  expandBtn:  { width: 28, height: 28, borderRadius: 14, backgroundColor: "#E0E7FF", justifyContent: "center", alignItems: "center" },
+  badgeTxt:   { fontSize: 9, fontWeight: "800", color: "#fff", letterSpacing: 0.5 },
+  expandBtn:  { width: 28, height: 28, borderRadius: 12, backgroundColor: "#E0E7FF", justifyContent: "center", alignItems: "center" },
   expandIcon: { fontSize: 10, color: "#6E3482", fontWeight: "800" },
   adviceText: { fontSize: 13, color: "#1E1B4B", lineHeight: 20, fontWeight: "500" },
   readMore:   { fontSize: 12, color: "#6E3482", fontWeight: "700", marginTop: 4 },
@@ -676,7 +677,7 @@ const sw = StyleSheet.create({
   servingLine: { fontSize: 11, color: "#aaa", marginTop: 1 },
   badge:       { alignSelf: "flex-start", paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6, marginTop: 4 },
   badgeText:   { fontSize: 10, fontWeight: "700" },
-  swapBtn:     { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20 },
+  swapBtn:     { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 16 },
   swapBtnTxt:  { fontWeight: "700", fontSize: 13 },
 });
 
@@ -689,7 +690,7 @@ const s = StyleSheet.create({
   loadingTxt:  { marginTop: 12, color: "#9A94AE", fontSize: 14 },
   emptyTitle:  { fontSize: 22, fontWeight: "800", color: "#1B1730", marginBottom: 6 },
   emptySub:    { fontSize: 14, color: "#9A94AE", textAlign: "center", marginBottom: 24 },
-  genBtn:      { backgroundColor: "#6E3482", paddingHorizontal: 28, paddingVertical: 14, borderRadius: 14 },
+  genBtn:      { backgroundColor: "#6E3482", paddingHorizontal: 28, paddingVertical: 14, borderRadius: 12 },
   genBtnTxt:   { color: "#fff", fontWeight: "800", fontSize: 15 },
 
   screenHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 },
@@ -708,13 +709,13 @@ const s = StyleSheet.create({
   card: {
     backgroundColor: "#fff", borderRadius: 16, padding: 16, marginBottom: 14,
     elevation: 3, shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07, shadowRadius: 6,
+    shadowOpacity: 0.045, shadowRadius: 6,
   },
   cardHeading: { fontSize: 11, fontWeight: "800", color: "#aaa", marginBottom: 14, textTransform: "uppercase", letterSpacing: 1 },
 
   calRow:     { flexDirection: "row", justifyContent: "space-around", alignItems: "center", marginBottom: 14 },
   calBlock:   { alignItems: "center" },
-  calBig:     { fontSize: 26, fontWeight: "900", color: "#1a1a1a" },
+  calBig:     { fontSize: 26, fontWeight: "800", color: "#1a1a1a" },
   calLbl:     { fontSize: 11, color: "#aaa", marginTop: 2, fontWeight: "600" },
   calDivider: { width: 1, height: 36, backgroundColor: "#f0f0f0" },
   calBar:     { height: 8, backgroundColor: "#f0f0f0", borderRadius: 4, overflow: "hidden", marginBottom: 6 },
@@ -732,7 +733,7 @@ const s = StyleSheet.create({
   mealCard: {
     backgroundColor: "#fff", borderRadius: 16, padding: 14, marginBottom: 12,
     borderLeftWidth: 4, elevation: 3, shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.045, shadowRadius: 6,
   },
   mealHeader:  { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 4 },
   mealIconBox: { width: 44, height: 44, borderRadius: 12, justifyContent: "center", alignItems: "center" },
@@ -761,7 +762,7 @@ const s = StyleSheet.create({
   swapChipTxt:  { fontSize: 11, fontWeight: "700" },
   emptyMeal:    { paddingVertical: 16, alignItems: "center" },
   emptyMealTxt: { fontSize: 13, color: "#ccc", fontStyle: "italic", marginBottom: 8 },
-  regenSmall:   { borderWidth: 1.5, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6 },
+  regenSmall:   { borderWidth: 1.5, borderRadius: 16, paddingHorizontal: 14, paddingVertical: 6 },
   regenSmallTxt:{ fontSize: 12, fontWeight: "700" },
   foodTop:      { flexDirection: "row", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 6 },
   foodName:     { fontSize: 14, fontWeight: "600", color: "#1a1a1a", flex: 1 },

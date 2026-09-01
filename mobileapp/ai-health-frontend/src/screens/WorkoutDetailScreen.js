@@ -1,6 +1,5 @@
-import {
-  useEffect, useState, useCallback, memo, useRef, useMemo,
-} from "react";
+import { useEffect, useState, useCallback, memo, useRef, useMemo } from "react";
+import { showToast } from "../services/uiFeedback";
 import {
   Animated, View, Text, StyleSheet, FlatList,
   Pressable, Platform, Image, Alert,
@@ -345,7 +344,7 @@ export default function WorkoutDetailScreen() {
       const added = Number(res.data?.caloriesAdded || 0);
       if (added > 0) showCalorieToast(added);
     } catch (err) {
-      Alert.alert("Couldn't record exercises", "Your selected exercises were not recorded. Please try again.");
+      showToast("Your selected exercises were not recorded. Please try again.", { title: "Couldn't record exercises", type: "error" });
       console.warn("Failed to confirm exercises:", err?.message);
     } finally {
       setSyncing(false);
@@ -373,7 +372,7 @@ export default function WorkoutDetailScreen() {
               setCompletedToday(Boolean(progress.completedToday));
               showStatusToast(`Retry attempt ${progress.attemptNumber || 1} started`);
             } catch (err) {
-              Alert.alert("Couldn't start retry", "Please try again.");
+              showToast("Please try again.", { title: "Couldn't start retry", type: "error" });
               console.warn("Failed to start workout retry:", err?.message);
             }
           },
@@ -415,7 +414,7 @@ export default function WorkoutDetailScreen() {
 
   const ListHeader = useMemo(() => (
     <Animated.View style={{ opacity: headerOpacity, transform: [{ translateY: headerSlide }] }}>
-      <LinearGradient colors={["#170F36", "#49225B"]} style={styles.hero}>
+      <LinearGradient colors={[COLORS.primaryDark, COLORS[700]]} style={styles.hero}>
         <View style={styles.heroDecor} />
         <Pressable
           onPress={() => router.back()}
@@ -464,7 +463,7 @@ export default function WorkoutDetailScreen() {
             disabled={syncing}
             style={({ pressed }) => [styles.confirmBtn, pressed && styles.confirmBtnPressed, syncing && styles.confirmBtnDisabled]}
           >
-            <LinearGradient colors={["#6339B8", "#8B5CF6"]} style={styles.confirmBtnGradient}>
+            <LinearGradient colors={[COLORS.primary, COLORS.primaryDark]} style={styles.confirmBtnGradient}>
               <Ionicons name="checkmark-circle" size={20} color="#fff" />
               <Text style={styles.confirmBtnText}>{syncing ? "Recording…" : "Done — Record Exercises"}</Text>
             </LinearGradient>
@@ -608,7 +607,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start", marginBottom: 12,
   },
   heroBadge: { color: "#FACC15", fontSize: 11, fontWeight: "800", letterSpacing: 0.5 },
-  heroTitle: { fontSize: 26, fontWeight: "900", color: "#fff", letterSpacing: -0.6, marginBottom: 6 },
+  heroTitle: { fontSize: 26, fontWeight: "800", color: "#fff", letterSpacing: -0.6, marginBottom: 6 },
   heroSub: { fontSize: 14, color: "#B8AFD6", marginBottom: 20 },
 
   progressWrap: { marginTop: 0 },
@@ -623,12 +622,12 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface, marginBottom: 10,
   },
   statPill: { flex: 1, alignItems: "center" },
-  statNum: { fontSize: 21, fontWeight: "900", color: COLORS.textDark, letterSpacing: -0.5 },
+  statNum: { fontSize: 21, fontWeight: "800", color: COLORS.textDark, letterSpacing: -0.5 },
   statLabel: { fontSize: 10, color: COLORS.textMuted, marginTop: 3, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.4 },
 
   historyBanner: {
     marginHorizontal: 20, marginBottom: 16, paddingHorizontal: 14, paddingVertical: 11,
-    borderRadius: 14, backgroundColor: "#ECFDF5", flexDirection: "row", alignItems: "center", gap: 8,
+    borderRadius: 12, backgroundColor: "#ECFDF5", flexDirection: "row", alignItems: "center", gap: 8,
     borderWidth: 1, borderColor: "#22C55E30",
   },
   historyBannerText: { flex: 1, fontSize: 12, lineHeight: 17, color: "#166534", fontWeight: "700" },
@@ -649,7 +648,7 @@ const styles = StyleSheet.create({
     borderColor: "#22C55E40", borderRadius: 20,
   },
   iconWrap: {
-    width: 68, height: 68, borderRadius: 18,
+    width: 68, height: 68, borderRadius: 16,
     backgroundColor: COLORS.surfaceMuted,
     justifyContent: "center", alignItems: "center", marginRight: 12,
   },
@@ -682,10 +681,10 @@ const styles = StyleSheet.create({
   checkEmpty: { width: 32, height: 32, borderRadius: 16, borderWidth: 2, borderColor: COLORS.border },
 
   doneCard: {
-    margin: 20, backgroundColor: COLORS.surface, borderRadius: 22, padding: 28,
+    margin: 20, backgroundColor: COLORS.surface, borderRadius: 20, padding: 28,
     alignItems: "center", borderWidth: 1.5, borderColor: "#22C55E30",
   },
-  doneTitle: { fontSize: 20, fontWeight: "900", color: COLORS.textDark, marginBottom: 6 },
+  doneTitle: { fontSize: 20, fontWeight: "800", color: COLORS.textDark, marginBottom: 6 },
   doneSub: { fontSize: 14, color: COLORS.textMuted, fontWeight: "600", textAlign: "center" },
   doneDate: { fontSize: 12, color: COLORS.textLight, marginTop: 5, fontWeight: "600" },
   retryWorkoutBtn: {
@@ -708,13 +707,13 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     marginBottom: 10, paddingHorizontal: 4,
   },
-  confirmTitle: { fontSize: 15, fontWeight: "900", color: COLORS.textDark },
+  confirmTitle: { fontSize: 15, fontWeight: "800", color: COLORS.textDark },
   confirmSub: { marginTop: 3, fontSize: 11, fontWeight: "600", color: COLORS.textMuted },
-  confirmKcal: { fontSize: 16, fontWeight: "900", color: "#F97316" },
+  confirmKcal: { fontSize: 16, fontWeight: "800", color: "#F97316" },
   confirmBtn: { borderRadius: 16, overflow: "hidden", ...shadow(5) },
   confirmBtnPressed: { transform: [{ scale: 0.98 }] },
   confirmBtnDisabled: { opacity: 0.65 },
   confirmBtnGradient: { minHeight: 54, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 9 },
-  confirmBtnText: { color: "#fff", fontSize: 14, fontWeight: "900" },
+  confirmBtnText: { color: "#fff", fontSize: 14, fontWeight: "800" },
   retryWorkoutText: { color: "#fff", fontSize: 13, fontWeight: "800" },
 });

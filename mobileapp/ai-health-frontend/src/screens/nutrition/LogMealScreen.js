@@ -975,7 +975,7 @@ const ts = StyleSheet.create({
     position: "absolute", left: 0, top: 0, bottom: 0, width: 3, borderRadius: 3,
   },
   toastIconWrap: {
-    width: 42, height: 42, borderRadius: 13,
+    width: 42, height: 42, borderRadius: 12,
     alignItems: "center", justifyContent: "center", borderWidth: 1,
   },
   toastIconTxt: { fontSize: 19 },
@@ -1040,7 +1040,7 @@ const s = StyleSheet.create({
   heroSub:       { fontSize: 13, color: "rgba(255,255,255,0.38)", marginBottom: 16 },
   searchBox: {
     flexDirection: "row", alignItems: "center",
-    backgroundColor: "#fff", borderRadius: 14,
+    backgroundColor: "#fff", borderRadius: 12,
     paddingHorizontal: 14, gap: 8, height: 52,
     borderWidth: 0.5, borderColor: "rgba(0,0,0,0.06)",
   },
@@ -1128,7 +1128,7 @@ const s = StyleSheet.create({
 
   selectedCard: {
     margin: 20, backgroundColor: DARK,
-    borderRadius: 22, padding: 18, overflow: "hidden",
+    borderRadius: 20, padding: 18, overflow: "hidden",
   },
   selGlow: {
     position: "absolute", top: -50, right: -50,
@@ -1175,7 +1175,7 @@ const s = StyleSheet.create({
   extraDiv:     { width: 0.5, backgroundColor: "rgba(255,255,255,0.1)" },
 
   logBtn: {
-    backgroundColor: ORANGE, padding: 15, borderRadius: 14, alignItems: "center",
+    backgroundColor: ORANGE, padding: 15, borderRadius: 12, alignItems: "center",
     shadowColor: ORANGE, shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4, shadowRadius: 10, elevation: 6,
   },
@@ -1187,7 +1187,7 @@ const s = StyleSheet.create({
   filterSheetBar:    { width: 36, height: 4, borderRadius: 2, backgroundColor: "#E0E0E0", alignSelf: "center", marginBottom: 16 },
   filterSheetHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 },
   filterSheetTitle:  { fontSize: 18, fontWeight: "700", color: "#1a1a1a" },
-  filterCloseBtn:    { width: 28, height: 28, borderRadius: 14, backgroundColor: "#F5F5F5", alignItems: "center", justifyContent: "center" },
+  filterCloseBtn:    { width: 28, height: 28, borderRadius: 12, backgroundColor: "#F5F5F5", alignItems: "center", justifyContent: "center" },
   filterCloseTxt:    { fontSize: 13, color: "#999" },
   filterGroup:       { fontSize: 11, fontWeight: "700", color: "#999", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 },
   filterChipRow:     { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 18 },
@@ -1195,6 +1195,6 @@ const s = StyleSheet.create({
   filterChipOn:      { backgroundColor: "#FFF3E0", borderColor: ORANGE },
   filterChipTxt:     { fontSize: 13, fontWeight: "600", color: "#888" },
   filterChipTxtOn:   { color: ORANGE },
-  filterApply:       { backgroundColor: ORANGE, padding: 14, borderRadius: 14, alignItems: "center", marginTop: 4 },
+  filterApply:       { backgroundColor: ORANGE, padding: 14, borderRadius: 12, alignItems: "center", marginTop: 4 },
   filterApplyTxt:    { color: "#fff", fontWeight: "700", fontSize: 15 },
 });

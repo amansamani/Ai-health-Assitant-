@@ -38,10 +38,11 @@ export default function SkeletonCard() {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: COLORS.card,
-    borderRadius: 16,
+    borderRadius: 12,
     padding: 14,
     marginBottom: 12,
-    ...SHADOW,
+    borderWidth: 1,
+    borderColor: COLORS.borderSubtle,
   },
   row: {
     flexDirection: "row",

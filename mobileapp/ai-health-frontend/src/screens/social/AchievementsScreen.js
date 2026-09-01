@@ -127,14 +127,14 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface, borderRadius: 16, padding: 12,
     borderWidth: 1, borderColor: COLORS.border,
   },
-  badgeIconWrap: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
+  badgeIconWrap: { width: 44, height: 44, borderRadius: 20, alignItems: "center", justifyContent: "center" },
   badgeTitle: { fontSize: 14.5, fontWeight: "700", color: COLORS.textDark },
   badgeDesc: { fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
 
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.55)", alignItems: "center", justifyContent: "center", padding: 30 },
   modalContent: { width: "100%", maxWidth: 340 },
   modalActions: { flexDirection: "row", gap: 10, marginTop: 16 },
-  modalBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderRadius: 14, paddingVertical: 13 },
+  modalBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderRadius: 12, paddingVertical: 13 },
   modalCloseBtn: { backgroundColor: "rgba(255,255,255,0.15)" },
   modalCloseBtnText: { color: "#fff", fontWeight: "700", fontSize: 14 },
   modalShareBtn: { backgroundColor: "#F97316" },
@@ -142,14 +142,14 @@ const styles = StyleSheet.create({
 });
 
 const cardStyles = StyleSheet.create({
-  card: { borderRadius: 24, padding: 26, alignItems: "center" },
+  card: { borderRadius: 20, padding: 26, alignItems: "center" },
   iconWrap: {
     width: 68, height: 68, borderRadius: 34, backgroundColor: "rgba(255,255,255,0.18)",
     alignItems: "center", justifyContent: "center", marginBottom: 16,
   },
-  title: { fontSize: 20, fontWeight: "900", color: "#fff", textAlign: "center" },
+  title: { fontSize: 20, fontWeight: "800", color: "#fff", textAlign: "center" },
   description: { fontSize: 13.5, color: "rgba(255,255,255,0.85)", textAlign: "center", marginTop: 8, lineHeight: 19 },
   brandRow: { flexDirection: "row", justifyContent: "space-between", width: "100%", marginTop: 22, paddingTop: 16, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.2)" },
-  brand: { color: "#fff", fontWeight: "900", fontSize: 13, letterSpacing: 0.5 },
+  brand: { color: "#fff", fontWeight: "800", fontSize: 13, letterSpacing: 0.5 },
   date: { color: "rgba(255,255,255,0.7)", fontSize: 11.5, fontWeight: "600" },
 });

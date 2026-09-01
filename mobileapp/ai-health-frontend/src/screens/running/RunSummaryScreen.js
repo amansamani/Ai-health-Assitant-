@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { showToast } from "../../services/uiFeedback";
 import {
   View,
   Text,
@@ -144,9 +145,9 @@ export default function RunSummaryScreen() {
       clearDraftRun();
       router.replace("/(app)/(tabs)/tracking");
     } catch (err) {
-      Alert.alert(
-        "Couldn't save run",
-        err?.response?.data?.message || "Please try again."
+      showToast(
+        err?.response?.data?.message || "Please try again.",
+        { title: "Couldn't save run", type: "error" }
       );
     } finally {
       setSaving(false);
@@ -317,7 +318,7 @@ const styles = StyleSheet.create({
   photoPlaceholderText: { color: COLORS.textLight, fontSize: 13 },
   captionInput: {
     backgroundColor: COLORS.card,
-    borderRadius: 14,
+    borderRadius: 12,
     padding: 14,
     minHeight: 60,
     fontSize: 14,
@@ -335,7 +336,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 8,
     paddingHorizontal: 12,
-    borderRadius: 18,
+    borderRadius: 16,
     backgroundColor: COLORS.card,
     borderWidth: 1,
     borderColor: COLORS.border,

@@ -165,7 +165,7 @@ export default function RegisterScreen() {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: COLORS.surface, borderRadius: 24,
+    backgroundColor: COLORS.surface, borderRadius: 20,
     padding: 20, marginBottom: 16,
     boxShadow: "0px 4px 20px rgba(23,15,54,0.08)",
   },

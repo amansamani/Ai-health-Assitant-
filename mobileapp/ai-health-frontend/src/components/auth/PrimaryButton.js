@@ -1,6 +1,5 @@
 import { Text, Pressable, Animated, ActivityIndicator, StyleSheet } from "react-native";
 import { useRef } from "react";
-import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "../../constants/theme";
 
@@ -10,12 +9,6 @@ export default function PrimaryButton({ title, onPress, loading, disabled, icon 
 
   const onIn = () => Animated.spring(scale, { toValue: 0.97, useNativeDriver: true, speed: 40 }).start();
   const onOut = () => Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 40 }).start();
-
-  const gradientColors = isDisabled
-    ? [COLORS.textMuted, COLORS.textMuted]
-    : variant === "primary"
-      ? [COLORS.primary, COLORS.primaryDark]
-      : [COLORS.primaryLight, COLORS.primary];
 
   return (
     <Pressable
@@ -28,12 +21,7 @@ export default function PrimaryButton({ title, onPress, loading, disabled, icon 
       accessibilityLabel={title}
     >
       <Animated.View style={{ transform: [{ scale }] }}>
-        <LinearGradient
-          colors={gradientColors}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.btn}
-        >
+        <Animated.View style={[styles.btn, { backgroundColor: isDisabled ? COLORS.textMuted : COLORS.primary }]}>
           {loading ? (
             <ActivityIndicator color={COLORS.onPrimary} size="small" />
           ) : (
@@ -42,7 +30,7 @@ export default function PrimaryButton({ title, onPress, loading, disabled, icon 
               {icon ? <Ionicons name={icon} size={18} color={COLORS.onPrimary} style={{ marginLeft: 8 }} /> : null}
             </>
           )}
-        </LinearGradient>
+        </Animated.View>
       </Animated.View>
     </Pressable>
   );
@@ -51,9 +39,9 @@ export default function PrimaryButton({ title, onPress, loading, disabled, icon 
 const styles = StyleSheet.create({
   btn: {
     flexDirection: "row",
-    borderRadius: 16, minHeight: 52, paddingVertical: 14,
+    borderRadius: 12, minHeight: 48, paddingVertical: 12,
     alignItems: "center", justifyContent: "center",
-    boxShadow: `0px 6px 18px ${COLORS.primary}45`,
+    boxShadow: `0px 3px 10px ${COLORS.primary}24`,
   },
-  text: { color: COLORS.onPrimary, fontSize: 16, fontWeight: "800", letterSpacing: 0.2 },
+  text: { color: COLORS.onPrimary, fontSize: 15, fontWeight: "600", letterSpacing: 0.2 },
 });

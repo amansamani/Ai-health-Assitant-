@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { showToast } from "../services/uiFeedback";
 import {
-  ActivityIndicator, Alert, FlatList, KeyboardAvoidingView, Platform,
+  ActivityIndicator, FlatList, KeyboardAvoidingView, Platform,
   Pressable, ScrollView, StyleSheet, Text, TextInput, View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -144,7 +145,7 @@ export default function CustomWorkoutBuilderScreen() {
         return { ...day, exercises: day.exercises.filter((item) => String(item.exerciseId) !== String(exercise._id)) };
       }
       if (day.exercises.length >= 12) {
-        Alert.alert("Day limit reached", "A custom workout day can contain up to 12 exercises.");
+        showToast("A custom workout day can contain up to 12 exercises.", { title: "Day limit reached", type: "warning" });
         return day;
       }
       return {
@@ -168,7 +169,7 @@ export default function CustomWorkoutBuilderScreen() {
 
   const savePlan = async () => {
     if (name.trim().length < 2) {
-      Alert.alert("Plan name required", "Give your workout plan a name.");
+      showToast("Give your workout plan a name.", { title: "Plan name required", type: "warning" });
       return;
     }
     try {
@@ -178,10 +179,11 @@ export default function CustomWorkoutBuilderScreen() {
         ? await API.put(`/custom-workouts/plans/${planId}`, payload)
         : await API.post("/custom-workouts/plans", payload);
       await AsyncStorage.setItem("@fitlip_workout_plan_mode", "custom");
-      Alert.alert("Plan saved", "Your custom workout plan is now active.", [{ text: "Done", onPress: () => router.replace("/(app)/workout") }]);
+      showToast("Your custom workout plan is now active.", { title: "Plan saved", type: "success", duration: 1800 });
+      setTimeout(() => router.replace("/(app)/workout"), 450);
       return res.data;
     } catch (error) {
-      Alert.alert("Couldn't save plan", error?.response?.data?.message || "Please review your days and try again.");
+      showToast(error?.response?.data?.message || "Please review your days and try again.", { title: "Couldn't save plan", type: "error" });
     } finally {
       setSaving(false);
     }
@@ -294,7 +296,7 @@ export default function CustomWorkoutBuilderScreen() {
           )}
 
           <Pressable onPress={savePlan} disabled={saving} style={[styles.saveButton, saving && { opacity: 0.65 }]}>
-            <LinearGradient colors={["#6339B8", "#8B5CF6"]} style={styles.saveGradient}>
+            <LinearGradient colors={[COLORS.primary, COLORS.primaryDark]} style={styles.saveGradient}>
               {saving ? <ActivityIndicator color="#fff" /> : <><Ionicons name="save-outline" size={19} color="#fff" /><Text style={styles.saveText}>{editing ? "Save Changes" : "Save & Activate Plan"}</Text></>}
             </LinearGradient>
           </Pressable>
@@ -309,37 +311,37 @@ const styles = StyleSheet.create({
   content: { padding: 20, paddingBottom: 50 },
   center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.background },
   headerRow: { flexDirection: "row", alignItems: "center", marginBottom: 22, gap: 10 },
-  iconButton: { width: 40, height: 40, borderRadius: 14, backgroundColor: COLORS.surface, alignItems: "center", justifyContent: "center" },
-  title: { fontSize: 25, fontWeight: "900", color: COLORS.textDark },
+  iconButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: COLORS.surface, alignItems: "center", justifyContent: "center" },
+  title: { fontSize: 25, fontWeight: "800", color: COLORS.textDark },
   subtitle: { fontSize: 13, color: COLORS.textMuted, marginTop: 3, fontWeight: "600" },
-  sectionLabel: { fontSize: 11, fontWeight: "900", color: COLORS.textLight, letterSpacing: 1.2, marginTop: 16, marginBottom: 10 },
+  sectionLabel: { fontSize: 11, fontWeight: "800", color: COLORS.textLight, letterSpacing: 1.2, marginTop: 16, marginBottom: 10 },
   input: { height: 52, backgroundColor: COLORS.surface, borderRadius: 16, paddingHorizontal: 16, color: COLORS.textDark, fontSize: 15, fontWeight: "700", borderWidth: 1, borderColor: COLORS.border },
   templateRow: { gap: 8, paddingBottom: 3 },
-  templateChip: { minHeight: 42, paddingHorizontal: 12, borderRadius: 14, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, flexDirection: "row", alignItems: "center", gap: 6 },
+  templateChip: { minHeight: 42, paddingHorizontal: 12, borderRadius: 12, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, flexDirection: "row", alignItems: "center", gap: 6 },
   templateChipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
   templateText: { color: COLORS.textMuted, fontSize: 12, fontWeight: "800" },
   templateTextActive: { color: "#fff" },
   inlineFields: { marginTop: 6, gap: 12 },
   inlineField: { backgroundColor: COLORS.surface, borderRadius: 16, padding: 12, borderWidth: 1, borderColor: COLORS.border },
-  fieldLabel: { fontSize: 10, fontWeight: "900", color: COLORS.textLight, marginBottom: 8, letterSpacing: 1 },
+  fieldLabel: { fontSize: 10, fontWeight: "800", color: COLORS.textLight, marginBottom: 8, letterSpacing: 1 },
   smallChoiceRow: { flexDirection: "row", flexWrap: "wrap", gap: 7 },
   smallChoice: { paddingHorizontal: 10, paddingVertical: 7, borderRadius: 10, backgroundColor: COLORS.surfaceMuted },
   smallChoiceActive: { backgroundColor: "#EEE6FF" },
-  smallChoiceText: { fontSize: 10, fontWeight: "900", color: COLORS.textMuted },
+  smallChoiceText: { fontSize: 10, fontWeight: "800", color: COLORS.textMuted },
   smallChoiceTextActive: { color: COLORS.primary },
   dayRow: { gap: 8, paddingBottom: 4 },
-  dayChip: { width: 82, padding: 10, borderRadius: 14, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border },
+  dayChip: { width: 82, padding: 10, borderRadius: 12, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border },
   dayChipActive: { backgroundColor: "#6339B8", borderColor: "#6339B8" },
-  dayName: { fontSize: 10, fontWeight: "900", color: COLORS.textMuted, textTransform: "uppercase" },
+  dayName: { fontSize: 10, fontWeight: "800", color: COLORS.textMuted, textTransform: "uppercase" },
   dayNameActive: { color: "#DCCEFF" },
   dayTitle: { marginTop: 4, fontSize: 11, fontWeight: "800", color: COLORS.textDark },
   dayTitleActive: { color: "#fff" },
-  dayEditorHeader: { marginTop: 14, padding: 14, borderRadius: 18, backgroundColor: COLORS.surface, flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: COLORS.border },
-  dayEditorTitle: { fontSize: 15, fontWeight: "900", color: COLORS.textDark },
+  dayEditorHeader: { marginTop: 14, padding: 14, borderRadius: 16, backgroundColor: COLORS.surface, flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: COLORS.border },
+  dayEditorTitle: { fontSize: 15, fontWeight: "800", color: COLORS.textDark },
   dayTitleInput: { marginTop: 4, height: 34, paddingHorizontal: 0, color: COLORS.textDark, fontSize: 12, fontWeight: "800" },
   dayEditorSub: { marginTop: 3, fontSize: 11, color: COLORS.textMuted, fontWeight: "600" },
   restToggle: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 11, backgroundColor: COLORS.surfaceMuted },
-  restToggleText: { fontSize: 10, fontWeight: "900", color: COLORS.textMuted },
+  restToggleText: { fontSize: 10, fontWeight: "800", color: COLORS.textMuted },
   searchWrap: { marginTop: 12, flexDirection: "row", alignItems: "center", backgroundColor: COLORS.surface, borderRadius: 15, paddingHorizontal: 12, borderWidth: 1, borderColor: COLORS.border },
   searchInput: { flex: 1, height: 46, paddingHorizontal: 8, color: COLORS.textDark, fontWeight: "600" },
   filterRow: { gap: 7, paddingVertical: 10 },
@@ -347,20 +349,20 @@ const styles = StyleSheet.create({
   filterChipActive: { backgroundColor: "#EEE6FF" },
   filterText: { fontSize: 10, color: COLORS.textMuted, fontWeight: "800", textTransform: "capitalize" },
   filterTextActive: { color: COLORS.primary },
-  libraryCard: { backgroundColor: COLORS.surface, borderRadius: 18, borderWidth: 1, borderColor: COLORS.border, overflow: "hidden" },
-  libraryTitle: { padding: 14, fontSize: 14, fontWeight: "900", color: COLORS.textDark },
+  libraryCard: { backgroundColor: COLORS.surface, borderRadius: 16, borderWidth: 1, borderColor: COLORS.border, overflow: "hidden" },
+  libraryTitle: { padding: 14, fontSize: 14, fontWeight: "800", color: COLORS.textDark },
   libraryItem: { flexDirection: "row", alignItems: "center", gap: 10, padding: 12, borderTopWidth: 1, borderTopColor: COLORS.border },
   libraryItemActive: { backgroundColor: "#FBF8FF" },
   libraryIcon: { width: 34, height: 34, borderRadius: 11, backgroundColor: COLORS.surfaceMuted, alignItems: "center", justifyContent: "center" },
   libraryName: { fontSize: 13, color: COLORS.textDark, fontWeight: "800" },
   libraryMeta: { marginTop: 3, fontSize: 10, color: COLORS.textMuted, fontWeight: "600", textTransform: "capitalize" },
   emptyText: { padding: 16, color: COLORS.textMuted, fontSize: 12, fontWeight: "600", textAlign: "center" },
-  selectedCard: { marginTop: 12, backgroundColor: COLORS.surface, borderRadius: 18, borderWidth: 1, borderColor: COLORS.border, overflow: "hidden" },
+  selectedCard: { marginTop: 12, backgroundColor: COLORS.surface, borderRadius: 16, borderWidth: 1, borderColor: COLORS.border, overflow: "hidden" },
   selectedItem: { flexDirection: "row", alignItems: "center", gap: 6, padding: 12, borderTopWidth: 1, borderTopColor: COLORS.border },
   tinyInput: { width: 44, height: 36, borderRadius: 10, backgroundColor: COLORS.surfaceMuted, textAlign: "center", color: COLORS.textDark, fontWeight: "800" },
-  by: { color: COLORS.textMuted, fontWeight: "900" },
+  by: { color: COLORS.textMuted, fontWeight: "800" },
   removeButton: { width: 32, height: 32, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: "#FEF2F2" },
   saveButton: { marginTop: 22, borderRadius: 16, overflow: "hidden" },
   saveGradient: { minHeight: 54, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8 },
-  saveText: { color: "#fff", fontSize: 14, fontWeight: "900" },
+  saveText: { color: "#fff", fontSize: 14, fontWeight: "800" },
 });

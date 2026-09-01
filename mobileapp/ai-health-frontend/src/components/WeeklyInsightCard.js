@@ -28,7 +28,7 @@ function StatChip({ label, value, color, bg }) {
 }
 const chip = StyleSheet.create({
   wrap: { flex: 1, borderRadius: 12, paddingVertical: 10, alignItems: "center" },
-  val:  { fontSize: 16, fontWeight: "900" },
+  val:  { fontSize: 16, fontWeight: "800" },
   lbl:  { fontSize: 10, color: COLORS.textLight, fontWeight: "600", marginTop: 2 },
 });
 
@@ -212,7 +212,7 @@ export default function WeeklyInsightCard({ onPress }) {
 const s = StyleSheet.create({
   card: {
     backgroundColor: COLORS.surface,
-    borderRadius: 18,
+    borderRadius: 16,
     padding: 16,
     marginBottom: 14,
     borderLeftWidth: 4,
@@ -228,7 +228,7 @@ const s = StyleSheet.create({
   title:       { fontSize: 15, fontWeight: "800", color: COLORS.textDark },
   sub:         { fontSize: 11, color: COLORS.textMuted, fontWeight: "500", marginTop: 1 },
   expandBtn:   {
-    width: 28, height: 28, borderRadius: 14, backgroundColor: COLORS.surfaceMuted,
+    width: 28, height: 28, borderRadius: 12, backgroundColor: COLORS.surfaceMuted,
     justifyContent: "center", alignItems: "center",
   },
   reason:      { fontSize: 13, color: COLORS.textDark, lineHeight: 20, marginBottom: 4 },
@@ -239,5 +239,5 @@ const s = StyleSheet.create({
   calChangeRow:{ flexDirection: "row", alignItems: "center" },
   calOld:      { fontSize: 16, fontWeight: "700", color: COLORS.textMuted, textDecorationLine: "line-through" },
   arrow:       { fontSize: 16, color: COLORS.primary, fontWeight: "800" },
-  calNew:      { fontSize: 18, fontWeight: "900", color: COLORS.primaryDark },
+  calNew:      { fontSize: 18, fontWeight: "800", color: COLORS.primaryDark },
 });

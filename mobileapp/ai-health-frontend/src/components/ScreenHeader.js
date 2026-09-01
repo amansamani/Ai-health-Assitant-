@@ -32,13 +32,13 @@ export default function ScreenHeader({ title, subtitle, rightAction }) {
 const styles = StyleSheet.create({
   header: {
     flexDirection: "row", alignItems: "center", gap: 10,
-    paddingHorizontal: 16, paddingTop: 8, paddingBottom: 14,
+    paddingHorizontal: 20, paddingTop: 8, paddingBottom: 14,
   },
   backBtn: {
-    width: 34, height: 34, borderRadius: 17,
+    width: 36, height: 36, borderRadius: 12,
     backgroundColor: COLORS.surfaceMuted,
     alignItems: "center", justifyContent: "center",
   },
-  title:    { fontSize: 19, fontWeight: "800", color: COLORS.textDark },
+  title:    { fontSize: 20, lineHeight: 26, fontWeight: "700", color: COLORS.textDark, letterSpacing: -0.2 },
   subtitle: { fontSize: 12.5, color: COLORS.textMuted, fontWeight: "500", marginTop: 1 },
 });

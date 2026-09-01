@@ -158,7 +158,7 @@ const styles = StyleSheet.create({
   pillRow: { flexDirection: "row", gap: 6 },
 
   compareCard: {
-    backgroundColor: COLORS.surfaceMuted, borderRadius: 14, padding: 14,
+    backgroundColor: COLORS.surfaceMuted, borderRadius: 12, padding: 14,
     marginTop: -4, marginBottom: 10,
   },
   compareTitle: { fontSize: 13, fontWeight: "800", color: COLORS.textDark, marginBottom: 10 },
