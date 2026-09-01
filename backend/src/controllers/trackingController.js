@@ -138,7 +138,7 @@ const addEstimatedCaloriesForToday =
        * A real device reading is authoritative for the headline total.
        * Estimates are still kept as a separate breakdown for transparency.
        */
-      if (track?.source === "device" && !activityType) {
+      if (track?.source === "device") {
         return track;
       }
 
@@ -208,17 +208,6 @@ exports.getTodayTracking =
     res
   ) => {
     try {
-      const activityPayload = activityType
-        ? {
-            activityType: String(activityType).trim().toLowerCase(),
-            label: String(activityLabel || activityType).trim().slice(0, 40),
-            minutes: Math.max(0, Number(activityMinutes) || 0),
-            met: Math.max(0, Number(activityMet) || 0),
-            calories: Math.max(0, Number(caloriesBurned) || 0),
-            loggedAt: new Date(),
-          }
-        : null;
-
       const {
         startOfToday,
         endOfToday,
@@ -521,7 +510,6 @@ exports.saveTodayTracking =
         () => {}
       );
 
-      const HealthProfile = require("../modules/health/health.model");
       const profile = await HealthProfile.findOne({ user: req.user.id }).select("activeCalorieGoal").lean();
       const activeGoal = Number(profile?.activeCalorieGoal) || 400;
       const dateKey = startOfToday.toISOString().slice(0, 10);
