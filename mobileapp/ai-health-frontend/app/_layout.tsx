@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { AuthProvider } from "@/src/context/AuthContext";
+// Registers the native GPS task at app startup, including headless/background launches.
+import "@/src/services/runLocationTask";
 
 SplashScreen.preventAutoHideAsync();
 

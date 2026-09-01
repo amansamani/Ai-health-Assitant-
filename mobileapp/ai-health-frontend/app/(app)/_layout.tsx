@@ -36,6 +36,8 @@ export default function AppLayout() {
         name="profile"
         options={{ animation: "slide_from_right", animationDuration: 180 }}
       />
+      <Stack.Screen name="profile-settings" options={{ animation: "slide_from_right", animationDuration: 180 }} />
+      <Stack.Screen name="about-fitlip" options={{ animation: "slide_from_right", animationDuration: 180 }} />
       <Stack.Screen
         name="coach"
         options={{ animation: "slide_from_bottom", animationDuration: 200 }}

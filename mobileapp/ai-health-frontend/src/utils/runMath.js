@@ -14,13 +14,13 @@ export function haversineMeters(a, b) {
 const MIN_ACCEPTED_JUMP_M = 1.5;
 const MAX_PLAUSIBLE_SPEED_MPS = 12;
 
-export function distanceDelta(prevPoint, nextPoint) {
+export function distanceDelta(prevPoint, nextPoint, maxPlausibleSpeedMps = MAX_PLAUSIBLE_SPEED_MPS) {
   if (!prevPoint) return 0;
   const meters = haversineMeters(prevPoint, nextPoint);
   if (meters < MIN_ACCEPTED_JUMP_M) return 0;
   const dtSeconds = Math.max(0.001, (nextPoint.ts - prevPoint.ts) / 1000);
   const speedMps = meters / dtSeconds;
-  if (speedMps > MAX_PLAUSIBLE_SPEED_MPS) return 0;
+  if (speedMps > maxPlausibleSpeedMps) return 0;
   return meters;
 }
 

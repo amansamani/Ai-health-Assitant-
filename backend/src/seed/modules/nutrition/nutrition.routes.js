@@ -1,0 +1,49 @@
+const express    = require("express");
+const router     = express.Router();
+const auth       = require("../../middleware/authMiddleware");
+const validate   = require("../../middleware/validate");
+const { mealPhotoSchema } = require("../../validation/schemas");
+const controller = require("./nutrition.controller");
+const { aiChat, clearChatSession, getChatHistoryCtrl } = require("./ai.chat.controller");
+const { getWaterLog, addWater, undoLastWater, setWaterGoal } = require("./waterLog.controller");
+const { logDailyDiet, getDailyDietLog } = require("./mealCompletion.controller");
+
+// ── Diet Plan ─────────────────────────────────────────────────────────────────
+router.post("/generate",       auth, controller.generatePlan);
+router.get("/current",         auth, controller.getCurrentPlan);
+router.post("/weekly-adjust",  auth, controller.runWeeklyAdjustment);
+router.get("/weekly-insight",  auth, controller.getWeeklyInsight);
+router.get("/weekly-insight-log", auth, controller.getWeeklyInsightLog);
+
+// ── Diet Progress (now wired to plan — replaces old stubs) ───────────────────
+router.post("/log", auth, logDailyDiet);
+router.get("/log",  auth, getDailyDietLog);
+
+// ── Swap ──────────────────────────────────────────────────────────────────────
+router.post("/swap", auth, controller.swapFood);
+router.get("/swap-options", auth, controller.getSwapOptions);
+
+// ── Meal Logging ──────────────────────────────────────────────────────────────
+router.post("/log-meal",      auth, controller.logMeal);
+router.get("/today-log",      auth, controller.getTodayLog);
+router.delete("/meal/:id",    auth, controller.deleteMeal);
+router.get("/history",        auth, controller.getMealHistory);
+
+// ── Food Search ───────────────────────────────────────────────────────────────
+router.get("/foods", auth, controller.getFoods);
+
+// ── Meal Photo Analysis ──────────────────────────────────────────────────────
+router.post("/analyze-meal-photo", auth, validate(mealPhotoSchema), controller.analyzeMealPhotoCtrl);
+
+// ── Water Tracking ────────────────────────────────────────────────────────────
+router.get("/water",         auth, getWaterLog);
+router.post("/water",        auth, addWater);
+router.delete("/water/last", auth, undoLastWater);
+router.put("/water/goal",    auth, setWaterGoal);
+
+// ── AI Chat ───────────────────────────────────────────────────────────────────
+router.get("/ai-chat",  auth, getChatHistoryCtrl);
+router.post("/ai-chat",  auth, aiChat);
+router.delete("/ai-chat", auth, clearChatSession);
+
+module.exports = router;

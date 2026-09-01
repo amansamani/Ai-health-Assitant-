@@ -15,7 +15,11 @@
       }
     },
     "android": {
-      "config": { "googleMaps": { "apiKey": "AIzaSyAhIey2i2hhzLESXJVIiPxJU4kiw0Sx-Yg" } },
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyAhIey2i2hhzLESXJVIiPxJU4kiw0Sx-Yg"
+        }
+      },
       "package": "com.amansamani.aihealthfrontend",
       "permissions": [
         "android.permission.CAMERA",
@@ -38,7 +42,16 @@
     },
     "plugins": [
       "expo-router",
-      ["expo-location", { "locationWhenInUsePermission": "Allow Fitlip to track your run." }],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow Fitlip to track your run.",
+          "locationAlwaysAndWhenInUsePermission": "Allow Fitlip to keep tracking your run when your screen is locked or you switch apps.",
+          "isIosBackgroundLocationEnabled": true,
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
+        }
+      ],
       [
         "expo-splash-screen",
         {

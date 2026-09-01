@@ -1,36 +1,13 @@
-import { useEffect, useMemo, useRef, useState, useContext } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  Pressable,
-  ActivityIndicator,
-  ScrollView,
-  Alert,
-  Image,
-} from "react-native";
-import * as ImagePicker from "expo-image-picker";
-import * as ImageManipulator from "expo-image-manipulator";
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { View, Text, StyleSheet, Pressable, ActivityIndicator, ScrollView, Alert, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback } from "react";
 import API, { API_BASE_URL } from "../services/api";
 import { getToken } from "../utils/secureToken";
 import { AuthContext } from "../context/AuthContext";
 import { COLORS, SHADOW } from "../constants/theme";
-import RunRouteMap from "../components/RunRouteMap";
-import { getMyRuns } from "../services/runService";
-import { formatDuration, formatDistanceKm, formatPace, paceSecPerKm } from "../utils/runMath";
-import { setUserGoal } from "../context/AuthContext";
 import FadeSlideIn from "../components/FadeSlideIn";
-
-const GOALS = [
-  { key: "bulk", label: "Bulk", desc: "Build muscle", icon: "barbell-outline", color: "#7C3AED" },
-  { key: "lean", label: "Lean", desc: "Burn fat", icon: "flame-outline", color: "#F97316" },
-  { key: "fit", label: "Fit", desc: "Stay balanced", icon: "fitness-outline", color: "#16A34A" },
-];
 
 function initials(name) {
   return String(name || "User")
@@ -50,15 +27,23 @@ function profileImageSource(profile, token) {
   };
 }
 
-async function prepareProfilePhoto(uri) {
-  return ImageManipulator.manipulateAsync(
-    uri,
-    [{ resize: { width: 720, height: 720 } }],
-    {
-      compress: 0.72,
-      format: ImageManipulator.SaveFormat.JPEG,
-      base64: true,
-    }
+function ProfileRow({ icon, title, subtitle, onPress, danger = false }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [styles.rowCard, pressed && styles.rowPressed]}
+      accessibilityRole="button"
+      accessibilityLabel={title}
+    >
+      <View style={[styles.rowIcon, danger && styles.rowIconDanger]}>
+        <Ionicons name={icon} size={20} color={danger ? COLORS.error : COLORS.primary} />
+      </View>
+      <View style={styles.rowCopy}>
+        <Text style={[styles.rowTitle, danger && { color: COLORS.error }]}>{title}</Text>
+        {!!subtitle && <Text style={styles.rowSubtitle}>{subtitle}</Text>}
+      </View>
+      <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
+    </Pressable>
   );
 }
 
@@ -66,16 +51,8 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { logout, userToken } = useContext(AuthContext);
   const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [savingGoal, setSavingGoal] = useState(false);
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  const [savedGoal, setSavedGoal] = useState(false);
-  const [visibility, setVisibility] = useState("private");
-  const [selectedGoal, setSelectedGoal] = useState("fit");
-  const [followRequests, setFollowRequests] = useState([]);
-  const [customPlan, setCustomPlan] = useState(null);
   const [token, setToken] = useState(userToken || null);
-  const [myRuns, setMyRuns] = useState([]);
+  const [loading, setLoading] = useState(true);
   const mountedRef = useRef(true);
 
   useEffect(() => () => { mountedRef.current = false; }, []);
@@ -83,37 +60,13 @@ export default function ProfileScreen() {
   const loadProfile = useCallback(async () => {
     try {
       setLoading(true);
-      const [profileRes, requestsRes] = await Promise.all([
+      const [profileRes, currentToken] = await Promise.all([
         API.get("/user/profile"),
-        API.get("/social/follow-requests"),
+        getToken(),
       ]);
       if (!mountedRef.current) return;
-      const p = profileRes.data;
-      let socialProfile = null;
-      try {
-        socialProfile = (await API.get(`/social/profile/${encodeURIComponent(p.username)}`)).data;
-      } catch (_) {
-        // Existing users can still open the profile if social counters are unavailable.
-      }
-      setProfile({ ...p, ...(socialProfile || {}) });
-      setVisibility(p.profileVisibility || "private");
-      setSelectedGoal(p.goal || "fit");
-      setFollowRequests(requestsRes.data || []);
-      try {
-        const customRes = await API.get("/custom-workouts/plans");
-        const plans = Array.isArray(customRes.data) ? customRes.data : [];
-        setCustomPlan(plans.find((item) => item.isActive) || plans[0] || null);
-      } catch (_) {
-        setCustomPlan(null);
-      }
-      try {
-        const runsRes = await getMyRuns(1, 6);
-        if (mountedRef.current) setMyRuns(runsRes.runs || []);
-      } catch (_) {
-        if (mountedRef.current) setMyRuns([]);
-      }
-      const currentToken = await getToken();
-      if (mountedRef.current) setToken(currentToken);
+      setProfile(profileRes.data);
+      setToken(currentToken);
     } catch (err) {
       console.log("Profile fetch error:", err.response?.data?.message || err.message);
     } finally {
@@ -123,70 +76,14 @@ export default function ProfileScreen() {
 
   useFocusEffect(useCallback(() => { loadProfile(); }, [loadProfile]));
 
-  const saveGoal = async () => {
-    try {
-      setSavingGoal(true);
-      await API.put("/user/goal", { goal: selectedGoal });
-      setProfile((prev) => ({ ...prev, goal: selectedGoal }));
-      setUserGoal(selectedGoal);
-      setSavedGoal(true);
-      setTimeout(() => mountedRef.current && setSavedGoal(false), 2200);
-    } catch {
-      Alert.alert("Error", "Failed to update goal. Please try again.");
-    } finally {
-      setSavingGoal(false);
-    }
+  const imageSource = useMemo(() => profileImageSource(profile, token), [profile, token]);
+
+  const confirmLogout = () => {
+    Alert.alert("Log out?", "You can sign back in any time.", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Log Out", style: "destructive", onPress: logout },
+    ]);
   };
-
-  const choosePhoto = async () => {
-    try {
-      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permission.granted) {
-        Alert.alert("Photo access needed", "Allow photo access in Settings to choose a profile picture.");
-        return;
-      }
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"],
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.85,
-      });
-      if (result.canceled || !result.assets?.[0]?.uri) return;
-
-      setUploadingPhoto(true);
-      const prepared = await prepareProfilePhoto(result.assets[0].uri);
-      await API.put("/user/profile/photo", {
-        imageBase64: prepared.base64,
-        contentType: "image/jpeg",
-      });
-
-      const fresh = await API.get("/user/profile");
-      const currentToken = await getToken();
-      setProfile(fresh.data);
-      setToken(currentToken);
-    } catch (err) {
-      Alert.alert("Couldn't update photo", err.response?.data?.message || "Please try another image.");
-    } finally {
-      setUploadingPhoto(false);
-    }
-  };
-
-  const respondRequest = async (requestId, action) => {
-    try {
-      await API.post(`/social/follow-requests/${requestId}/respond`, { action });
-      setFollowRequests((prev) => prev.filter((item) => item.requestId !== requestId));
-    } catch (err) {
-      Alert.alert("Couldn't update request", err.response?.data?.message || "Please try again.");
-    }
-  };
-
-  const activeGoal = useMemo(
-    () => GOALS.find((goal) => goal.key === selectedGoal) || GOALS[2],
-    [selectedGoal]
-  );
-
-  const imageSource = profileImageSource(profile, token);
-  const hasGoalChanges = selectedGoal !== (profile?.goal || "fit");
 
   if (loading || !profile) {
     return (
@@ -204,260 +101,92 @@ export default function ProfileScreen() {
           <View style={styles.headerRow}>
             <View>
               <Text style={styles.headerTitle}>Profile</Text>
-              <Text style={styles.headerSubtitle}>Your identity inside FitLip</Text>
+              <Text style={styles.headerSubtitle}>Your FitLip account</Text>
             </View>
-            <Pressable style={styles.iconBtn} onPress={() => router.push("/(app)/social/index")}>
-              <Ionicons name="people-outline" size={21} color={COLORS.primary} />
+            <Pressable
+              style={styles.headerSettings}
+              onPress={() => router.push("/(app)/profile-settings")}
+              accessibilityRole="button"
+              accessibilityLabel="Open settings"
+            >
+              <Ionicons name="settings-outline" size={20} color={COLORS.textDark} />
             </Pressable>
           </View>
         </FadeSlideIn>
 
-        <FadeSlideIn delay={70}>
-          <LinearGradient colors={[COLORS.primaryDark, COLORS.primary, COLORS.primaryLight]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroCard}>
-            <Pressable onPress={choosePhoto} disabled={uploadingPhoto} style={styles.avatarButton}>
+        <FadeSlideIn delay={60}>
+          <View style={styles.identityCard}>
+            <View style={styles.identityAvatarWrap}>
               {imageSource ? (
-                <Image source={imageSource} style={styles.avatarImage} />
+                <Image source={imageSource} style={styles.identityAvatar} />
               ) : (
-                <View style={styles.avatarFallback}>
-                  <Text style={styles.avatarInitials}>{initials(profile.name)}</Text>
+                <View style={styles.identityFallback}>
+                  <Text style={styles.identityInitials}>{initials(profile.name)}</Text>
                 </View>
               )}
-              <View style={styles.cameraBadge}>
-                {uploadingPhoto ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="camera" size={15} color="#fff" />}
-              </View>
-            </Pressable>
-            <View style={{ flex: 1, marginLeft: 16 }}>
-              <Text style={styles.heroName}>{profile.name}</Text>
-              <Text style={styles.heroHandle}>@{profile.username}</Text>
-              <View style={styles.heroPill}>
-                <Ionicons name={visibility === "public" ? "globe-outline" : "lock-closed-outline"} size={13} color="#fff" />
-                <Text style={styles.heroPillText}>{visibility === "public" ? "Public profile" : "Private profile"}</Text>
-              </View>
             </View>
-          </LinearGradient>
-        </FadeSlideIn>
-
-        <FadeSlideIn delay={120}>
-          <View style={styles.statsCard}>
-            <Stat value={profile.followerCount ?? 0} label="Followers" />
-            <View style={styles.statDivider} />
-            <Stat value={profile.followingCount ?? 0} label="Following" />
-            <View style={styles.statDivider} />
-            <Stat value={followRequests.length} label="Requests" />
+            <Text style={styles.identityName}>{profile.name || "User"}</Text>
+            <Text style={styles.identityUsername}>@{profile.username || "username"}</Text>
           </View>
         </FadeSlideIn>
 
-        {followRequests.length > 0 && (
-          <FadeSlideIn delay={150}>
-            <View style={styles.card}>
-              <View style={styles.cardTitleRow}>
-                <View>
-                  <Text style={styles.cardTitle}>Follow requests</Text>
-                  <Text style={styles.cardSubtitle}>People who want to see your activity</Text>
-                </View>
-                <View style={styles.requestBadge}><Text style={styles.requestBadgeText}>{followRequests.length}</Text></View>
-              </View>
-              {followRequests.slice(0, 3).map((request) => (
-                <View key={request.requestId} style={styles.requestRow}>
-                  <View style={styles.miniAvatar}><Text style={styles.miniAvatarText}>{initials(request.name).slice(0, 1)}</Text></View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.requestName}>{request.name}</Text>
-                    <Text style={styles.requestHandle}>@{request.username}</Text>
-                  </View>
-                  <Pressable onPress={() => respondRequest(request.requestId, "accept")} style={styles.acceptBtn}>
-                    <Ionicons name="checkmark" size={17} color="#fff" />
-                  </Pressable>
-                  <Pressable onPress={() => respondRequest(request.requestId, "reject")} style={styles.rejectBtn}>
-                    <Ionicons name="close" size={17} color={COLORS.textMuted} />
-                  </Pressable>
-                </View>
-              ))}
-            </View>
-          </FadeSlideIn>
-        )}
+        <FadeSlideIn delay={100}>
+          <Text style={styles.sectionLabel}>ACCOUNT</Text>
+          <ProfileRow
+            icon="person-outline"
+            title="My Account"
+            subtitle="Profile, followers, following and posts"
+            onPress={() => router.push({ pathname: "/(app)/social/profile", params: { identifier: profile.username } })}
+          />
+          <ProfileRow
+            icon="trophy-outline"
+            title="Achievements"
+            subtitle="Badges, milestones and your FitLip progress"
+            onPress={() => router.push("/(app)/social/achievements")}
+          />
+        </FadeSlideIn>
 
-        <FadeSlideIn delay={180}>
-          <Pressable
-  onPress={() => router.push("/social/gamification")}
-  accessibilityRole="button"
-  accessibilityLabel="Open FitLip identity and XP progress"
-  android_ripple={{ color: "rgba(255,255,255,0.12)" }}
-  style={({ pressed }) => [styles.greatnessCard, pressed && styles.greatnessPressed]}
->
-            <LinearGradient colors={[COLORS.primaryDark, COLORS.primary, COLORS.primaryLight]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.greatnessInner}>
-              <View style={styles.greatnessIcon}><Ionicons name="barbell-outline" size={21} color="#fff" /></View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.greatnessEyebrow}>YOUR GREATNESS</Text>
-                <Text style={styles.greatnessTitle}>Level up your FitLip identity</Text>
-                <Text style={styles.greatnessSub}>Earn XP, unlock Dumbbell ranks and compete with friends.</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color="#fff" />
-            </LinearGradient>
-          </Pressable>
+        <FadeSlideIn delay={150}>
+          <Text style={styles.sectionLabel}>FITNESS</Text>
+          <ProfileRow
+            icon="heart-outline"
+            title="Health Profile"
+            subtitle="Body, goals, nutrition and health information"
+            onPress={() => router.push("/(app)/edit-health-profile")}
+          />
+          <ProfileRow
+            icon="barbell-outline"
+            title="Custom Exercises"
+            subtitle="Create and manage your custom workout plans"
+            onPress={() => router.push("/(app)/custom-workout")}
+          />
         </FadeSlideIn>
 
         <FadeSlideIn delay={200}>
-          <Pressable
-            style={styles.socialProfileCard}
-            onPress={() => router.push({ pathname: "/(app)/social/profile", params: { identifier: profile.username } })}
-            accessibilityRole="button"
-            accessibilityLabel="Open your social profile"
-          >
-            <View style={styles.socialProfileIcon}><Ionicons name="people-outline" size={22} color="#fff" /></View>
-            <View style={styles.socialProfileCopy}>
-              <Text style={styles.socialProfileEyebrow}>SOCIAL PROFILE</Text>
-              <Text style={styles.socialProfileTitle}>Your FitLip identity</Text>
-              <Text style={styles.socialProfileSub}>Followers, following, bio and shared activity</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={COLORS.textMuted} />
-          </Pressable>
-        </FadeSlideIn>
-
-        <FadeSlideIn delay={225}>
-          <Pressable style={styles.previewCard} onPress={() => router.push("/(app)/social/profile-settings")}>
-            <View style={styles.previewIcon}><Ionicons name="create-outline" size={19} color={COLORS.primary} /></View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.cardTitle}>Edit social identity</Text>
-              <Text style={styles.cardSubtitle}>Username, bio and profile visibility</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={19} color={COLORS.textMuted} />
-          </Pressable>
+          <Text style={styles.sectionLabel}>APP</Text>
+          <ProfileRow
+            icon="settings-outline"
+            title="Settings"
+            subtitle="Privacy, notifications, appearance and tracking"
+            onPress={() => router.push("/(app)/profile-settings")}
+          />
         </FadeSlideIn>
 
         <FadeSlideIn delay={250}>
-          <View style={styles.card}>
-            <View style={styles.cardTitleRow}>
-              <View>
-                <Text style={styles.cardTitle}>My activity</Text>
-                <Text style={styles.cardSubtitle}>Your saved runs, walks and rides</Text>
-              </View>
-              {myRuns.length > 0 && (
-                <Pressable onPress={() => router.push("/run-feed")} style={styles.smallLinkBtn}>
-                  <Text style={styles.smallLinkText}>See all</Text>
-                </Pressable>
-              )}
-            </View>
-            {myRuns.length === 0 ? (
-              <View style={styles.emptyActivity}>
-                <Ionicons name="walk-outline" size={26} color={COLORS.textLight} />
-                <Text style={styles.emptyActivityText}>Your saved running activity will appear here.</Text>
-              </View>
-            ) : myRuns.map((run) => <ProfileRunCard key={run._id} run={run} />)}
-          </View>
-        </FadeSlideIn>
-
-        <FadeSlideIn delay={300}>
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Fitness goal</Text>
-            <Text style={styles.cardSubtitle}>This continues to control your workout and diet plans.</Text>
-            <View style={styles.goalRow}>
-              {GOALS.map((goal) => (
-                <Pressable key={goal.key} onPress={() => setSelectedGoal(goal.key)} style={[styles.goalCard, selectedGoal === goal.key && { borderColor: goal.color, backgroundColor: goal.color + "12" }]}>
-                  <Ionicons name={goal.icon} size={22} color={selectedGoal === goal.key ? goal.color : COLORS.textMuted} />
-                  <Text style={[styles.goalLabel, selectedGoal === goal.key && { color: goal.color }]}>{goal.label}</Text>
-                  <Text style={styles.goalDesc}>{goal.desc}</Text>
-                </Pressable>
-              ))}
-            </View>
-            <Pressable onPress={saveGoal} disabled={!hasGoalChanges || savingGoal} style={[styles.primaryBtn, (!hasGoalChanges || savingGoal) && styles.disabledBtn]}>
-              {savingGoal ? <ActivityIndicator size="small" color="#fff" /> : <><Ionicons name={savedGoal ? "checkmark" : "fitness-outline"} size={17} color="#fff" /><Text style={styles.primaryBtnText}>{savedGoal ? "Goal updated" : "Save fitness goal"}</Text></>}
-            </Pressable>
-          </View>
-        </FadeSlideIn>
-
-        <FadeSlideIn delay={340}>
-          <Pressable onPress={() => router.push("/(app)/edit-health-profile")} style={styles.secondaryCard}>
-            <View style={styles.previewIcon}><Ionicons name="body-outline" size={19} color={COLORS.primary} /></View>
-            <View style={{ flex: 1 }}><Text style={styles.cardTitle}>Health profile</Text><Text style={styles.cardSubtitle}>Update weight, height, activity and nutrition inputs</Text></View>
-            <Ionicons name="chevron-forward" size={19} color={COLORS.textMuted} />
-          </Pressable>
-        </FadeSlideIn>
-
-        <FadeSlideIn delay={380}>
-          <Pressable onPress={() => router.push("/(app)/custom-workout")} style={styles.secondaryCard}>
-            <View style={[styles.previewIcon, { backgroundColor: "#F1EAFE" }]}>
-              <Ionicons name="construct-outline" size={19} color={COLORS.primary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.cardTitle}>Workout plan</Text>
-              <Text style={styles.cardSubtitle}>
-                {customPlan ? `Custom: ${customPlan.name || "My Plan"} · Active in Exercises` : "Recommended plan is active · Create a custom plan here"}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={19} color={COLORS.textMuted} />
-          </Pressable>
-        </FadeSlideIn>
-
-        <FadeSlideIn delay={420}>
-          <Pressable onPress={logout} style={styles.logoutBtn}>
-            <Ionicons name="log-out-outline" size={18} color={COLORS.error} />
+          <Pressable
+            onPress={confirmLogout}
+            style={({ pressed }) => [styles.logoutCard, pressed && styles.rowPressed]}
+            accessibilityRole="button"
+            accessibilityLabel="Log out"
+          >
+            <View style={styles.logoutIcon}><Ionicons name="log-out-outline" size={20} color={COLORS.error} /></View>
             <Text style={styles.logoutText}>Log Out</Text>
           </Pressable>
         </FadeSlideIn>
 
-        <View style={{ height: 30 }} />
+        <Text style={styles.footerText}>FitLip · Your fitness journey, your account</Text>
       </ScrollView>
     </SafeAreaView>
-  );
-}
-
-function ProfileRunCard({ run }) {
-  const region = run.route?.length > 1 ? (() => {
-    const lats = run.route.map((p) => p.lat);
-    const lngs = run.route.map((p) => p.lng);
-    return {
-      latitude: (Math.min(...lats) + Math.max(...lats)) / 2,
-      longitude: (Math.min(...lngs) + Math.max(...lngs)) / 2,
-      latitudeDelta: Math.max(0.003, (Math.max(...lats) - Math.min(...lats)) * 1.4),
-      longitudeDelta: Math.max(0.003, (Math.max(...lngs) - Math.min(...lngs)) * 1.4),
-    };
-  })() : null;
-
-  return (
-    <View style={styles.profileRunCard}>
-      {run.photoUrl ? (
-        <Image source={{ uri: run.photoUrl }} style={styles.profileRunMedia} />
-      ) : region ? (
-        <View style={styles.profileRunMedia}>
-          <RunRouteMap
-            style={{ flex: 1 }}
-            route={run.route}
-            initialRegion={region}
-            showStartMarker={false}
-            showEndMarker={false}
-          />
-        </View>
-      ) : (
-        <View style={styles.profileRunNoMedia}>
-          <Ionicons name="walk-outline" size={24} color={COLORS.textLight} />
-        </View>
-      )}
-      <View style={styles.profileRunMeta}>
-        <View style={styles.profileRunTitleRow}>
-          <Text style={styles.profileRunTitle}>{run.activityType === "cycle" ? "Cycling" : run.activityType === "walk" ? "Walk" : "Run"}</Text>
-          <Text style={styles.profileRunKcal}>{Math.round(run.caloriesBurned || 0)} kcal</Text>
-        </View>
-        <Text style={styles.profileRunStats}>
-          {formatDistanceKm(run.distanceMeters)} km · {formatDuration(run.durationSeconds)} · {paceSecPerKm(run.distanceMeters, run.durationSeconds) ? `${formatPace(paceSecPerKm(run.distanceMeters, run.durationSeconds))}/km` : "Pace building"}
-        </Text>
-        {!!run.caption && <Text style={styles.profileRunCaption} numberOfLines={2}>{run.caption}</Text>}
-      </View>
-    </View>
-  );
-}
-
-function Stat({ value, label }) {
-  return <View style={styles.stat}><Text style={styles.statValue}>{value}</Text><Text style={styles.statLabel}>{label}</Text></View>;
-}
-
-function VisibilityOption({ selected, title, subtitle, icon, onPress }) {
-  return (
-    <Pressable onPress={onPress} style={[styles.visibilityCard, selected && styles.visibilitySelected]}>
-      <Ionicons name={icon} size={19} color={selected ? COLORS.primary : COLORS.textMuted} />
-      <Text style={[styles.visibilityTitle, selected && { color: COLORS.primary }]}>{title}</Text>
-      <Text style={styles.visibilitySubtitle}>{subtitle}</Text>
-      {selected && <Ionicons name="checkmark-circle" size={16} color={COLORS.primary} style={styles.visibilityCheck} />}
-    </Pressable>
   );
 }
 
@@ -465,86 +194,28 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   scroll: { padding: 16, paddingBottom: 40 },
   center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.background },
-  loadingText: { marginTop: 12, fontSize: 14, fontWeight: "600", color: COLORS.textMuted },
-  headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 18 },
-  headerTitle: { fontSize: 27, fontWeight: "900", letterSpacing: -0.8, color: COLORS.textDark },
-  headerSubtitle: { marginTop: 3, fontSize: 12.5, fontWeight: "600", color: COLORS.textMuted },
-  iconBtn: { width: 42, height: 42, borderRadius: 14, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, alignItems: "center", justifyContent: "center" },
-  heroCard: { borderRadius: 26, padding: 20, flexDirection: "row", alignItems: "center", marginBottom: 12, ...SHADOW, shadowColor: COLORS.primaryDark, shadowOpacity: 0.25 },
-  avatarButton: { width: 86, height: 86, borderRadius: 43, backgroundColor: "rgba(255,255,255,0.18)", padding: 3, position: "relative" },
-  avatarImage: { width: 80, height: 80, borderRadius: 40 },
-  avatarFallback: { width: 80, height: 80, borderRadius: 40, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(23,15,54,0.5)" },
-  avatarInitials: { color: "#fff", fontSize: 28, fontWeight: "900" },
-  cameraBadge: { position: "absolute", right: -1, bottom: -1, width: 27, height: 27, borderRadius: 14, backgroundColor: COLORS.primaryDark, borderWidth: 2, borderColor: "#fff", alignItems: "center", justifyContent: "center" },
-  heroName: { fontSize: 23, fontWeight: "900", color: "#fff", letterSpacing: -0.6 },
-  heroHandle: { fontSize: 13, color: "rgba(255,255,255,0.78)", fontWeight: "700", marginTop: 3 },
-  heroPill: { alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(255,255,255,0.16)", borderRadius: 14, paddingHorizontal: 10, paddingVertical: 6, marginTop: 10 },
-  heroPillText: { color: "#fff", fontSize: 11.5, fontWeight: "800" },
-  statsCard: { flexDirection: "row", alignItems: "center", backgroundColor: COLORS.surface, borderRadius: 18, borderWidth: 1, borderColor: COLORS.border, paddingVertical: 14, marginBottom: 14 },
-  stat: { flex: 1, alignItems: "center" },
-  statValue: { fontSize: 19, fontWeight: "900", color: COLORS.textDark },
-  statLabel: { marginTop: 2, fontSize: 11, fontWeight: "700", color: COLORS.textMuted },
-  statDivider: { width: 1, height: 28, backgroundColor: COLORS.border },
-  card: { backgroundColor: COLORS.surface, borderRadius: 22, padding: 18, marginBottom: 14, borderWidth: 1, borderColor: COLORS.border, ...SHADOW },
-  previewCard: { flexDirection: "row", alignItems: "center", backgroundColor: COLORS.surface, borderRadius: 20, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: COLORS.border },
-  secondaryCard: { flexDirection: "row", alignItems: "center", backgroundColor: COLORS.surface, borderRadius: 20, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: COLORS.border },
-  previewIcon: { width: 40, height: 40, borderRadius: 13, backgroundColor: COLORS.surfaceMuted, alignItems: "center", justifyContent: "center", marginRight: 12 },
-  cardTitleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 },
-  cardTitle: { fontSize: 16, fontWeight: "850", color: COLORS.textDark },
-  cardSubtitle: { marginTop: 3, fontSize: 12.5, lineHeight: 18, fontWeight: "600", color: COLORS.textMuted },
-  requestBadge: { minWidth: 27, height: 27, paddingHorizontal: 7, borderRadius: 14, backgroundColor: COLORS.primary, alignItems: "center", justifyContent: "center" },
-  requestBadgeText: { color: "#fff", fontSize: 12, fontWeight: "900" },
-  requestRow: { flexDirection: "row", alignItems: "center", paddingVertical: 10, borderTopWidth: 1, borderTopColor: COLORS.surfaceMuted },
-  miniAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.primary, alignItems: "center", justifyContent: "center", marginRight: 10 },
-  miniAvatarText: { color: "#fff", fontSize: 16, fontWeight: "900" },
-  requestName: { fontSize: 14, fontWeight: "800", color: COLORS.textDark },
-  requestHandle: { marginTop: 1, fontSize: 11.5, color: COLORS.textMuted, fontWeight: "600" },
-  acceptBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.success, alignItems: "center", justifyContent: "center", marginLeft: 7 },
-  rejectBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.surfaceMuted, alignItems: "center", justifyContent: "center", marginLeft: 7 },
-  fieldLabel: { fontSize: 10.5, fontWeight: "900", letterSpacing: 0.8, color: COLORS.textMuted, marginBottom: 7 },
-  inputWrap: { flexDirection: "row", alignItems: "center", backgroundColor: COLORS.background, borderRadius: 14, borderWidth: 1, borderColor: COLORS.border, paddingHorizontal: 12 },
-  inputPrefix: { fontSize: 16, fontWeight: "900", color: COLORS.primary },
-  input: { flex: 1, paddingHorizontal: 6, paddingVertical: 13, color: COLORS.textDark, fontSize: 15, fontWeight: "700" },
-  bioInput: { minHeight: 86, textAlignVertical: "top", backgroundColor: COLORS.background, borderRadius: 14, borderWidth: 1, borderColor: COLORS.border, paddingHorizontal: 13, paddingVertical: 12, color: COLORS.textDark, fontSize: 14, lineHeight: 20, fontWeight: "500" },
-  visibilityRow: { flexDirection: "row", gap: 10 },
-  visibilityCard: { flex: 1, minHeight: 108, borderRadius: 16, backgroundColor: COLORS.background, borderWidth: 1.5, borderColor: COLORS.border, padding: 13, position: "relative" },
-  visibilitySelected: { backgroundColor: COLORS.primary + "10", borderColor: COLORS.primary },
-  visibilityTitle: { fontSize: 14, fontWeight: "900", color: COLORS.textDark, marginTop: 10 },
-  visibilitySubtitle: { fontSize: 10.5, fontWeight: "600", color: COLORS.textMuted, marginTop: 3, lineHeight: 14 },
-  visibilityCheck: { position: "absolute", top: 10, right: 10 },
-  primaryBtn: { minHeight: 48, borderRadius: 15, backgroundColor: COLORS.primary, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 7, marginTop: 16, ...SHADOW, shadowColor: COLORS.primary, shadowOpacity: 0.23 },
-  primaryBtnText: { color: "#fff", fontSize: 14, fontWeight: "850" },
-  disabledBtn: { backgroundColor: "#CEC8D7", shadowOpacity: 0 },
-  goalRow: { flexDirection: "row", gap: 9, marginTop: 14 },
-  goalCard: { flex: 1, minHeight: 108, borderRadius: 16, borderWidth: 1.5, borderColor: COLORS.border, backgroundColor: COLORS.background, alignItems: "center", justifyContent: "center", padding: 10 },
-  goalLabel: { marginTop: 7, fontSize: 13.5, fontWeight: "900", color: COLORS.textDark },
-  goalDesc: { marginTop: 2, fontSize: 10.5, fontWeight: "600", color: COLORS.textMuted, textAlign: "center" },
-  greatnessCard: { marginBottom: 16, borderRadius: 24, overflow: "hidden", ...SHADOW },
-  greatnessPressed: { transform: [{ scale: 0.985 }], opacity: 0.96 },
-  greatnessInner: { minHeight: 104, padding: 17, flexDirection: "row", alignItems: "center", gap: 12 },
-  greatnessIcon: { width: 48, height: 48, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.14)", alignItems: "center", justifyContent: "center" },
-  greatnessEyebrow: { color: "rgba(255,255,255,0.72)", fontSize: 10, fontWeight: "900", letterSpacing: 1.05 },
-  greatnessTitle: { color: "#fff", fontSize: 16, fontWeight: "900", marginTop: 2 },
-  greatnessSub: { color: "rgba(255,255,255,0.78)", fontSize: 11, lineHeight: 16, marginTop: 3 },
-  socialProfileCard: { flexDirection: "row", alignItems: "center", backgroundColor: COLORS.surface, borderRadius: 22, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: COLORS.border, ...SHADOW },
-  socialProfileIcon: { width: 48, height: 48, borderRadius: 16, backgroundColor: COLORS.primary, alignItems: "center", justifyContent: "center", marginRight: 12 },
-  socialProfileCopy: { flex: 1 },
-  socialProfileEyebrow: { fontSize: 9.5, color: COLORS.primary, fontWeight: "900", letterSpacing: 1 },
-  socialProfileTitle: { marginTop: 2, fontSize: 16, fontWeight: "900", color: COLORS.textDark },
-  socialProfileSub: { marginTop: 4, fontSize: 11.5, lineHeight: 16, color: COLORS.textMuted, fontWeight: "600" },
-  smallLinkBtn: { paddingHorizontal: 10, paddingVertical: 7, borderRadius: 10, backgroundColor: COLORS.surfaceMuted },
-  smallLinkText: { color: COLORS.primary, fontSize: 11, fontWeight: "900" },
-  emptyActivity: { alignItems: "center", justifyContent: "center", paddingVertical: 22, gap: 7 },
-  emptyActivityText: { color: COLORS.textMuted, fontSize: 12, fontWeight: "600", textAlign: "center" },
-  profileRunCard: { borderRadius: 16, overflow: "hidden", borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.background, marginTop: 10 },
-  profileRunMedia: { width: "100%", height: 145, backgroundColor: COLORS.surfaceMuted },
-  profileRunNoMedia: { width: "100%", height: 92, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.surfaceMuted },
-  profileRunMeta: { padding: 12 },
-  profileRunTitleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  profileRunTitle: { fontSize: 14, fontWeight: "900", color: COLORS.textDark },
-  profileRunKcal: { fontSize: 12, fontWeight: "900", color: "#F97316" },
-  profileRunStats: { marginTop: 4, fontSize: 11, color: COLORS.textMuted, fontWeight: "700" },
-  profileRunCaption: { marginTop: 6, fontSize: 12, lineHeight: 17, color: COLORS.textLight, fontWeight: "600" },
-  logoutBtn: { height: 50, borderRadius: 15, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.error + "35", alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8 },
-  logoutText: { fontSize: 14, fontWeight: "800", color: COLORS.error },
+  loadingText: { marginTop: 10, color: COLORS.textMuted, fontSize: 12, fontWeight: "700" },
+  headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 },
+  headerTitle: { fontSize: 29, fontWeight: "900", color: COLORS.textDark, letterSpacing: -0.7 },
+  headerSubtitle: { marginTop: 3, fontSize: 12.5, color: COLORS.textMuted, fontWeight: "600" },
+  headerSettings: { width: 44, height: 44, borderRadius: 15, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border },
+  identityCard: { alignItems: "center", backgroundColor: COLORS.surface, borderRadius: 24, borderWidth: 1, borderColor: COLORS.border, paddingVertical: 24, paddingHorizontal: 20, ...SHADOW, shadowOpacity: 0.06 },
+  identityAvatarWrap: { width: 92, height: 92, borderRadius: 46, padding: 3, backgroundColor: COLORS.surfaceMuted, borderWidth: 1, borderColor: COLORS.border },
+  identityAvatar: { width: 84, height: 84, borderRadius: 42 },
+  identityFallback: { width: 84, height: 84, borderRadius: 42, backgroundColor: COLORS.primaryDark, alignItems: "center", justifyContent: "center" },
+  identityInitials: { color: "#fff", fontSize: 28, fontWeight: "900" },
+  identityName: { marginTop: 13, fontSize: 22, fontWeight: "900", color: COLORS.textDark },
+  identityUsername: { marginTop: 3, fontSize: 13, fontWeight: "700", color: COLORS.primary },
+  sectionLabel: { marginTop: 22, marginBottom: 9, paddingHorizontal: 2, color: COLORS.textMuted, fontSize: 10.5, fontWeight: "900", letterSpacing: 1.05 },
+  rowCard: { minHeight: 72, flexDirection: "row", alignItems: "center", backgroundColor: COLORS.surface, borderRadius: 19, borderWidth: 1, borderColor: COLORS.border, paddingHorizontal: 14, paddingVertical: 12, marginBottom: 10, ...SHADOW, shadowOpacity: 0.045 },
+  rowPressed: { opacity: 0.82, transform: [{ scale: 0.99 }] },
+  rowIcon: { width: 42, height: 42, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.surfaceMuted, marginRight: 12 },
+  rowIconDanger: { backgroundColor: COLORS.errorBg },
+  rowCopy: { flex: 1, paddingRight: 8 },
+  rowTitle: { fontSize: 15, fontWeight: "900", color: COLORS.textDark },
+  rowSubtitle: { marginTop: 3, fontSize: 11.5, lineHeight: 16, fontWeight: "600", color: COLORS.textMuted },
+  logoutCard: { minHeight: 54, marginTop: 16, borderRadius: 16, borderWidth: 1, borderColor: COLORS.error + "35", backgroundColor: COLORS.errorBg, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
+  logoutIcon: { width: 34, height: 34, borderRadius: 11, alignItems: "center", justifyContent: "center", backgroundColor: "#fff" },
+  logoutText: { fontSize: 14, fontWeight: "900", color: COLORS.error },
+  footerText: { marginTop: 18, textAlign: "center", fontSize: 10.5, color: COLORS.textMuted, fontWeight: "600" },
 });

@@ -5,6 +5,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import API, { API_BASE_URL } from "../../services/api";
+import { getMyRuns } from "../../services/runService";
+import { formatDistanceKm, formatDuration, formatPace, paceSecPerKm } from "../../utils/runMath";
 import { getToken } from "../../utils/secureToken";
 import { COLORS, SHADOW } from "../../constants/theme";
 import FadeSlideIn from "../../components/FadeSlideIn";
@@ -24,6 +26,7 @@ export default function PublicProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [token, setToken] = useState(null);
+  const [myRuns, setMyRuns] = useState([]);
 
   const load = useCallback(async () => {
     try {
@@ -32,8 +35,17 @@ export default function PublicProfileScreen() {
         API.get(`/social/profile/${encodeURIComponent(identifier)}`),
         getToken(),
       ]);
-      setProfile(profileRes.data);
+      const data = profileRes.data;
+      setProfile(data);
       setToken(currentToken);
+      if (data.isSelf) {
+        try {
+          const runs = await getMyRuns(1, 12);
+          setMyRuns(runs.runs || []);
+        } catch (_) { setMyRuns([]); }
+      } else {
+        setMyRuns([]);
+      }
     } catch (err) {
       Alert.alert("Profile unavailable", err.response?.data?.message || "This profile could not be loaded.", [
         { text: "Back", onPress: () => router.back() },
@@ -125,6 +137,44 @@ export default function PublicProfileScreen() {
             <Stat value={profile.profileVisibility === "public" ? "Public" : "Private"} label="Visibility" />
           </View>
         </FadeSlideIn>
+        <FadeSlideIn delay={105}>
+          {profile.isSelf && (
+            <Pressable style={styles.editProfileBtn} onPress={() => router.push("/(app)/social/profile-settings")}>
+              <Ionicons name="create-outline" size={16} color="#fff" />
+              <Text style={styles.editProfileBtnText}>Edit Profile</Text>
+            </Pressable>
+          )}
+        </FadeSlideIn>
+
+        <FadeSlideIn delay={125}>
+          <View style={styles.postsCard}>
+            <View style={styles.postsHeader}>
+              <View><Text style={styles.postsTitle}>Posts</Text><Text style={styles.postsSubtitle}>{myRuns.length ? `${myRuns.length} recent activities` : "Your shared running activities"}</Text></View>
+              {myRuns.length > 0 && <Pressable onPress={() => router.push("/(app)/run-feed")}><Text style={styles.seeAll}>See all</Text></Pressable>}
+            </View>
+            {profile.isSelf && myRuns.length === 0 ? (
+              <View style={styles.emptyPosts}><Ionicons name="walk-outline" size={28} color={COLORS.textLight} /><Text style={styles.emptyPostsText}>Your running posts will appear here after you finish and save a run.</Text></View>
+            ) : profile.isSelf ? (
+              myRuns.map((run) => {
+                const pace = paceSecPerKm(run.durationSeconds, run.distanceMeters);
+                const date = run.startedAt ? new Date(run.startedAt) : null;
+                const timeLabel = date && !Number.isNaN(date.getTime()) ? date.toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) : "";
+                return (
+                  <Pressable key={run._id} onPress={() => router.push("/(app)/run-feed")} style={styles.postRow}>
+                    <View style={styles.postIcon}><Ionicons name={run.activityType === "cycle" ? "bicycle-outline" : run.activityType === "walk" ? "walk-outline" : "footsteps-outline"} size={19} color={COLORS.primary} /></View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.postActivity}>{run.activityType === "cycle" ? "Cycling" : run.activityType === "walk" ? "Walk" : "Run"}</Text>
+                      <Text style={styles.postMeta}>{formatDistanceKm(run.distanceMeters)} km · {formatDuration(run.durationSeconds)}{pace ? ` · ${formatPace(pace)} /km` : ""}</Text>
+                      <Text style={styles.postTime}>{timeLabel}</Text>
+                      {!!run.caption && <Text style={styles.postCaption} numberOfLines={2}>{run.caption}</Text>}
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color={COLORS.textLight} />
+                  </Pressable>
+                );
+              })
+            ) : null}
+          </View>
+        </FadeSlideIn>
 
         {profile.canView ? (
           <FadeSlideIn delay={130}>
@@ -182,7 +232,7 @@ const styles = StyleSheet.create({
   infoCard: { marginTop: 12, backgroundColor: COLORS.surface, borderRadius: 20, borderWidth: 1, borderColor: COLORS.border, padding: 18, flexDirection: "row" },
   infoTitle: { fontSize: 15, fontWeight: "850", color: COLORS.textDark },
   infoText: { marginTop: 5, color: COLORS.textMuted, fontSize: 12.5, lineHeight: 18, fontWeight: "600" },
-  privateCard: { marginTop: 12, backgroundColor: COLORS.surface, borderRadius: 22, borderWidth: 1, borderColor: COLORS.border, alignItems: "center", padding: 28 },
+  editProfileBtn:{alignSelf:"center",marginTop:10,minHeight:42,paddingHorizontal:16,borderRadius:14,backgroundColor:COLORS.primary,flexDirection:"row",alignItems:"center",justifyContent:"center",gap:7},editProfileBtnText:{color:"#fff",fontSize:12.5,fontWeight:"900"},postsCard:{marginTop:14,backgroundColor:COLORS.surface,borderRadius:22,borderWidth:1,borderColor:COLORS.border,padding:16},postsHeader:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",marginBottom:8},postsTitle:{fontSize:16,fontWeight:"900",color:COLORS.textDark},postsSubtitle:{marginTop:3,fontSize:11.5,color:COLORS.textMuted,fontWeight:"600"},seeAll:{fontSize:11.5,fontWeight:"900",color:COLORS.primary},emptyPosts:{alignItems:"center",paddingVertical:24,gap:8},emptyPostsText:{maxWidth:290,textAlign:"center",fontSize:12,color:COLORS.textMuted,lineHeight:17,fontWeight:"600"},postRow:{flexDirection:"row",alignItems:"center",paddingVertical:12,borderTopWidth:1,borderTopColor:COLORS.border},postIcon:{width:40,height:40,borderRadius:13,backgroundColor:COLORS.surfaceMuted,alignItems:"center",justifyContent:"center",marginRight:11},postActivity:{fontSize:14,fontWeight:"900",color:COLORS.textDark},postMeta:{marginTop:3,fontSize:11.5,color:COLORS.textLight,fontWeight:"700"},postTime:{marginTop:2,fontSize:10.5,color:COLORS.textMuted,fontWeight:"600"},postCaption:{marginTop:5,fontSize:11.5,color:COLORS.textLight,lineHeight:16,fontWeight:"600"},  privateCard: { marginTop: 12, backgroundColor: COLORS.surface, borderRadius: 22, borderWidth: 1, borderColor: COLORS.border, alignItems: "center", padding: 28 },
   lockCircle: { width: 54, height: 54, borderRadius: 27, backgroundColor: COLORS.surfaceMuted, alignItems: "center", justifyContent: "center", marginBottom: 12 },
   privateTitle: { fontSize: 17, fontWeight: "900", color: COLORS.textDark },
   privateText: { marginTop: 6, maxWidth: 290, textAlign: "center", color: COLORS.textMuted, fontSize: 12.5, lineHeight: 18, fontWeight: "600" },

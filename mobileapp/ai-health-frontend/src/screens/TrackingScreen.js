@@ -209,7 +209,11 @@ function ActiveBurnCard({ value, goal, source, syncing, onQuickAdd, onManualChan
   const stepsKcal = Math.round(breakdown?.steps || 0);
   const activityKcal = Math.round(breakdown?.activity || 0);
   const badge =
-    source === "device"
+    source === "mixed" || (source === "device" && (activityKcal > 0 || exerciseKcal > 0))
+      ? { icon: "layers-outline", text: `Synced + activity ${Math.round(activityKcal + exerciseKcal)} kcal`, color: "#6339B8" }
+      : source === "estimated"
+      ? { icon: "flame-outline", text: "Estimated activity calories", color: "#F97316" }
+      : source === "device"
       ? { icon: "watch-outline", text: "Synced from your device", color: "#22C55E" }
       : exerciseKcal > 0 && stepsKcal > 0
       ? { icon: "flame-outline", text: `Workout ${exerciseKcal} · Steps ${stepsKcal} kcal`, color: "#6339B8" }
@@ -219,8 +223,6 @@ function ActiveBurnCard({ value, goal, source, syncing, onQuickAdd, onManualChan
       ? { icon: "walk-outline", text: `Steps ${stepsKcal} kcal`, color: "#F97316" }
       : activityKcal > 0
       ? { icon: "flame-outline", text: `Activity ${activityKcal} kcal`, color: "#F97316" }
-      : source === "estimated"
-      ? { icon: "flame-outline", text: "Estimated activity calories", color: "#F97316" }
       : { icon: "create-outline", text: "Logged manually", color: COLORS.textMuted };
 
   return (
@@ -476,8 +478,15 @@ export default function TrackingScreen() {
       // calories is the *only* thing that synced.
       const overallSource = (nextDeviceFields.steps || nextDeviceFields.sleep) ? "device" : "estimated";
       try {
-        const res = await API.post("/track/today", { ...toSave, source: overallSource });
+        const res = await API.post("/track/today", {
+          ...toSave,
+          source: overallSource,
+          caloriesSource: device.caloriesBurned != null
+            ? (device.caloriesEstimated ? "estimated" : "device")
+            : undefined,
+        });
         setTodayLog(res.data);
+        setCaloriesSource(res.data?.caloriesSource || (device.caloriesEstimated ? "estimated" : overallSource));
         setCalorieBreakdown({
           steps: Number(res.data?.stepsCaloriesBurned || 0),
           exercise: Number(res.data?.exerciseCaloriesBurned || 0),
@@ -568,6 +577,13 @@ export default function TrackingScreen() {
         sleep: Number(sleep),
         source: "manual",
       };
+
+      // Persist an explicitly edited Active Burn value as well. The backend
+      // stores this as a headline override so later device sync cannot
+      // silently replace the user's manual value.
+      if (caloriesSource === "manual" && calories.trim() !== "") {
+        payload.caloriesBurned = Math.max(0, Number(calories) || 0);
+      }
       const res = await API.post("/track/today", payload);
       setSaved(true);
       setTodayLog(res.data);

@@ -160,9 +160,11 @@ export default function TrackDetailScreen() {
 
   const fetchLogs = useCallback(async () => {
     try {
-      const res    = await API.get("/track/recent/3");
-      const today_ = new Date().toISOString().slice(0, 10);
-      setLogs(res.data.filter((l) => l.date.slice(0, 10) !== today_));
+      const res = await API.get("/track/recent/3");
+      // The backend already excludes today's local calendar day. Do not
+      // compare UTC date strings here, which can be wrong around midnight
+      // for non-UTC timezones.
+      setLogs(Array.isArray(res.data) ? res.data : []);
     } catch { console.log("Failed to fetch logs"); }
   }, []);
 
@@ -191,7 +193,7 @@ export default function TrackDetailScreen() {
 
   // Build chart data including today
   const chartLogs = [
-    { _id: "today", date: new Date().toISOString(), [type]: todayVal },
+    { _id: "today", date: new Date(), [type]: todayVal },
     ...logs,
   ];
 
