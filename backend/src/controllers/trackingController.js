@@ -138,7 +138,7 @@ const addEstimatedCaloriesForToday =
        * A real device reading is authoritative for the headline total.
        * Estimates are still kept as a separate breakdown for transparency.
        */
-      if (track?.source === "device") {
+      if (track?.source === "device" && !activityType) {
         return track;
       }
 
@@ -208,6 +208,17 @@ exports.getTodayTracking =
     res
   ) => {
     try {
+      const activityPayload = activityType
+        ? {
+            activityType: String(activityType).trim().toLowerCase(),
+            label: String(activityLabel || activityType).trim().slice(0, 40),
+            minutes: Math.max(0, Number(activityMinutes) || 0),
+            met: Math.max(0, Number(activityMet) || 0),
+            calories: Math.max(0, Number(caloriesBurned) || 0),
+            loggedAt: new Date(),
+          }
+        : null;
+
       const {
         startOfToday,
         endOfToday,
@@ -257,6 +268,10 @@ exports.saveTodayTracking =
         sleep,
         caloriesBurned,
         source,
+        activityType,
+        activityLabel,
+        activityMinutes,
+        activityMet,
       } = req.body;
 
       if (
@@ -300,6 +315,17 @@ exports.saveTodayTracking =
        */
       const incomingSource =
         source || "manual";
+
+      const activityPayload = activityType
+        ? {
+            activityType: String(activityType).trim().toLowerCase(),
+            label: String(activityLabel || activityType).trim().slice(0, 40),
+            minutes: Math.max(0, Number(activityMinutes) || 0),
+            met: Math.max(0, Number(activityMet) || 0),
+            calories: Math.max(0, Number(caloriesBurned) || 0),
+            loggedAt: new Date(),
+          }
+        : null;
 
       // Manual steps should produce the same step-calorie estimate as the
       // device fallback. Recompute that component from the entered step
@@ -415,8 +441,23 @@ exports.saveTodayTracking =
             incomingSource;
         }
 
+        if (activityPayload && activityPayload.calories > 0) {
+          track.activityEntries = Array.isArray(track.activityEntries) ? track.activityEntries : [];
+          track.activityEntries.push(activityPayload);
+          track.activityCaloriesBurned = Number(track.activityCaloriesBurned || 0) + activityPayload.calories;
+
+          // A manually confirmed activity is an explicit extra burn. When a
+          // device-sourced log already exists, keep its source attribution
+          // but add the confirmed activity to the visible daily total.
+          if (track.source === "device") {
+            track.caloriesBurned = Math.round(
+              Number(track.caloriesBurned || 0) + activityPayload.calories
+            );
+          }
+        }
+
         if (track.source !== "device") {
-          if (caloriesBurned !== undefined && incomingSource === "manual") {
+          if (caloriesBurned !== undefined && incomingSource === "manual" && !activityPayload) {
             track.manualCaloriesBurned = Math.max(0, Number(caloriesBurned) || 0);
           }
           track.caloriesBurned = Math.round(
@@ -449,18 +490,24 @@ exports.saveTodayTracking =
                 ? Math.max(0, Number(caloriesBurned) || 0)
                 : Math.round(
                     Number(manualStepCalories || 0) +
-                    (incomingSource === "manual" ? Math.max(0, Number(caloriesBurned) || 0) : 0)
+                    Number(activityPayload?.calories || 0) +
+                    (!activityPayload && incomingSource === "manual" ? Math.max(0, Number(caloriesBurned) || 0) : 0)
                   ),
 
             stepsCaloriesBurned:
               incomingSource === "device" ? 0 : Number(manualStepCalories || 0),
             exerciseCaloriesBurned: 0,
-            activityCaloriesBurned: 0,
+            activityCaloriesBurned: activityPayload ? activityPayload.calories : 0,
             manualCaloriesBurned:
-              incomingSource === "manual" ? Math.max(0, Number(caloriesBurned) || 0) : 0,
+              activityPayload
+                ? 0
+                : incomingSource === "manual"
+                ? Math.max(0, Number(caloriesBurned) || 0)
+                : 0,
+            activityEntries: activityPayload && activityPayload.calories > 0 ? [activityPayload] : [],
 
             source:
-              incomingSource,
+              activityPayload ? "estimated" : incomingSource,
           });
       }
 

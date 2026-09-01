@@ -211,7 +211,7 @@ export default function RunSummaryScreen() {
           <SummaryStat label="Duration" value={formatDuration(draft.durationSeconds)} />
           <SummaryStat
             label="Avg pace"
-            value={`${formatPace(paceSecPerKm(draft.distanceMeters, draft.durationSeconds))} /km`}
+            value={paceSecPerKm(draft.distanceMeters, draft.durationSeconds) ? `${formatPace(paceSecPerKm(draft.distanceMeters, draft.durationSeconds))} /km` : "Building /km"}
           />
           <SummaryStat label="Calories" value={`${draft.caloriesBurned} kcal`} />
         </View>

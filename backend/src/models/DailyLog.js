@@ -45,6 +45,20 @@ const dailyLogSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
+
+    activityEntries: {
+      type: [
+        {
+          activityType: { type: String, required: true },
+          label: { type: String, required: true },
+          minutes: { type: Number, min: 0, default: 0 },
+          met: { type: Number, min: 0, default: 0 },
+          calories: { type: Number, min: 0, required: true },
+          loggedAt: { type: Date, default: Date.now },
+        },
+      ],
+      default: [],
+    },
     manualCaloriesBurned: {
       type: Number,
       default: 0,

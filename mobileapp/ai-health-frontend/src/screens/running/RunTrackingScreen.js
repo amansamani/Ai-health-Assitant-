@@ -77,6 +77,8 @@ export default function RunTrackingScreen() {
   const pausedAccumRef = useRef(0); // seconds spent paused, subtracted from wall clock
   const pausedAtRef = useRef(null);
   const lastPointRef = useRef(null);
+  const routeRef = useRef([]);
+  const distanceRef = useRef(0);
 
   useEffect(() => {
     return () => {
@@ -112,19 +114,24 @@ export default function RunTrackingScreen() {
       { duration: 500 }
     );
 
-    const delta = distanceDelta(lastPointRef.current, point);
+    const previous = lastPointRef.current;
+    const delta = distanceDelta(previous, point);
     lastPointRef.current = point;
 
-    if (delta === 0 && route.length > 0) {
-      // Filtered as noise/stationary — still record the point so the
-      // polyline doesn't look jagged, just don't count the distance.
-      setRoute((prev) => [...prev, point]);
+    if (!previous) {
+      routeRef.current = [point];
+      setRoute(routeRef.current);
       return;
     }
 
-    setDistanceMeters((prev) => prev + delta);
-    setRoute((prev) => [...prev, point]);
-  }, [route.length]);
+    routeRef.current = [...routeRef.current, point];
+    setRoute(routeRef.current);
+
+    if (delta > 0) {
+      distanceRef.current += delta;
+      setDistanceMeters(distanceRef.current);
+    }
+  }, []);
 
   const requestPermissionAndLocate = async () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
@@ -348,7 +355,7 @@ export default function RunTrackingScreen() {
         <View style={styles.statsRow}>
           <Stat
             label="pace /km"
-            value={formatPace(paceSecPerKm(distanceMeters, elapsedSeconds))}
+            value={paceSecPerKm(distanceMeters, elapsedSeconds) ? formatPace(paceSecPerKm(distanceMeters, elapsedSeconds)) : "Building…"}
           />
           <Stat label="kcal" value={String(calories)} />
         </View>

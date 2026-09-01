@@ -6,7 +6,6 @@ import {
   Pressable,
   ActivityIndicator,
   ScrollView,
-  TextInput,
   Alert,
   Image,
 } from "react-native";
@@ -21,6 +20,9 @@ import API, { API_BASE_URL } from "../services/api";
 import { getToken } from "../utils/secureToken";
 import { AuthContext } from "../context/AuthContext";
 import { COLORS, SHADOW } from "../constants/theme";
+import MapView, { Polyline } from "react-native-maps";
+import { getMyRuns } from "../services/runService";
+import { formatDuration, formatDistanceKm, formatPace, paceSecPerKm } from "../utils/runMath";
 import { setUserGoal } from "../context/AuthContext";
 import FadeSlideIn from "../components/FadeSlideIn";
 
@@ -65,18 +67,15 @@ export default function ProfileScreen() {
   const { logout, userToken } = useContext(AuthContext);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [savingSocial, setSavingSocial] = useState(false);
   const [savingGoal, setSavingGoal] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  const [savedSocial, setSavedSocial] = useState(false);
   const [savedGoal, setSavedGoal] = useState(false);
-  const [username, setUsername] = useState("");
-  const [bio, setBio] = useState("");
   const [visibility, setVisibility] = useState("private");
   const [selectedGoal, setSelectedGoal] = useState("fit");
   const [followRequests, setFollowRequests] = useState([]);
   const [customPlan, setCustomPlan] = useState(null);
   const [token, setToken] = useState(userToken || null);
+  const [myRuns, setMyRuns] = useState([]);
   const mountedRef = useRef(true);
 
   useEffect(() => () => { mountedRef.current = false; }, []);
@@ -97,8 +96,6 @@ export default function ProfileScreen() {
         // Existing users can still open the profile if social counters are unavailable.
       }
       setProfile({ ...p, ...(socialProfile || {}) });
-      setUsername(p.username || "");
-      setBio(p.bio || "");
       setVisibility(p.profileVisibility || "private");
       setSelectedGoal(p.goal || "fit");
       setFollowRequests(requestsRes.data || []);
@@ -108,6 +105,12 @@ export default function ProfileScreen() {
         setCustomPlan(plans.find((item) => item.isActive) || plans[0] || null);
       } catch (_) {
         setCustomPlan(null);
+      }
+      try {
+        const runsRes = await getMyRuns(1, 6);
+        if (mountedRef.current) setMyRuns(runsRes.runs || []);
+      } catch (_) {
+        if (mountedRef.current) setMyRuns([]);
       }
       const currentToken = await getToken();
       if (mountedRef.current) setToken(currentToken);
@@ -119,24 +122,6 @@ export default function ProfileScreen() {
   }, []);
 
   useFocusEffect(useCallback(() => { loadProfile(); }, [loadProfile]));
-
-  const saveSocialProfile = async () => {
-    try {
-      setSavingSocial(true);
-      const { data } = await API.put("/user/profile", {
-        username,
-        bio,
-        profileVisibility: visibility,
-      });
-      setProfile((prev) => ({ ...prev, ...data.profile }));
-      setSavedSocial(true);
-      setTimeout(() => mountedRef.current && setSavedSocial(false), 2200);
-    } catch (err) {
-      Alert.alert("Couldn't save profile", err.response?.data?.message || "Please try again.");
-    } finally {
-      setSavingSocial(false);
-    }
-  };
 
   const saveGoal = async () => {
     try {
@@ -201,7 +186,6 @@ export default function ProfileScreen() {
   );
 
   const imageSource = profileImageSource(profile, token);
-  const hasSocialChanges = username !== (profile?.username || "") || bio !== (profile?.bio || "") || visibility !== (profile?.profileVisibility || "private");
   const hasGoalChanges = selectedGoal !== (profile?.goal || "fit");
 
   if (loading || !profile) {
@@ -313,40 +297,53 @@ export default function ProfileScreen() {
         </FadeSlideIn>
 
         <FadeSlideIn delay={200}>
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Social identity</Text>
-            <Text style={styles.cardSubtitle}>Choose how people find and recognize you.</Text>
-
-            <Text style={styles.fieldLabel}>USERNAME</Text>
-            <View style={styles.inputWrap}>
-              <Text style={styles.inputPrefix}>@</Text>
-              <TextInput value={username} onChangeText={setUsername} autoCapitalize="none" autoCorrect={false} maxLength={30} style={styles.input} placeholder="your_username" placeholderTextColor={COLORS.textMuted} />
+          <Pressable
+            style={styles.socialProfileCard}
+            onPress={() => router.push({ pathname: "/(app)/social/profile", params: { identifier: profile.username } })}
+            accessibilityRole="button"
+            accessibilityLabel="Open your social profile"
+          >
+            <View style={styles.socialProfileIcon}><Ionicons name="people-outline" size={22} color="#fff" /></View>
+            <View style={styles.socialProfileCopy}>
+              <Text style={styles.socialProfileEyebrow}>SOCIAL PROFILE</Text>
+              <Text style={styles.socialProfileTitle}>Your FitLip identity</Text>
+              <Text style={styles.socialProfileSub}>Followers, following, bio and shared activity</Text>
             </View>
-
-            <Text style={[styles.fieldLabel, { marginTop: 14 }]}>BIO</Text>
-            <TextInput value={bio} onChangeText={setBio} maxLength={160} multiline numberOfLines={3} style={styles.bioInput} placeholder="Train. Eat. Repeat." placeholderTextColor={COLORS.textMuted} />
-
-            <Text style={[styles.fieldLabel, { marginTop: 14 }]}>PROFILE VISIBILITY</Text>
-            <View style={styles.visibilityRow}>
-              <VisibilityOption selected={visibility === "public"} title="Public" subtitle="Anyone can find you" icon="globe-outline" onPress={() => setVisibility("public")} />
-              <VisibilityOption selected={visibility === "private"} title="Private" subtitle="Approve follow requests" icon="lock-closed-outline" onPress={() => setVisibility("private")} />
-            </View>
-
-            <Pressable onPress={saveSocialProfile} disabled={!hasSocialChanges || savingSocial} style={[styles.primaryBtn, (!hasSocialChanges || savingSocial) && styles.disabledBtn]}>
-              {savingSocial ? <ActivityIndicator size="small" color="#fff" /> : <><Ionicons name={savedSocial ? "checkmark" : "save-outline"} size={17} color="#fff" /><Text style={styles.primaryBtnText}>{savedSocial ? "Saved" : "Save social profile"}</Text></>}
-            </Pressable>
-          </View>
+            <Ionicons name="chevron-forward" size={20} color={COLORS.textMuted} />
+          </Pressable>
         </FadeSlideIn>
 
-        <FadeSlideIn delay={250}>
-          <Pressable style={styles.previewCard} onPress={() => router.push({ pathname: "/(app)/social/profile", params: { identifier: profile.username } })}>
-            <View style={styles.previewIcon}><Ionicons name="eye-outline" size={19} color={COLORS.primary} /></View>
+        <FadeSlideIn delay={225}>
+          <Pressable style={styles.previewCard} onPress={() => router.push("/(app)/social/profile-settings")}>
+            <View style={styles.previewIcon}><Ionicons name="create-outline" size={19} color={COLORS.primary} /></View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.cardTitle}>Preview public profile</Text>
-              <Text style={styles.cardSubtitle}>See what other FitLip users will see</Text>
+              <Text style={styles.cardTitle}>Edit social identity</Text>
+              <Text style={styles.cardSubtitle}>Username, bio and profile visibility</Text>
             </View>
             <Ionicons name="chevron-forward" size={19} color={COLORS.textMuted} />
           </Pressable>
+        </FadeSlideIn>
+
+        <FadeSlideIn delay={250}>
+          <View style={styles.card}>
+            <View style={styles.cardTitleRow}>
+              <View>
+                <Text style={styles.cardTitle}>My activity</Text>
+                <Text style={styles.cardSubtitle}>Your saved runs, walks and rides</Text>
+              </View>
+              {myRuns.length > 0 && (
+                <Pressable onPress={() => router.push("/run-feed")} style={styles.smallLinkBtn}>
+                  <Text style={styles.smallLinkText}>See all</Text>
+                </Pressable>
+              )}
+            </View>
+            {myRuns.length === 0 ? (
+              <View style={styles.emptyActivity}>
+                <Ionicons name="walk-outline" size={26} color={COLORS.textLight} />
+                <Text style={styles.emptyActivityText}>Your saved running activity will appear here.</Text>
+              </View>
+            ) : myRuns.map((run) => <ProfileRunCard key={run._id} run={run} />)}
+          </View>
         </FadeSlideIn>
 
         <FadeSlideIn delay={300}>
@@ -401,6 +398,47 @@ export default function ProfileScreen() {
         <View style={{ height: 30 }} />
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function ProfileRunCard({ run }) {
+  const region = run.route?.length > 1 ? (() => {
+    const lats = run.route.map((p) => p.lat);
+    const lngs = run.route.map((p) => p.lng);
+    return {
+      latitude: (Math.min(...lats) + Math.max(...lats)) / 2,
+      longitude: (Math.min(...lngs) + Math.max(...lngs)) / 2,
+      latitudeDelta: Math.max(0.003, (Math.max(...lats) - Math.min(...lats)) * 1.4),
+      longitudeDelta: Math.max(0.003, (Math.max(...lngs) - Math.min(...lngs)) * 1.4),
+    };
+  })() : null;
+
+  return (
+    <View style={styles.profileRunCard}>
+      {run.photoUrl ? (
+        <Image source={{ uri: run.photoUrl }} style={styles.profileRunMedia} />
+      ) : region ? (
+        <View style={styles.profileRunMedia}>
+          <MapView style={{ flex: 1 }} initialRegion={region} scrollEnabled={false} zoomEnabled={false} pitchEnabled={false} rotateEnabled={false}>
+            <Polyline coordinates={run.route.map((p) => ({ latitude: p.lat, longitude: p.lng }))} strokeColor={COLORS.primary} strokeWidth={4} />
+          </MapView>
+        </View>
+      ) : (
+        <View style={styles.profileRunNoMedia}>
+          <Ionicons name="walk-outline" size={24} color={COLORS.textLight} />
+        </View>
+      )}
+      <View style={styles.profileRunMeta}>
+        <View style={styles.profileRunTitleRow}>
+          <Text style={styles.profileRunTitle}>{run.activityType === "cycle" ? "Cycling" : run.activityType === "walk" ? "Walk" : "Run"}</Text>
+          <Text style={styles.profileRunKcal}>{Math.round(run.caloriesBurned || 0)} kcal</Text>
+        </View>
+        <Text style={styles.profileRunStats}>
+          {formatDistanceKm(run.distanceMeters)} km · {formatDuration(run.durationSeconds)} · {paceSecPerKm(run.distanceMeters, run.durationSeconds) ? `${formatPace(paceSecPerKm(run.distanceMeters, run.durationSeconds))}/km` : "Pace building"}
+        </Text>
+        {!!run.caption && <Text style={styles.profileRunCaption} numberOfLines={2}>{run.caption}</Text>}
+      </View>
+    </View>
   );
 }
 
@@ -484,6 +522,25 @@ const styles = StyleSheet.create({
   greatnessEyebrow: { color: "rgba(255,255,255,0.72)", fontSize: 10, fontWeight: "900", letterSpacing: 1.05 },
   greatnessTitle: { color: "#fff", fontSize: 16, fontWeight: "900", marginTop: 2 },
   greatnessSub: { color: "rgba(255,255,255,0.78)", fontSize: 11, lineHeight: 16, marginTop: 3 },
+  socialProfileCard: { flexDirection: "row", alignItems: "center", backgroundColor: COLORS.surface, borderRadius: 22, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: COLORS.border, ...SHADOW },
+  socialProfileIcon: { width: 48, height: 48, borderRadius: 16, backgroundColor: COLORS.primary, alignItems: "center", justifyContent: "center", marginRight: 12 },
+  socialProfileCopy: { flex: 1 },
+  socialProfileEyebrow: { fontSize: 9.5, color: COLORS.primary, fontWeight: "900", letterSpacing: 1 },
+  socialProfileTitle: { marginTop: 2, fontSize: 16, fontWeight: "900", color: COLORS.textDark },
+  socialProfileSub: { marginTop: 4, fontSize: 11.5, lineHeight: 16, color: COLORS.textMuted, fontWeight: "600" },
+  smallLinkBtn: { paddingHorizontal: 10, paddingVertical: 7, borderRadius: 10, backgroundColor: COLORS.surfaceMuted },
+  smallLinkText: { color: COLORS.primary, fontSize: 11, fontWeight: "900" },
+  emptyActivity: { alignItems: "center", justifyContent: "center", paddingVertical: 22, gap: 7 },
+  emptyActivityText: { color: COLORS.textMuted, fontSize: 12, fontWeight: "600", textAlign: "center" },
+  profileRunCard: { borderRadius: 16, overflow: "hidden", borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.background, marginTop: 10 },
+  profileRunMedia: { width: "100%", height: 145, backgroundColor: COLORS.surfaceMuted },
+  profileRunNoMedia: { width: "100%", height: 92, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.surfaceMuted },
+  profileRunMeta: { padding: 12 },
+  profileRunTitleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  profileRunTitle: { fontSize: 14, fontWeight: "900", color: COLORS.textDark },
+  profileRunKcal: { fontSize: 12, fontWeight: "900", color: "#F97316" },
+  profileRunStats: { marginTop: 4, fontSize: 11, color: COLORS.textMuted, fontWeight: "700" },
+  profileRunCaption: { marginTop: 6, fontSize: 12, lineHeight: 17, color: COLORS.textLight, fontWeight: "600" },
   logoutBtn: { height: 50, borderRadius: 15, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.error + "35", alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8 },
   logoutText: { fontSize: 14, fontWeight: "800", color: COLORS.error },
 });

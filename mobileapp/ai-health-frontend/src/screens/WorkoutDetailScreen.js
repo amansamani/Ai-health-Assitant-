@@ -81,7 +81,7 @@ const ExerciseCard = memo(function ExerciseCard({
         accessibilityState={{ checked: isCompleted || isSelected, disabled: isSyncing }}
         accessibilityLabel={`${item.name}, ${item.sets ?? "—"} sets of ${item.reps ?? "—"} reps, approximately ${kcal} calories`}
       >
-        <View style={[styles.card, shadow(3), isSelected && styles.cardSelected, isCompleted && styles.cardCompleted]}>
+        <View style={[styles.card, shadow(3), !isSelected && !isCompleted && styles.cardIdle, isSelected && styles.cardSelected, isCompleted && styles.cardCompleted]}>
           {isCompleted && <View style={styles.cardDoneTint} />}
 
           <View style={[styles.iconWrap, isCompleted && styles.iconWrapDone]}>
@@ -636,12 +636,13 @@ const styles = StyleSheet.create({
   sectionLabel: { fontSize: 11, fontWeight: "800", color: COLORS.textLight, letterSpacing: 1.2, marginBottom: 10, paddingHorizontal: 20 },
 
   card: {
-    backgroundColor: COLORS.surface, borderRadius: 20,
+    backgroundColor: COLORS.surfaceMuted, borderRadius: 20,
     marginHorizontal: 20, marginBottom: 12,
     flexDirection: "row", alignItems: "center",
     padding: 14, overflow: "hidden",
   },
-  cardCompleted: { opacity: 0.58 },
+  cardIdle: { backgroundColor: COLORS.surfaceMuted, borderColor: COLORS.border, borderWidth: 1 },
+  cardCompleted: { opacity: 0.58, backgroundColor: COLORS.surface },
   cardDoneTint: {
     position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
     backgroundColor: "rgba(34,197,94,0.04)", borderWidth: 1.5,

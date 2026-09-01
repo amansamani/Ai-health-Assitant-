@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef, useContext } from "react";
 import {
   View, Text, TextInput, Pressable, StyleSheet,
   ActivityIndicator, Animated, Dimensions, KeyboardAvoidingView,
-  Platform, ScrollView,
+  Platform, ScrollView, Alert,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
@@ -290,15 +290,32 @@ function ActiveBurnCard({ value, goal, source, syncing, onQuickAdd, onManualChan
         </View>
       ) : (
         <>
-          <Text style={styles.burnQuickAddLabel}>NO WATCH? LOG AN ACTIVITY</Text>
+          {!!breakdown?.activityEntries?.length && (
+            <View style={styles.activityHistory}>
+              <Text style={styles.activityHistoryTitle}>TODAY'S ACTIVITIES</Text>
+              {breakdown.activityEntries.slice().reverse().slice(0, 4).map((entry, index) => (
+                <View key={`${entry.loggedAt || index}-${index}`} style={styles.activityHistoryRow}>
+                  <View style={styles.activityHistoryIcon}>
+                    <Ionicons name={entry.activityType === "swimming" ? "water-outline" : entry.activityType === "cycling" ? "bicycle-outline" : entry.activityType === "walk" ? "walk-outline" : "body-outline"} size={15} color="#F97316" />
+                  </View>
+                  <View style={styles.activityHistoryCopy}>
+                    <Text style={styles.activityHistoryName}>{entry.label}</Text>
+                    <Text style={styles.activityHistoryMeta}>{entry.minutes} min · estimated</Text>
+                  </View>
+                  <Text style={styles.activityHistoryKcal}>+{Math.round(entry.calories || 0)} kcal</Text>
+                </View>
+              ))}
+            </View>
+          )}
+          <Text style={styles.burnQuickAddLabel}>LOG AN ACTIVITY</Text>
           <View style={styles.quickAddRow}>
             {QUICK_ADD_ACTIVITIES.map((a) => (
               <Pressable
                 key={a.key}
                 onPress={() => onQuickAdd(a)}
-                style={({ pressed }) => [styles.quickAddChip, { opacity: pressed ? 0.7 : 1 }]}
+                style={({ pressed }) => [styles.quickAddChip, { opacity: pressed ? 0.72 : 1 }]}
                 accessibilityRole="button"
-                accessibilityLabel={`Add ${a.label} to today's active burn`}
+                accessibilityLabel={`Log ${a.label}`}
               >
                 <Ionicons name={a.icon} size={16} color="#F97316" />
                 <Text style={styles.quickAddText}>{a.label}</Text>
@@ -342,7 +359,7 @@ export default function TrackingScreen() {
   // "device" (Tier 1, real sensor data), "estimated" (Tier 2, derived from
   // steps or a completed workout), or null (Tier 3 / not yet logged today).
   const [caloriesSource, setCaloriesSource] = useState(null);
-  const [calorieBreakdown, setCalorieBreakdown] = useState({ steps: 0, exercise: 0, activity: 0, manual: 0 });
+  const [calorieBreakdown, setCalorieBreakdown] = useState({ steps: 0, exercise: 0, activity: 0, manual: 0, activityEntries: [] });
 
   const btnScale = useRef(new Animated.Value(1)).current;
   const onBtnIn  = () => Animated.spring(btnScale, { toValue: 0.97, useNativeDriver: true }).start();
@@ -362,6 +379,7 @@ export default function TrackingScreen() {
           exercise: Number(res.data.exerciseCaloriesBurned || 0),
           activity: Number(res.data.activityCaloriesBurned || 0),
           manual: Number(res.data.manualCaloriesBurned || 0),
+          activityEntries: Array.isArray(res.data.activityEntries) ? res.data.activityEntries : [],
         });
         // Whole-document source is a simplification (one field covers all
         // metrics), but it's a reasonable stand-in for the Active Burn
@@ -372,6 +390,7 @@ export default function TrackingScreen() {
             exercise: Number(res.data.exerciseCaloriesBurned || 0),
             activity: Number(res.data.activityCaloriesBurned || 0),
             manual: Number(res.data.manualCaloriesBurned || 0),
+            activityEntries: Array.isArray(res.data.activityEntries) ? res.data.activityEntries : [],
           };
           setCalorieBreakdown(nextBreakdown);
           setCaloriesSource(
@@ -464,6 +483,7 @@ export default function TrackingScreen() {
           exercise: Number(res.data?.exerciseCaloriesBurned || 0),
           activity: Number(res.data?.activityCaloriesBurned || 0),
           manual: Number(res.data?.manualCaloriesBurned || 0),
+          activityEntries: Array.isArray(res.data?.activityEntries) ? res.data.activityEntries : [],
         });
       } catch (err) {
         console.log("Auto-sync save failed:", err.response?.data?.message || err.message);
@@ -499,22 +519,43 @@ export default function TrackingScreen() {
   // whatever's already logged today rather than overwriting it.
   const handleQuickAdd = async (activity) => {
     const added = kcalFromMET(activity.met, weightKg, activity.minutes);
-    const next = Math.round((parseFloat(calories) || 0) + added);
-    setCalories(String(next));
-    setCaloriesSource("estimated");
-    try {
-      const res = await API.post("/track/today", { caloriesBurned: added, source: "manual" });
-      setTodayLog(res.data);
-      setCalories(String(res.data.caloriesBurned ?? next));
-      setCalorieBreakdown({
-        steps: Number(res.data.stepsCaloriesBurned || 0),
-        exercise: Number(res.data.exerciseCaloriesBurned || 0),
-        activity: Number(res.data.activityCaloriesBurned || 0),
-        manual: Number(res.data.manualCaloriesBurned || 0),
-      });
-    } catch (err) {
-      console.log("Quick-add save failed:", err.response?.data?.message || err.message);
-    }
+    Alert.alert(
+      `Log ${activity.label}?`,
+      `${activity.minutes} min · estimated ${added} kcal.\n\nThis will be added to today's Active Burn.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: `Log ${activity.label}`,
+          onPress: async () => {
+            const next = Math.round((parseFloat(calories) || 0) + added);
+            setCalories(String(next));
+            setCaloriesSource("estimated");
+            try {
+              const res = await API.post("/track/today", {
+                caloriesBurned: added,
+                source: "manual",
+                activityType: activity.key,
+                activityLabel: activity.label,
+                activityMinutes: activity.minutes,
+                activityMet: activity.met,
+              });
+              setTodayLog(res.data);
+              setCalories(String(res.data.caloriesBurned ?? next));
+              setCalorieBreakdown({
+                steps: Number(res.data.stepsCaloriesBurned || 0),
+                exercise: Number(res.data.exerciseCaloriesBurned || 0),
+                activity: Number(res.data.activityCaloriesBurned || 0),
+                manual: Number(res.data.manualCaloriesBurned || 0),
+                activityEntries: Array.isArray(res.data.activityEntries) ? res.data.activityEntries : [],
+              });
+            } catch (err) {
+              setCalories((parseFloat(calories) || 0).toString());
+              console.log("Quick-add save failed:", err.response?.data?.message || err.message);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const saveToday = async () => {
@@ -536,6 +577,7 @@ export default function TrackingScreen() {
         exercise: Number(res.data?.exerciseCaloriesBurned || 0),
         activity: Number(res.data?.activityCaloriesBurned || 0),
         manual: Number(res.data?.manualCaloriesBurned || 0),
+        activityEntries: Array.isArray(res.data?.activityEntries) ? res.data.activityEntries : [],
       });
       setCaloriesSource(
         Number(res.data?.exerciseCaloriesBurned || 0) > 0 && Number(res.data?.stepsCaloriesBurned || 0) === 0
@@ -918,6 +960,15 @@ const styles = StyleSheet.create({
   runCtaCopy: { flex: 1 },
   runCtaTitle: { color: "#FFFFFF", fontSize: 16, fontWeight: "900" },
   runCtaSub: { color: "#D7D7DB", fontSize: 11.5, fontWeight: "600", marginTop: 3 },
+
+  activityHistory: { marginTop: 8, marginBottom: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: COLORS.border },
+  activityHistoryTitle: { fontSize: 10, fontWeight: "900", color: COLORS.textMuted, letterSpacing: 1, marginBottom: 8 },
+  activityHistoryRow: { flexDirection: "row", alignItems: "center", paddingVertical: 8 },
+  activityHistoryIcon: { width: 30, height: 30, borderRadius: 10, backgroundColor: "#F9731618", alignItems: "center", justifyContent: "center", marginRight: 9 },
+  activityHistoryCopy: { flex: 1 },
+  activityHistoryName: { fontSize: 12.5, fontWeight: "800", color: COLORS.textDark },
+  activityHistoryMeta: { marginTop: 2, fontSize: 10.5, color: COLORS.textMuted, fontWeight: "600" },
+  activityHistoryKcal: { fontSize: 12, fontWeight: "900", color: "#F97316" },
 
   burnEditRow: {
     flexDirection: "row", alignItems: "center", gap: 8,
