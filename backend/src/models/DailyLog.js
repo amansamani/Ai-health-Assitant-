@@ -24,8 +24,31 @@ const dailyLogSchema = new mongoose.Schema(
       default: 0,
     },
     caloriesBurned: {
-      type: Number, // active calories (kcal), typically device-synced
+      type: Number, // total active calories shown in the app
       default: 0,
+    },
+
+    // Source breakdown. These let the UI distinguish workout calories from
+    // step calories instead of attributing every estimate to steps.
+    stepsCaloriesBurned: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    exerciseCaloriesBurned: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    activityCaloriesBurned: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    manualCaloriesBurned: {
+      type: Number,
+      default: 0,
+      min: 0,
     },
     // "device" = read straight from Health Connect/HealthKit (Tier 1).
     // "estimated" = no wearable data today, so we derived it — from steps

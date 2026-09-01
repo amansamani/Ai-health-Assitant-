@@ -200,16 +200,27 @@ function SyncStatusBanner({ status, lastSyncedAt, syncing, onRefresh, onRetry })
 // The ring is always the primary visual regardless of where the number
 // came from; tapping "Edit manually" reveals an inline input rather than
 // swapping the whole card to a different layout.
-function ActiveBurnCard({ value, goal, source, syncing, onQuickAdd, onManualChange }) {
+function ActiveBurnCard({ value, goal, source, syncing, onQuickAdd, onManualChange, breakdown, onStartRun }) {
   const [editing, setEditing] = useState(false);
   const numVal = parseFloat(value) || 0;
   const progress = Math.min(numVal / goal, 1);
 
+  const exerciseKcal = Math.round(breakdown?.exercise || 0);
+  const stepsKcal = Math.round(breakdown?.steps || 0);
+  const activityKcal = Math.round(breakdown?.activity || 0);
   const badge =
     source === "device"
       ? { icon: "watch-outline", text: "Synced from your device", color: "#22C55E" }
+      : exerciseKcal > 0 && stepsKcal > 0
+      ? { icon: "flame-outline", text: `Workout ${exerciseKcal} · Steps ${stepsKcal} kcal`, color: "#6339B8" }
+      : exerciseKcal > 0
+      ? { icon: "barbell-outline", text: `Workout ${exerciseKcal} kcal`, color: "#6339B8" }
+      : stepsKcal > 0
+      ? { icon: "walk-outline", text: `Steps ${stepsKcal} kcal`, color: "#F97316" }
+      : activityKcal > 0
+      ? { icon: "flame-outline", text: `Activity ${activityKcal} kcal`, color: "#F97316" }
       : source === "estimated"
-      ? { icon: "walk-outline", text: "Estimated from your steps", color: "#F97316" }
+      ? { icon: "flame-outline", text: "Estimated activity calories", color: "#F97316" }
       : { icon: "create-outline", text: "Logged manually", color: COLORS.textMuted };
 
   return (
@@ -239,6 +250,29 @@ function ActiveBurnCard({ value, goal, source, syncing, onQuickAdd, onManualChan
           </Pressable>
         </View>
       </View>
+
+      <Pressable
+        onPress={onStartRun}
+        style={({ pressed }) => [styles.runCta, { opacity: pressed ? 0.92 : 1 }]}
+        accessibilityRole="button"
+        accessibilityLabel="Start a run"
+      >
+        <LinearGradient
+          colors={["#0D0D0F", "#2A2A2E", "#55555A"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.runCtaGradient}
+        >
+          <View style={styles.runCtaIcon}>
+            <Ionicons name="walk" size={22} color="#FFFFFF" />
+          </View>
+          <View style={styles.runCtaCopy}>
+            <Text style={styles.runCtaTitle}>Start a Run</Text>
+            <Text style={styles.runCtaSub}>Track distance, pace & calories</Text>
+          </View>
+          <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+        </LinearGradient>
+      </Pressable>
 
       {editing ? (
         <View style={styles.burnEditRow}>
@@ -308,6 +342,7 @@ export default function TrackingScreen() {
   // "device" (Tier 1, real sensor data), "estimated" (Tier 2, derived from
   // steps or a completed workout), or null (Tier 3 / not yet logged today).
   const [caloriesSource, setCaloriesSource] = useState(null);
+  const [calorieBreakdown, setCalorieBreakdown] = useState({ steps: 0, exercise: 0, activity: 0, manual: 0 });
 
   const btnScale = useRef(new Animated.Value(1)).current;
   const onBtnIn  = () => Animated.spring(btnScale, { toValue: 0.97, useNativeDriver: true }).start();
@@ -322,10 +357,33 @@ export default function TrackingScreen() {
         setWater(res.data.water?.toString() || "");
         setSleep(res.data.sleep?.toString() || "");
         setCalories(res.data.caloriesBurned?.toString() || "");
+        setCalorieBreakdown({
+          steps: Number(res.data.stepsCaloriesBurned || 0),
+          exercise: Number(res.data.exerciseCaloriesBurned || 0),
+          activity: Number(res.data.activityCaloriesBurned || 0),
+          manual: Number(res.data.manualCaloriesBurned || 0),
+        });
         // Whole-document source is a simplification (one field covers all
         // metrics), but it's a reasonable stand-in for the Active Burn
         // badge until device sync (below) sets something more precise.
-        if (res.data.caloriesBurned) setCaloriesSource(res.data.source ?? "manual");
+        if (res.data.caloriesBurned) {
+          const nextBreakdown = {
+            steps: Number(res.data.stepsCaloriesBurned || 0),
+            exercise: Number(res.data.exerciseCaloriesBurned || 0),
+            activity: Number(res.data.activityCaloriesBurned || 0),
+            manual: Number(res.data.manualCaloriesBurned || 0),
+          };
+          setCalorieBreakdown(nextBreakdown);
+          setCaloriesSource(
+            res.data.source === "device"
+              ? "device"
+              : nextBreakdown.exercise > 0 && nextBreakdown.steps === 0 && nextBreakdown.activity === 0
+              ? "exercise"
+              : nextBreakdown.steps > 0 && nextBreakdown.exercise === 0 && nextBreakdown.activity === 0
+              ? "steps"
+              : res.data.source ?? "manual"
+          );
+        }
       }
     } catch {
       console.log("No tracking data for today");
@@ -401,6 +459,12 @@ export default function TrackingScreen() {
       try {
         const res = await API.post("/track/today", { ...toSave, source: overallSource });
         setTodayLog(res.data);
+        setCalorieBreakdown({
+          steps: Number(res.data?.stepsCaloriesBurned || 0),
+          exercise: Number(res.data?.exerciseCaloriesBurned || 0),
+          activity: Number(res.data?.activityCaloriesBurned || 0),
+          manual: Number(res.data?.manualCaloriesBurned || 0),
+        });
       } catch (err) {
         console.log("Auto-sync save failed:", err.response?.data?.message || err.message);
       }
@@ -437,10 +501,17 @@ export default function TrackingScreen() {
     const added = kcalFromMET(activity.met, weightKg, activity.minutes);
     const next = Math.round((parseFloat(calories) || 0) + added);
     setCalories(String(next));
-    setCaloriesSource("manual");
+    setCaloriesSource("estimated");
     try {
-      const res = await API.post("/track/today", { caloriesBurned: next, source: "manual" });
+      const res = await API.post("/track/today", { caloriesBurned: added, source: "manual" });
       setTodayLog(res.data);
+      setCalories(String(res.data.caloriesBurned ?? next));
+      setCalorieBreakdown({
+        steps: Number(res.data.stepsCaloriesBurned || 0),
+        exercise: Number(res.data.exerciseCaloriesBurned || 0),
+        activity: Number(res.data.activityCaloriesBurned || 0),
+        manual: Number(res.data.manualCaloriesBurned || 0),
+      });
     } catch (err) {
       console.log("Quick-add save failed:", err.response?.data?.message || err.message);
     }
@@ -454,13 +525,25 @@ export default function TrackingScreen() {
         steps: Number(steps),
         water: Number(water),
         sleep: Number(sleep),
-        caloriesBurned: Number(calories),
         source: "manual",
       };
-      await API.post("/track/today", payload);
+      const res = await API.post("/track/today", payload);
       setSaved(true);
-      setTodayLog(payload);
-      setCaloriesSource("manual");
+      setTodayLog(res.data);
+      setCalories(String(res.data?.caloriesBurned ?? calories ?? "0"));
+      setCalorieBreakdown({
+        steps: Number(res.data?.stepsCaloriesBurned || 0),
+        exercise: Number(res.data?.exerciseCaloriesBurned || 0),
+        activity: Number(res.data?.activityCaloriesBurned || 0),
+        manual: Number(res.data?.manualCaloriesBurned || 0),
+      });
+      setCaloriesSource(
+        Number(res.data?.exerciseCaloriesBurned || 0) > 0 && Number(res.data?.stepsCaloriesBurned || 0) === 0
+          ? "exercise"
+          : Number(res.data?.stepsCaloriesBurned || 0) > 0 && Number(res.data?.exerciseCaloriesBurned || 0) === 0
+          ? "steps"
+          : res.data?.source || "manual"
+      );
       setTimeout(() => setSaved(false), 2500);
       router.push({
         pathname: "/(app)/(tabs)/home",
@@ -579,6 +662,8 @@ export default function TrackingScreen() {
               syncing={syncing}
               onQuickAdd={handleQuickAdd}
               onManualChange={handleCaloriesManualChange}
+              breakdown={calorieBreakdown}
+              onStartRun={() => router.push("/run-tracking")}
             />
           </FadeSlideIn>
 
@@ -808,6 +893,32 @@ const styles = StyleSheet.create({
     borderRadius: 20, paddingHorizontal: 12, paddingVertical: 8,
   },
   quickAddText: { fontSize: 12.5, fontWeight: "700", color: "#F97316" },
+  runCta: {
+    marginTop: 4,
+    marginBottom: 14,
+    borderRadius: 16,
+    overflow: "hidden",
+  },
+  runCtaGradient: {
+    minHeight: 74,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  runCtaIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 13,
+    backgroundColor: "rgba(255,255,255,0.10)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  runCtaCopy: { flex: 1 },
+  runCtaTitle: { color: "#FFFFFF", fontSize: 16, fontWeight: "900" },
+  runCtaSub: { color: "#D7D7DB", fontSize: 11.5, fontWeight: "600", marginTop: 3 },
+
   burnEditRow: {
     flexDirection: "row", alignItems: "center", gap: 8,
     backgroundColor: COLORS.surfaceMuted, borderRadius: 12,

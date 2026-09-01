@@ -161,6 +161,30 @@ export default function WorkoutScreen() {
     setPlanMode(nextMode);
   }, []);
 
+  const openPlanSwitcher = useCallback(() => {
+    Alert.alert(
+      "Change Workout Plan",
+      "Choose which weekly plan you want to use. Your other plan stays saved.",
+      [
+        {
+          text: "Recommended Plan",
+          onPress: () => choosePlanMode("standard"),
+        },
+        {
+          text: "Custom Plan",
+          onPress: () => {
+            if (customPlans.length > 0) {
+              choosePlanMode("custom");
+            } else {
+              Alert.alert("No custom plan yet", "Create a custom plan from Profile first.");
+            }
+          },
+        },
+        { text: "Cancel", style: "cancel" },
+      ]
+    );
+  }, [choosePlanMode, customPlans.length]);
+
   const fetchWorkouts = useCallback(async () => {
     try {
       setLoading(true);
@@ -230,14 +254,14 @@ export default function WorkoutScreen() {
           ListHeaderComponent={() => (
             <>
               <View style={styles.headerRow}>
-                <View style={{ flex: 1 }}>
+                <View style={{ flex: 1, marginRight: 10 }}>
                   <Text style={styles.screenTitle}>{activePlan.name || "My Workout"}</Text>
                   <Text style={styles.screenSub}>Your custom training plan</Text>
                 </View>
-                <View style={[styles.goalChip, { backgroundColor: "#F1EAFE", borderColor: "#8B5CF640" }]}>
-                  <Ionicons name="construct-outline" size={14} color="#6339B8" style={{ marginRight: 5 }} />
-                  <Text style={[styles.goalChipText, { color: "#6339B8" }]}>Custom</Text>
-                </View>
+                <Pressable onPress={openPlanSwitcher} style={styles.changePlanBtn} accessibilityRole="button" accessibilityLabel="Change workout plan">
+                  <Ionicons name="swap-horizontal" size={14} color="#fff" />
+                  <Text style={styles.changePlanBtnText}>Change</Text>
+                </Pressable>
               </View>
 
               <LinearGradient colors={["#170F36", "#49225B"]} style={[styles.statsBar, shadow(8)]}>
@@ -409,14 +433,14 @@ export default function WorkoutScreen() {
             {/* Title row */}
             <FadeSlideIn delay={0}>
               <View style={styles.headerRow}>
-                <View>
+                <View style={{ flex: 1, marginRight: 10 }}>
                   <Text style={styles.screenTitle}>Workouts</Text>
-                  <Text style={styles.screenSub}>Your weekly training plan</Text>
+                  <Text style={styles.screenSub}>Recommended weekly training plan</Text>
                 </View>
-                <View style={[styles.goalChip, { backgroundColor: goal.bg, borderColor: goal.color + "40" }]}>
-                  <Ionicons name={goal.icon} size={14} color={goal.color} style={{ marginRight: 5 }} />
-                  <Text style={[styles.goalChipText, { color: goal.color }]}>{goal.label}</Text>
-                </View>
+                <Pressable onPress={openPlanSwitcher} style={styles.changePlanBtn} accessibilityRole="button" accessibilityLabel="Change workout plan">
+                  <Ionicons name="swap-horizontal" size={14} color="#fff" />
+                  <Text style={styles.changePlanBtnText}>Change</Text>
+                </Pressable>
               </View>
             </FadeSlideIn>
 
@@ -597,6 +621,8 @@ const styles = StyleSheet.create({
   secondaryChoiceButton: { marginTop: 10, paddingHorizontal: 16, paddingVertical: 10 },
   secondaryChoiceText: { color: COLORS.primary, fontSize: 12, fontWeight: "900" },
   customHeaderBtn: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: COLORS.primaryDark, paddingHorizontal: 11, paddingVertical: 8, borderRadius: 12 },
+  changePlanBtn: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: COLORS.primaryDark, paddingHorizontal: 12, paddingVertical: 9, borderRadius: 13 },
+  changePlanBtnText: { color: "#fff", fontSize: 11, fontWeight: "900" },
   customHeaderBtnText: { color: "#fff", fontSize: 11, fontWeight: "900" },
   customEmptyCard: { backgroundColor: COLORS.surface, borderRadius: 22, padding: 24, alignItems: "center", marginBottom: 18, borderWidth: 1, borderColor: "#E8DFFF" },
   customEmptyTitle: { marginTop: 10, fontSize: 18, fontWeight: "900", color: COLORS.textDark },

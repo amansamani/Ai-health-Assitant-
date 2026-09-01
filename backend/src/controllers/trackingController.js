@@ -11,6 +11,9 @@ const DailyLog = require(
 const User = require(
   "../models/User"
 );
+const HealthProfile = require(
+  "../modules/health/health.model"
+);
 
 const {
   checkAndAwardStreakAchievements,
@@ -76,7 +79,8 @@ const addEstimatedCaloriesForToday =
   async (
     userId,
     kcalToAdd,
-    timezone = null
+    timezone = null,
+    sourceKind = "activity"
   ) => {
     try {
       const numericKcal =
@@ -131,55 +135,46 @@ const addEstimatedCaloriesForToday =
         });
 
       /*
-       * Tier 1 device data wins.
-       *
-       * If the wearable already reported today's
-       * active calories, don't stack workout estimates
-       * on top of it.
+       * A real device reading is authoritative for the headline total.
+       * Estimates are still kept as a separate breakdown for transparency.
        */
-      if (
-        track?.source ===
-        "device"
-      ) {
+      if (track?.source === "device") {
         return track;
       }
 
-      if (track) {
-        track.caloriesBurned =
-          Math.round(
-            Number(
-              track.caloriesBurned ||
-                0
-            ) +
-              numericKcal
-          );
-
-        track.source =
-          "estimated";
-
-        await track.save();
-      } else {
-        track =
-          await DailyLog.create({
-            user: userId,
-
-            date: start,
-
-            steps: 0,
-
-            water: 0,
-
-            sleep: 0,
-
-            caloriesBurned:
-              Math.round(
-                numericKcal
-              ),
-
-            source:
-              "estimated",
-          });
+      if (!track) {
+        track = await DailyLog.create({
+          user: userId,
+          date: start,
+          steps: 0,
+          water: 0,
+          sleep: 0,
+          caloriesBurned: 0,
+          source: "estimated",
+        });
       }
+
+      const kindField =
+        sourceKind === "exercise"
+          ? "exerciseCaloriesBurned"
+          : sourceKind === "steps"
+          ? "stepsCaloriesBurned"
+          : sourceKind === "manual"
+          ? "manualCaloriesBurned"
+          : "activityCaloriesBurned";
+
+      track[kindField] =
+        Number(track[kindField] || 0) + numericKcal;
+
+      track.caloriesBurned = Math.round(
+        Number(track.stepsCaloriesBurned || 0) +
+        Number(track.exerciseCaloriesBurned || 0) +
+        Number(track.activityCaloriesBurned || 0) +
+        Number(track.manualCaloriesBurned || 0)
+      );
+
+      track.source = "estimated";
+      await track.save();
 
       return track;
     } catch (error) {
@@ -306,6 +301,26 @@ exports.saveTodayTracking =
       const incomingSource =
         source || "manual";
 
+      // Manual steps should produce the same step-calorie estimate as the
+      // device fallback. Recompute that component from the entered step
+      // count instead of leaving calories at zero.
+      let manualStepCalories = null;
+      if (steps !== undefined && incomingSource !== "device") {
+        const profile = await HealthProfile.findOne({ user: req.user.id })
+          .select("weight")
+          .lean();
+        const weightKg = Number(profile?.weight) || 70;
+        const stepCount = Math.max(0, Number(steps) || 0);
+        if (stepCount > 0) {
+          // ~100 steps/min at 3.5 MET. kcal/min = MET * 3.5 * kg / 200.
+          manualStepCalories = Math.round(
+            ((3.5 * 3.5 * weightKg) / 200) * (stepCount / 100)
+          );
+        } else {
+          manualStepCalories = 0;
+        }
+      }
+
       if (track) {
         /*
          * Steps
@@ -316,6 +331,10 @@ exports.saveTodayTracking =
         ) {
           track.steps =
             steps;
+
+          if (manualStepCalories !== null && track.source !== "device") {
+            track.stepsCaloriesBurned = manualStepCalories;
+          }
         }
 
         /*
@@ -396,6 +415,18 @@ exports.saveTodayTracking =
             incomingSource;
         }
 
+        if (track.source !== "device") {
+          if (caloriesBurned !== undefined && incomingSource === "manual") {
+            track.manualCaloriesBurned = Math.max(0, Number(caloriesBurned) || 0);
+          }
+          track.caloriesBurned = Math.round(
+            Number(track.stepsCaloriesBurned || 0) +
+            Number(track.exerciseCaloriesBurned || 0) +
+            Number(track.activityCaloriesBurned || 0) +
+            Number(track.manualCaloriesBurned || 0)
+          );
+        }
+
         await track.save();
       } else {
         track =
@@ -414,8 +445,19 @@ exports.saveTodayTracking =
               sleep ?? 0,
 
             caloriesBurned:
-              caloriesBurned ??
-              0,
+              incomingSource === "device"
+                ? Math.max(0, Number(caloriesBurned) || 0)
+                : Math.round(
+                    Number(manualStepCalories || 0) +
+                    (incomingSource === "manual" ? Math.max(0, Number(caloriesBurned) || 0) : 0)
+                  ),
+
+            stepsCaloriesBurned:
+              incomingSource === "device" ? 0 : Number(manualStepCalories || 0),
+            exerciseCaloriesBurned: 0,
+            activityCaloriesBurned: 0,
+            manualCaloriesBurned:
+              incomingSource === "manual" ? Math.max(0, Number(caloriesBurned) || 0) : 0,
 
             source:
               incomingSource,

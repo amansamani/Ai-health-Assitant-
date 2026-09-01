@@ -47,6 +47,17 @@ const workoutLogSchema = new mongoose.Schema(
       type: Date,
       required: true,
     },
+
+    // Custom plans contain a full week inside one plan document. Keep the
+    // day as part of the log identity so Monday and Thursday never share
+    // completion state. Standard plans use null here.
+    dayOfWeek: {
+      type: Number,
+      min: 1,
+      max: 7,
+      default: null,
+    },
+
     // True once at least one attempt completed the full workout today.
     completed: {
       type: Boolean,
@@ -67,8 +78,11 @@ const workoutLogSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Keep one daily workout log per user. Retry creates another attempt inside
-// the same document, so progress/history remains grouped by calendar date.
-workoutLogSchema.index({ user: 1, date: 1, planModel: 1, workoutPlan: 1 }, { unique: true });
+// One log per user/date/plan/day. For CustomWorkoutPlan the dayOfWeek is
+// essential because one plan contains Monday-Sunday workouts.
+workoutLogSchema.index(
+  { user: 1, date: 1, planModel: 1, workoutPlan: 1, dayOfWeek: 1 },
+  { unique: true }
+);
 
 module.exports = mongoose.model("WorkoutLog", workoutLogSchema);

@@ -129,7 +129,7 @@ function getCurrentAttempt(log) {
   return log.attempts[log.attempts.length - 1];
 }
 
-async function findWorkoutLog(userId, start, end, workoutPlanId, planModel) {
+async function findWorkoutLog(userId, start, end, workoutPlanId, planModel, dayOfWeek = null) {
   const planFilter = {
     user: userId,
     date: { $gte: start, $lte: end },
@@ -138,6 +138,11 @@ async function findWorkoutLog(userId, start, end, workoutPlanId, planModel) {
       ? [{ planModel: "WorkoutPlan" }, { planModel: { $exists: false } }]
       : [{ planModel }],
   };
+
+  if (planModel === "CustomWorkoutPlan") {
+    planFilter.dayOfWeek = Number(dayOfWeek || 1);
+  }
+
   return WorkoutLog.findOne(planFilter);
 }
 
@@ -265,7 +270,14 @@ exports.getWorkoutProgress = async (req, res) => {
     if (!context) return res.status(404).json({ message: "Workout plan not found" });
 
     const { start, end } = await getUserTodayRange(req.user.id);
-    const log = await findWorkoutLog(req.user.id, start, end, workoutPlanId, context.planModel).then((doc) => doc?.toObject?.() || null);
+    const log = await findWorkoutLog(
+      req.user.id,
+      start,
+      end,
+      workoutPlanId,
+      context.planModel,
+      dayOfWeek
+    ).then((doc) => doc?.toObject?.() || null);
     if (log && (String(log.workoutPlan) !== String(workoutPlanId) || log.planModel !== context.planModel)) {
       return res.status(409).json({ message: "A different workout is already tracked for today." });
     }
@@ -299,10 +311,32 @@ exports.confirmExercises = async (req, res) => {
     const profile = await HealthProfile.findOne({ user: req.user.id }).select("weight").lean();
     const weightKg = Number(profile?.weight) || 0;
     const { start, end } = await getUserTodayRange(req.user.id);
-    let log = await findWorkoutLog(req.user.id, start, end, workoutPlanId, context.planModel);
+    let log = await findWorkoutLog(
+      req.user.id,
+      start,
+      end,
+      workoutPlanId,
+      context.planModel,
+      dayOfWeek
+    );
 
     if (!log) {
-      log = await WorkoutLog.create({ user: req.user.id, date: start, workoutPlan: workoutPlanId, planModel: context.planModel, completed: false, caloriesBurned: 0, attempts: [{ attemptNumber: 1, completedExercises: [], caloriesBurned: 0, completed: false, startedAt: new Date() }] });
+      log = await WorkoutLog.create({
+        user: req.user.id,
+        date: start,
+        workoutPlan: workoutPlanId,
+        planModel: context.planModel,
+        dayOfWeek: context.planModel === "CustomWorkoutPlan" ? Number(dayOfWeek || 1) : null,
+        completed: false,
+        caloriesBurned: 0,
+        attempts: [{
+          attemptNumber: 1,
+          completedExercises: [],
+          caloriesBurned: 0,
+          completed: false,
+          startedAt: new Date(),
+        }],
+      });
     } else if (String(log.workoutPlan) !== String(workoutPlanId) || log.planModel !== context.planModel) {
       return res.status(409).json({ message: "A different workout is already tracked for today." });
     }
@@ -337,7 +371,12 @@ exports.confirmExercises = async (req, res) => {
     const selectedCalories = newExercises.reduce((sum, exercise) => sum + getExerciseCalories(context.plan, exercise, weightKg), 0);
     let caloriesAdded = 0;
     if (selectedCalories > 0) {
-      const calorieLog = await addEstimatedCaloriesForToday(req.user.id, selectedCalories);
+      const calorieLog = await addEstimatedCaloriesForToday(
+        req.user.id,
+        selectedCalories,
+        null,
+        "exercise"
+      );
       if (calorieLog?.source === "estimated") caloriesAdded = selectedCalories;
     }
     for (const exercise of newExercises) {
@@ -434,7 +473,8 @@ exports.retryWorkout = async (req, res) => {
       start,
       end,
       workoutPlanId,
-      context.planModel
+      context.planModel,
+      dayOfWeek
     );
 
     if (!log) {

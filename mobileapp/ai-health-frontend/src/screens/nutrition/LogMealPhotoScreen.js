@@ -484,133 +484,539 @@ export default function LogMealPhotoScreen({ navigation, route }) {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  scroll: { padding: 20, paddingBottom: 40 },
+  // ============================================================
+  // SCREEN
+  // ============================================================
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
 
-  // ── Screen header — mirrors NutritionDashboardScreen's eyebrow + title
-  // + icon-chip pattern so this screen reads as part of the same app.
-  screenHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18 },
-  eyebrow: { fontSize: 11, fontWeight: "800", color: COLORS.textMuted, letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 },
-  screenTitle: { fontSize: 22, fontWeight: "800", color: COLORS.textDark, letterSpacing: -0.5, marginBottom: 4 },
-  screenSub: { fontSize: 12.5, color: COLORS.textMuted, fontWeight: "600", lineHeight: 17, paddingRight: 12 },
+  scroll: {
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 44,
+  },
+
+  // ============================================================
+  // HEADER
+  // ============================================================
+  screenHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    marginBottom: 22,
+  },
+
+  screenHeaderText: {
+    flex: 1,
+    paddingRight: 16,
+  },
+
+  eyebrow: {
+    fontSize: 10,
+    lineHeight: 13,
+    fontWeight: "900",
+    color: COLORS.textMuted,
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    marginBottom: 5,
+  },
+
+  screenTitle: {
+    fontSize: 24,
+    lineHeight: 30,
+    fontWeight: "900",
+    color: COLORS.textDark,
+    letterSpacing: -0.7,
+    marginBottom: 6,
+  },
+
+  screenSub: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: COLORS.textMuted,
+    fontWeight: "600",
+    maxWidth: 320,
+  },
+
   headerIconWrap: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: BRAND[100], alignItems: "center", justifyContent: "center",
+    width: 44,
+    height: 44,
+    borderRadius: 15,
+    backgroundColor: BRAND[100],
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 10,
   },
 
-  tabRow: { flexDirection: "row", gap: 8, marginBottom: 20 },
+  // ============================================================
+  // MEAL TABS
+  // ============================================================
+  tabRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 22,
+  },
+
   tab: {
-    flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
-    gap: 6, paddingVertical: 10, borderRadius: 14,
-    borderWidth: 1.5, borderColor: COLORS.border, backgroundColor: COLORS.card,
+    flex: 1,
+    minHeight: 46,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
   },
-  tabTxt: { fontSize: 12, fontWeight: "600", color: COLORS.textLight },
 
-  captureCard: {
-    backgroundColor: COLORS.card, borderRadius: 22, padding: 28,
-    alignItems: "center", ...SHADOW,
+  tabTxt: {
+    fontSize: 11.5,
+    lineHeight: 15,
+    fontWeight: "700",
+    color: COLORS.textLight,
   },
+
+  // ============================================================
+  // CAPTURE CARD
+  // ============================================================
+  captureCard: {
+    backgroundColor: COLORS.card,
+    borderRadius: 24,
+    paddingHorizontal: 22,
+    paddingVertical: 28,
+    alignItems: "center",
+    ...SHADOW,
+  },
+
   captureIconWrap: {
-    width: 72, height: 72, borderRadius: 24,
-    alignItems: "center", justifyContent: "center",
+    width: 76,
+    height: 76,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 18,
+  },
+
+  captureTitle: {
+    fontSize: 21,
+    lineHeight: 27,
+    fontWeight: "900",
+    color: COLORS.textDark,
+    textAlign: "center",
+    marginBottom: 8,
+  },
+
+  captureSub: {
+    width: "100%",
+    maxWidth: 310,
+    fontSize: 13,
+    lineHeight: 19,
+    color: COLORS.textMuted,
+    fontWeight: "600",
+    textAlign: "center",
+    marginBottom: 22,
+  },
+
+  // ============================================================
+  // PREVIEW / ANALYSIS CARD
+  // ============================================================
+  previewCard: {
+    backgroundColor: COLORS.card,
+    borderRadius: 24,
+    padding: 16,
+    ...SHADOW,
+  },
+
+  photoRow: {
+    flexDirection: "row",
+    gap: 10,
     marginBottom: 16,
   },
-  captureTitle: { fontSize: 20, fontWeight: "900", color: COLORS.textDark, marginBottom: 6 },
-  captureSub: { fontSize: 13, color: COLORS.textMuted, textAlign: "center", marginBottom: 24, lineHeight: 19 },
 
-  previewCard: {
-    backgroundColor: COLORS.card, borderRadius: 22, padding: 16,
-    ...SHADOW,
+  photoThumbWrap: {
+    flex: 1,
+    position: "relative",
+    overflow: "visible",
   },
-  photoRow: { flexDirection: "row", gap: 10, marginBottom: 16 },
-  photoThumbWrap: { position: "relative", flex: 1 },
-  photoThumb: { width: "100%", height: 180, borderRadius: 16, backgroundColor: BRAND[100] },
+
+  photoThumb: {
+    width: "100%",
+    height: 185,
+    borderRadius: 17,
+    backgroundColor: BRAND[100],
+  },
+
   photoRemove: {
-    position: "absolute", top: 8, right: 8, width: 26, height: 26, borderRadius: 13,
-    backgroundColor: "rgba(15,23,42,0.65)", alignItems: "center", justifyContent: "center",
+    position: "absolute",
+    top: -6,
+    right: -6,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "rgba(15, 23, 42, 0.82)",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: COLORS.card,
   },
 
+  // ============================================================
+  // ADD ANGLE
+  // ============================================================
   angleBtn: {
-    backgroundColor: BRAND[50], borderRadius: 14, paddingVertical: 12,
-    alignItems: "center", marginBottom: 10,
-    borderWidth: 1, borderColor: BRAND[100],
+    minHeight: 46,
+    backgroundColor: BRAND[50],
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: BRAND[100],
   },
-  angleBtnText: { color: COLORS.primary, fontSize: 13, fontWeight: "700" },
 
+  angleBtnText: {
+    color: COLORS.primary,
+    fontSize: 12.5,
+    lineHeight: 17,
+    fontWeight: "800",
+    textAlign: "center",
+  },
+
+  // ============================================================
+  // REFERENCE OBJECT
+  // ============================================================
   referenceRow: {
-    flexDirection: "row", alignItems: "center", gap: 10,
-    marginBottom: 14, paddingHorizontal: 2,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 11,
+    marginBottom: 16,
+    paddingHorizontal: 2,
   },
-  referenceText: { flex: 1, fontSize: 12, color: COLORS.textLight, fontWeight: "600", lineHeight: 17 },
 
-  // ── "AI is reading your plate" state ──
-  analyzingWrap: { paddingTop: 4 },
-  analyzingIconRow: { flexDirection: "row", alignItems: "center", marginBottom: 16 },
-  analyzingIconCircle: {
-    width: 44, height: 44, borderRadius: 22, backgroundColor: BRAND[100],
-    alignItems: "center", justifyContent: "center",
+  referenceText: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 17,
+    color: COLORS.textLight,
+    fontWeight: "600",
   },
-  analyzingTitle: { fontSize: 15, fontWeight: "800", color: COLORS.textDark },
-  analyzingSub: { fontSize: 12, color: COLORS.textMuted, fontWeight: "600", marginTop: 2 },
-
-  secondaryBtn: {
-    backgroundColor: BRAND[50], borderRadius: 16, paddingVertical: 16,
-    flexDirection: "row", alignItems: "center", justifyContent: "center",
-    borderWidth: 1, borderColor: BRAND[100],
-  },
-  secondaryBtnText: { color: COLORS.textDark, fontSize: 15, fontWeight: "700" },
-
-  retakeBtn: { alignItems: "center", paddingVertical: 10 },
-  retakeBtnText: { color: COLORS.primary, fontSize: 13, fontWeight: "700" },
-
-  sectionTitle: { fontSize: 11, fontWeight: "800", color: COLORS.textMuted, letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 },
-  sectionHint: { fontSize: 12.5, color: COLORS.textMuted, fontWeight: "600", marginBottom: 14 },
-
-  itemCard: {
-    backgroundColor: COLORS.card, borderRadius: 16, padding: 14, marginBottom: 10,
-    borderWidth: 1.5, borderColor: BRAND[100], ...SHADOW,
-  },
-  itemCardMuted: { opacity: 0.45, ...SHADOW, shadowOpacity: 0, elevation: 0, borderColor: COLORS.border },
-  itemTapRow: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
 
   checkbox: {
-    width: 22, height: 22, borderRadius: 7, borderWidth: 2, borderColor: COLORS.border,
-    alignItems: "center", justifyContent: "center", marginTop: 2,
+    width: 23,
+    height: 23,
+    borderRadius: 7,
+    borderWidth: 2,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 0,
   },
-  checkboxChecked: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  checkboxTick: { color: "#fff", fontSize: 13, fontWeight: "900" },
 
-  itemHeaderRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 3 },
-  itemName: { fontSize: 15, fontWeight: "800", color: COLORS.textDark, flex: 1, marginRight: 8 },
-  confBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
-  confBadgeText: { fontSize: 10, fontWeight: "800" },
-  itemMeta: { fontSize: 13, color: COLORS.textLight, fontWeight: "600", marginBottom: 2 },
-  itemMacros: { fontSize: 11, color: COLORS.textMuted, fontWeight: "600" },
-  dbBadge: { fontSize: 10, color: COLORS.success, fontWeight: "700", marginTop: 4 },
-  portionBasisText: { fontSize: 11, color: COLORS.textMuted, fontStyle: "italic", marginTop: 3 },
-
-  gramStepperRow: {
-    flexDirection: "row", alignItems: "center", gap: 10,
-    marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: BRAND[100],
+  checkboxChecked: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
   },
-  gramStepperLabel: { fontSize: 12, color: COLORS.textLight, fontWeight: "700", marginRight: 2 },
-  gramBtn: {
-    width: 32, height: 32, borderRadius: 11, backgroundColor: BRAND[100],
-    alignItems: "center", justifyContent: "center",
+
+  checkboxTick: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    lineHeight: 15,
+    fontWeight: "900",
   },
-  gramBtnText: { fontSize: 17, fontWeight: "800", color: COLORS.primaryDark },
-  gramValue: { fontSize: 14, fontWeight: "800", color: COLORS.textDark, minWidth: 48, textAlign: "center" },
 
-  notesText: { fontSize: 12, color: COLORS.textMuted, fontStyle: "italic", marginBottom: 14, lineHeight: 17 },
+  // ============================================================
+  // ANALYZING STATE
+  // ============================================================
+  analyzingWrap: {
+    paddingTop: 4,
+  },
 
-  emptyCard: {
-    backgroundColor: COLORS.card, borderRadius: 22, padding: 28, alignItems: "center",
+  analyzingIconRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 18,
+  },
+
+  analyzingIconCircle: {
+    width: 46,
+    height: 46,
+    borderRadius: 16,
+    backgroundColor: BRAND[100],
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  analyzingTitle: {
+    fontSize: 15,
+    lineHeight: 20,
+    fontWeight: "900",
+    color: COLORS.textDark,
+  },
+
+  analyzingSub: {
+    fontSize: 12,
+    lineHeight: 17,
+    color: COLORS.textMuted,
+    fontWeight: "600",
+    marginTop: 3,
+  },
+
+  // ============================================================
+  // SECONDARY BUTTON
+  // ============================================================
+  secondaryBtn: {
+    minHeight: 52,
+    backgroundColor: BRAND[50],
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: BRAND[100],
+  },
+
+  secondaryBtnText: {
+    color: COLORS.textDark,
+    fontSize: 14,
+    lineHeight: 19,
+    fontWeight: "800",
+  },
+
+  // ============================================================
+  // RETAKE / TEXT BUTTON
+  // ============================================================
+  retakeBtn: {
+    minHeight: 42,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+
+  retakeBtnText: {
+    color: COLORS.primary,
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: "800",
+  },
+
+  // ============================================================
+  // SECTION HEADERS
+  // ============================================================
+  sectionTitle: {
+    fontSize: 10.5,
+    lineHeight: 14,
+    fontWeight: "900",
+    color: COLORS.textMuted,
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    marginBottom: 5,
+  },
+
+  sectionHint: {
+    fontSize: 12.5,
+    lineHeight: 18,
+    color: COLORS.textMuted,
+    fontWeight: "600",
+    marginBottom: 16,
+  },
+
+  // ============================================================
+  // FOOD ITEM CARD
+  // ============================================================
+  itemCard: {
+    backgroundColor: COLORS.card,
+    borderRadius: 18,
+    paddingHorizontal: 15,
+    paddingVertical: 15,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: BRAND[100],
     ...SHADOW,
   },
-  emptyIconWrap: {
-    width: 64, height: 64, borderRadius: 32, backgroundColor: BRAND[50],
-    alignItems: "center", justifyContent: "center", marginBottom: 12,
+
+  itemCardMuted: {
+    opacity: 0.48,
+    shadowOpacity: 0,
+    elevation: 0,
+    borderColor: COLORS.border,
   },
-  emptyTitle: { fontSize: 16, fontWeight: "800", color: COLORS.textDark, marginBottom: 6 },
-  emptySub: { fontSize: 13, color: COLORS.textMuted, textAlign: "center", marginBottom: 20, lineHeight: 19 },
+
+  itemTapRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+  },
+
+  // ============================================================
+  // FOOD ITEM TEXT
+  // ============================================================
+  itemHeaderRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    marginBottom: 5,
+  },
+
+  itemName: {
+    flex: 1,
+    fontSize: 15,
+    lineHeight: 20,
+    fontWeight: "900",
+    color: COLORS.textDark,
+    marginRight: 10,
+  },
+
+  confBadge: {
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 9,
+    alignSelf: "flex-start",
+  },
+
+  confBadgeText: {
+    fontSize: 9.5,
+    lineHeight: 12,
+    fontWeight: "900",
+  },
+
+  itemMeta: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: COLORS.textLight,
+    fontWeight: "700",
+    marginBottom: 3,
+  },
+
+  itemMacros: {
+    fontSize: 11.5,
+    lineHeight: 16,
+    color: COLORS.textMuted,
+    fontWeight: "600",
+  },
+
+  dbBadge: {
+    fontSize: 10,
+    lineHeight: 14,
+    color: COLORS.success,
+    fontWeight: "800",
+    marginTop: 6,
+  },
+
+  portionBasisText: {
+    fontSize: 11,
+    lineHeight: 15,
+    color: COLORS.textMuted,
+    fontStyle: "italic",
+    marginTop: 5,
+  },
+
+  // ============================================================
+  // GRAM STEPPER
+  // ============================================================
+  gramStepperRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 9,
+    marginTop: 14,
+    paddingTop: 13,
+    borderTopWidth: 1,
+    borderTopColor: BRAND[100],
+  },
+
+  gramStepperLabel: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 16,
+    color: COLORS.textLight,
+    fontWeight: "800",
+  },
+
+  gramBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 11,
+    backgroundColor: BRAND[100],
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  gramBtnText: {
+    fontSize: 18,
+    lineHeight: 21,
+    fontWeight: "900",
+    color: COLORS.primaryDark,
+  },
+
+  gramValue: {
+    minWidth: 52,
+    fontSize: 14,
+    lineHeight: 19,
+    fontWeight: "900",
+    color: COLORS.textDark,
+    textAlign: "center",
+  },
+
+  // ============================================================
+  // NOTES
+  // ============================================================
+  notesText: {
+    fontSize: 12,
+    lineHeight: 17,
+    color: COLORS.textMuted,
+    fontStyle: "italic",
+    marginTop: 2,
+    marginBottom: 15,
+  },
+
+  // ============================================================
+  // EMPTY STATE
+  // ============================================================
+  emptyCard: {
+    backgroundColor: COLORS.card,
+    borderRadius: 24,
+    paddingHorizontal: 24,
+    paddingVertical: 30,
+    alignItems: "center",
+    ...SHADOW,
+  },
+
+  emptyIconWrap: {
+    width: 66,
+    height: 66,
+    borderRadius: 22,
+    backgroundColor: BRAND[50],
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 14,
+  },
+
+  emptyTitle: {
+    fontSize: 17,
+    lineHeight: 22,
+    fontWeight: "900",
+    color: COLORS.textDark,
+    textAlign: "center",
+    marginBottom: 7,
+  },
+
+  emptySub: {
+    maxWidth: 300,
+    fontSize: 13,
+    lineHeight: 19,
+    color: COLORS.textMuted,
+    fontWeight: "600",
+    textAlign: "center",
+    marginBottom: 18,
+  },
 });

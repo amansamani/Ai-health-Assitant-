@@ -135,7 +135,8 @@ exports.createRun = async (req, res) => {
       addEstimatedCaloriesForToday(
         req.user.id,
         run.caloriesBurned,
-        getTimezone(req)
+        getTimezone(req),
+        "activity"
       ).catch((err) =>
         logger.error({ err }, "Failed to apply run calories to DailyLog")
       );
