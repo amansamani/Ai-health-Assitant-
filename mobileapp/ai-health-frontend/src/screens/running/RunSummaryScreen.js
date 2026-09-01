@@ -13,7 +13,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import MapView, { Polyline, Marker } from "react-native-maps";
+import RunRouteMap from "../../components/RunRouteMap";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
 
@@ -172,37 +172,14 @@ export default function RunSummaryScreen() {
       <ScrollView contentContainerStyle={styles.scroll}>
         {region && (
           <View style={styles.mapCard}>
-            <MapView
+            <RunRouteMap
               style={styles.map}
+              route={draft.route}
               initialRegion={region}
-              scrollEnabled={false}
-              zoomEnabled={false}
-              pitchEnabled={false}
-              rotateEnabled={false}
-            >
-              <Polyline
-                coordinates={draft.route.map((p) => ({
-                  latitude: p.lat,
-                  longitude: p.lng,
-                }))}
-                strokeColor={COLORS.primary}
-                strokeWidth={5}
-              />
-              <Marker
-                coordinate={{
-                  latitude: draft.route[0].lat,
-                  longitude: draft.route[0].lng,
-                }}
-                pinColor={COLORS.success}
-              />
-              <Marker
-                coordinate={{
-                  latitude: draft.route[draft.route.length - 1].lat,
-                  longitude: draft.route[draft.route.length - 1].lng,
-                }}
-                pinColor={COLORS.error}
-              />
-            </MapView>
+              showStartMarker
+              showEndMarker
+              strokeWidth={5}
+            />
           </View>
         )}
 

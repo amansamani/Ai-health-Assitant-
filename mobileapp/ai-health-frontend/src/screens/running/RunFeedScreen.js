@@ -13,7 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
-import MapView, { Polyline } from "react-native-maps";
+import RunRouteMap from "../../components/RunRouteMap";
 
 import { COLORS, SHADOW } from "../../constants/theme";
 import Avatar from "../../components/Avatar";
@@ -66,21 +66,13 @@ function RunCard({ run, onToggleLike }) {
         <Image source={{ uri: run.photoUrl }} style={styles.photo} />
       ) : region ? (
         <View style={styles.routeThumb}>
-          <MapView
+          <RunRouteMap
             style={{ flex: 1 }}
+            route={run.route}
             initialRegion={region}
-            scrollEnabled={false}
-            zoomEnabled={false}
-            pitchEnabled={false}
-            rotateEnabled={false}
-            liteMode
-          >
-            <Polyline
-              coordinates={run.route.map((p) => ({ latitude: p.lat, longitude: p.lng }))}
-              strokeColor={COLORS.primary}
-              strokeWidth={4}
-            />
-          </MapView>
+            showStartMarker={false}
+            showEndMarker={false}
+          />
         </View>
       ) : null}
 

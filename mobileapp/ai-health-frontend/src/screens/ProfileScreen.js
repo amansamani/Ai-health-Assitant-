@@ -20,7 +20,7 @@ import API, { API_BASE_URL } from "../services/api";
 import { getToken } from "../utils/secureToken";
 import { AuthContext } from "../context/AuthContext";
 import { COLORS, SHADOW } from "../constants/theme";
-import MapView, { Polyline } from "react-native-maps";
+import RunRouteMap from "../components/RunRouteMap";
 import { getMyRuns } from "../services/runService";
 import { formatDuration, formatDistanceKm, formatPace, paceSecPerKm } from "../utils/runMath";
 import { setUserGoal } from "../context/AuthContext";
@@ -419,9 +419,13 @@ function ProfileRunCard({ run }) {
         <Image source={{ uri: run.photoUrl }} style={styles.profileRunMedia} />
       ) : region ? (
         <View style={styles.profileRunMedia}>
-          <MapView style={{ flex: 1 }} initialRegion={region} scrollEnabled={false} zoomEnabled={false} pitchEnabled={false} rotateEnabled={false}>
-            <Polyline coordinates={run.route.map((p) => ({ latitude: p.lat, longitude: p.lng }))} strokeColor={COLORS.primary} strokeWidth={4} />
-          </MapView>
+          <RunRouteMap
+            style={{ flex: 1 }}
+            route={run.route}
+            initialRegion={region}
+            showStartMarker={false}
+            showEndMarker={false}
+          />
         </View>
       ) : (
         <View style={styles.profileRunNoMedia}>

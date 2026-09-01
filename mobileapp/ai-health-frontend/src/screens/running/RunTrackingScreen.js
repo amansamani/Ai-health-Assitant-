@@ -2,7 +2,6 @@
 // Live GPS activity tracker (run/walk/cycle) — Strava/Adidas-Running style.
 //
 // Requires two native modules that are NOT in package.json yet:
-//   npx expo install expo-location react-native-maps
 //
 // Both ship native code, so after installing you need a fresh dev-client
 // build (this will NOT work in plain Expo Go):
@@ -35,7 +34,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
-import MapView, { Polyline, Marker } from "react-native-maps";
+import RunRouteMap from "../../components/RunRouteMap";
 
 import { COLORS, SHADOW } from "../../constants/theme";
 import { useActiveCalorieGoal } from "../../hooks/useActiveCalorieGoal";
@@ -275,34 +274,16 @@ export default function RunTrackingScreen() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.mapWrap}>
         {currentRegion ? (
-          <MapView
+          <RunRouteMap
             ref={mapRef}
             style={StyleSheet.absoluteFillObject}
+            route={route}
             initialRegion={currentRegion}
-            showsUserLocation
-            showsMyLocationButton={false}
-          >
-            {route.length > 1 && (
-              <Polyline
-                coordinates={route.map((p) => ({
-                  latitude: p.lat,
-                  longitude: p.lng,
-                }))}
-                strokeColor={COLORS.primary}
-                strokeWidth={5}
-              />
-            )}
-            {route.length > 0 && (
-              <Marker
-                coordinate={{
-                  latitude: route[0].lat,
-                  longitude: route[0].lng,
-                }}
-                pinColor={COLORS.success}
-                title="Start"
-              />
-            )}
-          </MapView>
+            showUserLocation
+            showStartMarker
+            showEndMarker={false}
+            strokeWidth={5}
+          />
         ) : (
           <View style={[StyleSheet.absoluteFillObject, styles.mapFallback]}>
             <Text style={styles.mapFallbackText}>
