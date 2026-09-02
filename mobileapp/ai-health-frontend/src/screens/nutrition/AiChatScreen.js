@@ -7,6 +7,8 @@ import { Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import LucideIcon from "../../components/ui/LucideIcon";
+import AiRichMessage from "../../components/ai/AiRichMessage";
+import { useRouter } from "expo-router";
 import { AuthContext } from "../../context/AuthContext";
 import API from "../../services/api";
 import { COLORS, RADIUS, SPACING, TYPOGRAPHY, SHADOW } from "../../constants/theme";
@@ -82,9 +84,25 @@ function MessageBubble({ message }) {
         </View>
       )}
       <View style={[mb.bubble, isUser ? mb.bubbleUser : mb.bubbleAi]}>
-        <Text style={[mb.text, isUser ? mb.textUser : mb.textAi]}>
-          {message.content}
-        </Text>
+        {isUser ? (
+          <Text style={[mb.text, mb.textUser]}>{message.content}</Text>
+        ) : (
+          <AiRichMessage
+            content={message.content}
+            cards={message.cards || []}
+            onCardAction={(target) => {
+              const routes = {
+                water: "/(app)/water-tracking",
+                meals: "/(app)/nutrition/meal-logger",
+                workout: "/(app)/workout",
+                running: "/(app)/run-tracking",
+                tracking: "/(app)/(tabs)/tracking",
+                progress: "/(app)/nutrition/progress",
+              };
+              if (routes[target]) router.push(routes[target]);
+            }}
+          />
+        )}
         <Text style={[mb.time, isUser ? mb.timeUser : mb.timeAi]}>
           {message.time}
         </Text>
@@ -129,12 +147,13 @@ const mb = StyleSheet.create({
 
 export default function AiChatScreen({ navigation }) {
   const { user } = useContext(AuthContext);
+  const router = useRouter();
 
   const [messages, setMessages] = useState([
     {
       id:      "welcome",
       role:    "assistant",
-      content: `Hi! 👋 I'm your AI nutrition assistant.\n\nI already know your health profile — ask me anything about your diet, meals, conditions, or fitness goal.`,
+      content: `Hi! 👋 I'm your FitLip Coach.\n\nI can use your FitLip profile, meals, hydration, workouts, runs and progress to give you practical answers.`,
       time:    formatTime(new Date()),
     },
   ]);
@@ -158,6 +177,7 @@ export default function AiChatScreen({ navigation }) {
               id:      m.id,
               role:    m.role,
               content: m.content,
+              cards: [],
               time:    m.ts ? formatTime(new Date(m.ts)) : "",
             })),
           ]);
@@ -202,6 +222,7 @@ export default function AiChatScreen({ navigation }) {
         id:      Date.now().toString() + "_ai",
         role:    "assistant",
         content: res.data?.reply || "Sorry, I couldn't understand that.",
+        cards: Array.isArray(res.data?.cards) ? res.data.cards : [],
         time:    formatTime(new Date()),
       };
       setMessages((prev) => [...prev, aiMsg]);
@@ -211,6 +232,7 @@ export default function AiChatScreen({ navigation }) {
         id:      Date.now().toString() + "_err",
         role:    "assistant",
         content: backendMsg || "Sorry, something went wrong. Please try again.",
+        cards: [],
         time:    formatTime(new Date()),
       };
       setMessages((prev) => [...prev, errMsg]);

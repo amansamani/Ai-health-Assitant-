@@ -68,9 +68,16 @@ export default function AiCoachFab() {
     opacity: 1 - expand.value,
   }));
 
+  // Two concentric rings pulsing slightly out of phase reads as a soft glow
+  // instead of one flat circle popping in and out.
+  const outerGlowStyle = useAnimatedStyle(() => ({
+    opacity: (0.18 - pulse.value * 0.14) * (1 - expand.value),
+    transform: [{ scale: 1 + pulse.value * 0.45 }],
+  }));
+
   const ringStyle = useAnimatedStyle(() => ({
-    opacity: (0.32 - pulse.value * 0.24) * (1 - expand.value),
-    transform: [{ scale: 1 + pulse.value * 0.3 }],
+    opacity: (0.28 - pulse.value * 0.18) * (1 - expand.value),
+    transform: [{ scale: 1 + pulse.value * 0.22 }],
   }));
 
   // The coach screen is the active route — hide the bubble entirely instead
@@ -82,6 +89,7 @@ export default function AiCoachFab() {
       pointerEvents="box-none"
       style={[styles.wrap, { bottom: insets.bottom + 88 }]}
     >
+      <Animated.View style={[styles.outerGlow, outerGlowStyle]} />
       <Animated.View style={[styles.ring, ringStyle]} />
       <Pressable
         onPress={handlePress}
@@ -116,6 +124,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  outerGlow: {
+    position: "absolute",
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: COLORS.primaryLight,
+  },
   ring: {
     position: "absolute",
     width: 60,
@@ -126,7 +141,7 @@ const styles = StyleSheet.create({
   fab: {
     width: 56,
     height: 56,
-    borderRadius: 18,
+    borderRadius: 28,
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#FFFFFF",

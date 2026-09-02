@@ -24,6 +24,7 @@ import { useRouter } from "expo-router";
 import LucideIcon from "../../components/ui/LucideIcon";
 import * as Location from "expo-location";
 import RunRouteMap from "../../components/RunRouteMap";
+import ConfirmModal from "../../components/ui/ConfirmModal";
 
 import { COLORS, SHADOW } from "../../constants/theme";
 import { useActiveCalorieGoal } from "../../hooks/useActiveCalorieGoal";
@@ -93,6 +94,8 @@ export default function RunTrackingScreen() {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [currentRegion, setCurrentRegion] = useState(null);
   const [mapReady, setMapReady] = useState(false);
+  const [backgroundConfirm, setBackgroundConfirm] = useState(false);
+  const [shortRunConfirm, setShortRunConfirm] = useState(false);
 
   const applySession = useCallback((session) => {
     if (!session) return;
@@ -354,7 +357,6 @@ export default function RunTrackingScreen() {
 
     if (finalDistanceMeters < 20 && finalElapsedSeconds < 30) {
       setShortRunConfirm(true);
-      return;
       return;
     }
 

@@ -52,246 +52,137 @@ async function saveHistory(userId, history) {
 }
 
 function buildSystemInstruction(context) {
-  return `You are FitLip AI Coach — the intelligent coach built into the FitLip health and fitness app.
+  return `You are FitLip AI Coach, the personalized health, nutrition, fitness and activity assistant inside the FitLip app.
 
-FITLIP'S JOB:
-- Help the user understand and act on their nutrition, workouts, running, hydration, activity and progress.
-- Feel like a calm, knowledgeable FitLip coach, not a generic chatbot.
-- Prefer the user's actual FitLip data whenever the question is personal.
-- Give practical, specific guidance instead of generic motivational filler.
+You have two kinds of information:
+1. FITLIP USER CONTEXT below: current data fetched from this authenticated user's database.
+2. CONVERSATION HISTORY: previous messages in this chat.
 
-TRUST & DATA RULES:
-- FITLIP USER CONTEXT is the source of truth for user-specific facts.
-- Never invent, guess, or silently substitute user-specific numbers.
-- Never expose IDs, credentials, tokens, private implementation details, or another user's data.
-- Distinguish actual logged data from targets, plans, estimates and device-derived values.
-- "Today" and "yesterday" use the user's local FitLip timezone.
-- If the requested personal data is unavailable, say so plainly.
-- Use metric units: kcal, g, ml/L, km, min/km, kg.
+IMPORTANT DATA RULES:
+- Treat FITLIP USER CONTEXT as the source of truth for user-specific facts.
+- Never invent, guess, or silently substitute a user's weight, calories, meals, water, workouts, runs, steps, sleep, goals, allergies, conditions, progress, achievements, or other app data.
+- If the requested data is not present in the context, clearly say that FitLip does not currently have that information available.
+- Distinguish logged data from estimates. If a value is estimated or device-derived, say so when it matters.
+- Use the user's local timezone and date labels. "today" means the context's today date.
+- Do not reveal database IDs, tokens, credentials, internal implementation details, or private fields.
+- Only discuss the authenticated user's own data. Never infer or expose another user's private data.
 
 PERSONALIZATION:
-- Respect the user's goal, diet type, allergies and medical conditions.
-- Never recommend a listed allergen.
-- Use Indian-food examples when useful.
-- When comparing progress, use actual values and simple transparent calculations.
-- For food intake, use meal logs; do not treat the planned diet as already eaten.
-- For hydration, use WaterLog.
-- For runs, use RunLog.
-- For workouts, distinguish today's planned workout from completed logs.
-- For steps/sleep/activity calories, use DailyLog data when present.
+- Use the user's profile, goal, diet type, allergies and health conditions when relevant.
+- Never recommend an allergen listed in the user's allergies.
+- Respect vegetarian/vegan/non-veg preferences.
+- When comparing progress, use actual logged values and calculate simple differences/percentages carefully.
+- When a question asks about today's intake, prefer today's meal logs and progress records; do not treat the active diet plan as food actually consumed.
+- When a question asks about a workout, distinguish the planned workout from the completed workout log.
+- When a question asks about running, use RunLog values rather than guessing from steps.
+- When a question asks about hydration, use WaterLog rather than DailyLog.water when WaterLog exists.
+- If data conflicts, prefer the more specific/current source and explain the discrepancy briefly.
 
-SAFETY:
-- You are not a doctor and must not diagnose conditions or prescribe medication.
-- For serious symptoms, emergencies, severe allergic reactions, or other high-risk concerns, direct the user to appropriate professional/urgent care.
-- Do not overstate certainty.
+HEALTH SAFETY:
+- You are an assistant, not a doctor. Do not diagnose disease or prescribe medication.
+- For serious symptoms, emergencies, eating-disorder concerns, severe allergic reactions, or other high-risk medical situations, recommend appropriate professional/urgent care.
+- Do not claim certainty where the data or medical evidence is uncertain.
 
 RESPONSE STYLE:
-- Answer the question first.
-- Default to a concise, useful response.
-- Use short headings and bullets when they genuinely help.
-- You may use Markdown-style **bold**, headings, bullets and numbered lists. The FitLip app renders these as rich UI.
-- Avoid excessive emojis; use at most 1-2 when they add meaning.
-- Avoid canned phrases like "As an AI" or "I am here to help".
-- When helpful, include a short calculation using the user's real data.
-- When the user asks a broad question, connect the answer to the user's current FitLip status.
-
-RICH FITLIP UI CONTRACT:
-Return ONLY valid JSON with this shape:
-{
-  "reply": "string using optional Markdown formatting",
-  "cards": [
-    { "type": "calories" | "protein" | "hydration" | "activity" | "running" | "workout" | "weight" }
-  ],
-  "actions": [
-    { "target": "home" | "nutrition" | "water" | "workout" | "tracking" | "running" | "progress" | "profile", "label": "short label" }
-  ]
-}
-
-CARD RULES:
-- Cards are requests for FitLip to render verified user data. Choose only card types clearly relevant to the user's question.
-- Never put user-specific numeric values inside the card request. FitLip will fill verified values from the current context.
-- Usually return 0-2 cards.
-- Actions are optional navigation shortcuts only. Never request destructive or irreversible actions.
-- Usually return 0-2 actions.
-- Keep action labels to 20 characters or fewer.
-- If a normal text answer is enough, return empty cards and actions arrays.
+- Answer the user's actual question first.
+- Be concise and practical by default, usually 3-8 sentences or a small bullet list.
+- Use Indian food examples when food examples are useful.
+- Use metric units and kcal/g/ml/km unless the user asks otherwise.
+- If useful, show a short calculation (for example, target minus consumed).
+- Do not mention that you are reading a database or "context" unless the user asks how the feature works.
 
 CURRENT FITLIP USER CONTEXT:
 ${contextToPrompt(context)}`;
 }
 
-function safeParseAiPayload(rawText) {
-  const fallback = {
-    reply: String(rawText || "").trim(),
-    cards: [],
-    actions: [],
-  };
 
-  try {
-    const parsed = JSON.parse(rawText);
-    if (!parsed || typeof parsed !== "object") return fallback;
+function buildFitLipCards(message, context) {
+  const q = String(message || "").toLowerCase();
+  const cards = [];
+  const t = context?.today || {};
+  const targets = context?.targets || {};
 
-    const reply = typeof parsed.reply === "string" && parsed.reply.trim()
-      ? parsed.reply.trim()
-      : fallback.reply;
-
-    const allowedCards = new Set([
-      "calories", "protein", "hydration", "activity",
-      "running", "workout", "weight",
-    ]);
-    const cards = Array.isArray(parsed.cards)
-      ? parsed.cards
-          .filter((card) => card && allowedCards.has(card.type))
-          .slice(0, 2)
-          .map((card) => ({ type: card.type }))
-      : [];
-
-    const allowedTargets = new Set([
-      "home", "nutrition", "water", "workout",
-      "tracking", "running", "progress", "profile",
-    ]);
-    const actions = Array.isArray(parsed.actions)
-      ? parsed.actions
-          .filter(
-            (action) =>
-              action &&
-              allowedTargets.has(action.target) &&
-              typeof action.label === "string" &&
-              action.label.trim()
-          )
-          .slice(0, 2)
-          .map((action) => ({
-            target: action.target,
-            label: action.label.trim().slice(0, 20),
-          }))
-      : [];
-
-    return { reply, cards, actions };
-  } catch {
-    // Graceful fallback for any model response that isn't valid JSON.
-    return fallback;
+  if (/water|hydration|drink|thirst/.test(q)) {
+    const h = t.hydration || {};
+    const total = Number(h.totalMl || 0);
+    const goal = Number(h.goalMl || 2500);
+    const remaining = Math.max(goal - total, 0);
+    cards.push({
+      type: "hydration", title: "Today's hydration", value: Math.round(total / 100) / 10,
+      target: Math.round(goal / 100) / 10, unit: "L", percent: goal ? (total / goal) * 100 : 0,
+      subtitle: remaining ? `${Math.round(remaining)} ml remaining` : "Daily goal reached",
+      actionLabel: "Log water", actionTarget: "water",
+    });
   }
-}
 
-function buildFitLipCards(context, requestedCards) {
-  const today = context.today || {};
-  const nutrition = today.nutrition || {};
-  const hydration = today.hydration || {};
-  const activity = today.activity || {};
-  const workout = today.workout || {};
-  const recent7 = context.recent7Days || {};
-  const running = recent7.running || {};
-  const progress = context.progress || {};
-  const user = context.user || {};
-  const targets = context.targets || {};
+  if (/calorie|calories|kcal|eaten|consume|intake/.test(q)) {
+    const consumed = Number(t.nutrition?.caloriesConsumedFromMealLogs || 0);
+    const target = Number(targets.targetCalories || 0);
+    cards.push({
+      type: "calories", title: "Today's calories", value: Math.round(consumed),
+      target: target || undefined, unit: "kcal", percent: target ? (consumed / target) * 100 : null,
+      subtitle: target ? `${Math.max(Math.round(target - consumed), 0)} kcal remaining` : "Based on logged meals",
+      actionLabel: "Log a meal", actionTarget: "meals",
+    });
+  }
 
-  const has = (value) => value !== null && value !== undefined;
+  if (/protein/.test(q)) {
+    const consumed = Number(t.nutrition?.proteinGFromMealLogs || 0);
+    const target = Number(targets.proteinTargetG || 0);
+    cards.push({
+      type: "protein", title: "Today's protein", value: Math.round(consumed),
+      target: target || undefined, unit: "g", percent: target ? (consumed / target) * 100 : null,
+      subtitle: target ? `${Math.max(Math.round(target - consumed), 0)} g remaining` : "Based on logged meals",
+      actionLabel: "Log a meal", actionTarget: "meals",
+    });
+  }
 
-  return requestedCards
-    .map(({ type }) => {
-      if (type === "calories") {
-        const consumed = Number(nutrition.caloriesConsumedFromMealLogs || 0);
-        const target = Number(targets.targetCalories || 0);
-        if (!target && !consumed) return null;
-        const remaining = Math.max(target - consumed, 0);
-        return {
-          type,
-          title: "Today's calories",
-          value: `${Math.round(consumed)} kcal`,
-          secondary: target ? `${Math.round(target)} kcal target` : "No target set",
-          progress: target ? Math.max(0, Math.min(1, consumed / target)) : null,
-          detail: target ? `${Math.round(remaining)} kcal remaining` : `${nutrition.mealsLogged || 0} meal${nutrition.mealsLogged === 1 ? "" : "s"} logged`,
-        };
-      }
+  if (/workout|exercise|training|gym/.test(q)) {
+    const plan = t.workout?.plan;
+    const completed = (t.workout?.recentTodayLogs || []).some((log) => log.completed);
+    if (plan) {
+      cards.push({
+        type: "workout", title: completed ? "Today's workout · completed" : `Today's workout · ${plan.title || "Plan"}`,
+        value: plan.exercises?.length || 0, unit: "exercises", percent: completed ? 100 : 0,
+        subtitle: plan.isRestDay ? "Rest day" : `${plan.exercises?.length || 0} exercises planned`,
+        actionLabel: completed ? "View workout" : "Open workout", actionTarget: "workout",
+      });
+    }
+  }
 
-      if (type === "protein") {
-        const consumed = Number(nutrition.proteinGFromMealLogs || 0);
-        const target = Number(targets.proteinTargetG || 0);
-        if (!target && !consumed) return null;
-        return {
-          type,
-          title: "Today's protein",
-          value: `${Math.round(consumed)} g`,
-          secondary: target ? `${Math.round(target)} g target` : "No target set",
-          progress: target ? Math.max(0, Math.min(1, consumed / target)) : null,
-          detail: target ? `${Math.max(0, Math.round(target - consumed))} g remaining` : "Keep meals protein-rich",
-        };
-      }
+  if (/run|running|pace|distance/.test(q)) {
+    const r = context?.recent7Days?.running || {};
+    cards.push({
+      type: "running", title: "Running · last 7 days", value: Number(r.distanceKm || 0).toFixed(1),
+      unit: "km", subtitle: `${r.count || 0} run${r.count === 1 ? "" : "s"} · ${Math.round(Number(r.caloriesBurned || 0))} kcal burned`,
+      actionLabel: "Open running", actionTarget: "running",
+    });
+  }
 
-      if (type === "hydration") {
-        const total = Number(hydration.totalMl || 0);
-        const goal = Number(hydration.goalMl || 0);
-        return {
-          type,
-          title: "Hydration",
-          value: `${(total / 1000).toFixed(1)} L`,
-          secondary: goal ? `${(goal / 1000).toFixed(1)} L goal` : "Daily water",
-          progress: goal ? Math.max(0, Math.min(1, total / goal)) : null,
-          detail: goal ? `${Math.max(0, Math.round(goal - total))} ml remaining` : "Keep sipping through the day",
-        };
-      }
+  if (/step|steps|activity/.test(q)) {
+    const activity = t.activity || {};
+    cards.push({
+      type: "activity", title: "Today's activity", value: Math.round(Number(activity.steps || 0)),
+      unit: "steps", subtitle: `${Math.round(Number(activity.caloriesBurned || 0))} kcal burned`,
+      actionLabel: "View tracking", actionTarget: "tracking",
+    });
+  }
 
-      if (type === "activity") {
-        if (!activity) return null;
-        return {
-          type,
-          title: "Today's activity",
-          value: `${Math.round(Number(activity.steps || 0)).toLocaleString()} steps`,
-          secondary: `${Number(activity.sleepHours || 0).toFixed(1)} h sleep`,
-          progress: null,
-          detail: `${Math.round(Number(activity.caloriesBurned || 0))} kcal active burn`,
-        };
-      }
+  if (/weight|progress|lost|gain|trend/.test(q)) {
+    const weights = context?.progress?.weightHistory || [];
+    if (weights.length) {
+      const latest = weights[weights.length - 1]?.weightKg;
+      const first = weights[0]?.weightKg;
+      const delta = Number(latest) - Number(first);
+      cards.push({
+        type: "weight", title: "Weight progress", value: Number(latest).toFixed(1), unit: "kg",
+        subtitle: weights.length > 1 ? `${delta > 0 ? "+" : ""}${delta.toFixed(1)} kg over ${weights.length} logged points` : "Latest logged weight",
+        actionLabel: "View progress", actionTarget: "progress",
+      });
+    }
+  }
 
-      if (type === "running") {
-        if (!running.count && !running.distanceKm) return null;
-        const pace = running.runs?.[0]?.averagePaceMinPerKm;
-        return {
-          type,
-          title: "Running · last 7 days",
-          value: `${Number(running.distanceKm || 0).toFixed(1)} km`,
-          secondary: `${Number(running.count || 0)} run${running.count === 1 ? "" : "s"}`,
-          progress: null,
-          detail: pace ? `Latest pace ${Number(pace).toFixed(2)} min/km` : `${Math.round(Number(running.caloriesBurned || 0))} kcal burned`,
-        };
-      }
-
-      if (type === "workout") {
-        const plan = workout.plan;
-        const logs = workout.recentTodayLogs || [];
-        if (!plan && !logs.length) return null;
-        const completed = logs.some((log) => log.completed);
-        return {
-          type,
-          title: completed ? "Today's workout" : "Today's workout plan",
-          value: completed ? "Completed" : (plan?.title || "Planned workout"),
-          secondary: completed
-            ? `${Math.round(Number(logs.reduce((sum, l) => sum + Number(l.caloriesBurned || 0), 0)))} kcal logged`
-            : `${Array.isArray(plan?.exercises) ? plan.exercises.length : 0} exercises`,
-          progress: completed ? 1 : null,
-          detail: completed ? "Nice work — keep the streak going." : (plan?.isRestDay ? "Rest day" : "Ready when you are"),
-        };
-      }
-
-      if (type === "weight") {
-        const history = Array.isArray(progress.weightHistory) ? progress.weightHistory : [];
-        if (!history.length && !has(user.currentWeightKg)) return null;
-        const latest = history[history.length - 1]?.weightKg ?? user.currentWeightKg;
-        const first = history[0]?.weightKg ?? latest;
-        const delta = Number(latest) - Number(first);
-        return {
-          type,
-          title: "Weight progress",
-          value: `${Number(latest).toFixed(1)} kg`,
-          secondary: history.length > 1 ? `${Math.abs(delta).toFixed(1)} kg ${delta < 0 ? "down" : delta > 0 ? "up" : "unchanged"}` : "Current weight",
-          progress: null,
-          detail: context.user?.goal ? `Goal: ${context.user.goal}` : "Keep tracking consistently",
-        };
-      }
-
-      return null;
-    })
-    .filter(Boolean);
+  return cards.slice(0, 2);
 }
 
 const aiChat = async (req, res, next) => {
@@ -309,6 +200,8 @@ const aiChat = async (req, res, next) => {
       });
     }
 
+    // Rebuild context on every turn so the assistant sees newly logged meals,
+    // water, workouts, runs, weight and activity without requiring a new chat.
     const [history, context] = await Promise.all([
       getHistory(userId),
       buildAiContext(userId),
@@ -322,26 +215,19 @@ const aiChat = async (req, res, next) => {
         },
         {
           role: "model",
-          parts: [{ text: JSON.stringify({
-            reply: "Understood. I’ll answer as your FitLip Coach using the current FitLip data.",
-            cards: [],
-            actions: [],
-          }) }],
+          parts: [{ text: "Understood. I will answer using the current FitLip user data and conversation history without inventing user-specific facts." }],
         },
         ...history.map(({ role, parts }) => ({ role, parts })),
       ],
       generationConfig: {
-        maxOutputTokens: 900,
-        temperature: 0.45,
-        responseMimeType: "application/json",
+        maxOutputTokens: 700,
+        temperature: 0.55,
       },
     });
 
     const result = await chat.sendMessage(message);
-    const rawReply = result.response.text().trim();
-    const payload = safeParseAiPayload(rawReply);
-
-    const cards = buildFitLipCards(context, payload.cards);
+    const reply = result.response.text().trim();
+    const cards = buildFitLipCards(message, context);
 
     history.push({
       role: "user",
@@ -350,22 +236,13 @@ const aiChat = async (req, res, next) => {
     });
     history.push({
       role: "model",
-      parts: [{ text: payload.reply }],
+      parts: [{ text: reply }],
       ts: Date.now(),
     });
 
     await saveHistory(userId, history);
 
-    res.json({
-      reply: payload.reply,
-      cards,
-      actions: payload.actions,
-      meta: {
-        today: context.today,
-        timezone: context.timezone,
-        coach: "fitlip",
-      },
-    });
+    res.json({ reply, cards });
   } catch (err) {
     logger.error({ err }, "AI chat error");
     next(err);
