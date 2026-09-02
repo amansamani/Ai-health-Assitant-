@@ -99,18 +99,7 @@ export default function CompeteHubScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <ScreenHeader title="Compete" subtitle="Build your FitLip identity" />
-
-        <FadeSlideIn delay={0}>
-          <Pressable onPress={() => router.push("/(app)/profile")} style={({ pressed }) => [styles.identityCard, pressed && { opacity: 0.9 }]}>
-            <View style={styles.identityIcon}><LucideIcon name="person-circle-outline" size={27} color={COLORS.primary} /></View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.identityTitle}>Your social profile</Text>
-              <Text style={styles.identitySubtitle}>Username, profile photo, followers & visibility</Text>
-            </View>
-            <LucideIcon name="chevron-forward" size={20} color={COLORS.textMuted} />
-          </Pressable>
-        </FadeSlideIn>
+        <ScreenHeader title="Compete" subtitle="Find friends and challenges" />
 
         <Text style={styles.sectionLabel}>FIND PEOPLE</Text>
         <FadeSlideIn delay={50}>
@@ -162,10 +151,6 @@ export default function CompeteHubScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   scroll: { paddingHorizontal: 16, paddingBottom: 40 },
-  identityCard: { flexDirection: "row", alignItems: "center", backgroundColor: COLORS.surface, borderRadius: 20, borderWidth: 1, borderColor: COLORS.border, padding: 15, marginBottom: 18 },
-  identityIcon: { width: 48, height: 48, borderRadius: 16, backgroundColor: COLORS.surfaceMuted, alignItems: "center", justifyContent: "center", marginRight: 12 },
-  identityTitle: { fontSize: 15, fontWeight: "800", color: COLORS.textDark },
-  identitySubtitle: { marginTop: 3, fontSize: 11.5, lineHeight: 16, fontWeight: "600", color: COLORS.textMuted },
   sectionLabel: { fontSize: 10.5, fontWeight: "800", letterSpacing: 0.8, color: COLORS.textMuted, marginBottom: 9 },
   searchWrap: { height: 50, flexDirection: "row", alignItems: "center", backgroundColor: COLORS.surface, borderRadius: 15, borderWidth: 1, borderColor: COLORS.border, paddingHorizontal: 14 },
   searchInput: { flex: 1, marginLeft: 9, fontSize: 14, fontWeight: "600", color: COLORS.textDark },

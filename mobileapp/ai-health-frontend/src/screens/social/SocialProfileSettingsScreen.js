@@ -63,7 +63,7 @@ export default function SocialProfileSettingsScreen() {
     try {
       setSaving(true);
       await API.put("/user/profile", { username, bio, profileVisibility: visibility });
-      showToast("Your social identity has been updated.", { title: "Saved", type: "success" });
+      showToast("Your social profile has been updated.", { title: "Saved", type: "success" });
       router.back();
     } catch (err) {
       showToast(err.response?.data?.message || "Please try again.", { title: "Couldn't save", type: "error" });
@@ -76,7 +76,7 @@ export default function SocialProfileSettingsScreen() {
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <View style={styles.header}>
         <Pressable style={styles.back} onPress={() => router.back()}><LucideIcon name="chevron-back" size={22} color={COLORS.textDark} /></Pressable>
-        <View style={{ flex: 1, marginLeft: 12 }}><Text style={styles.title}>Social Identity</Text><Text style={styles.subtitle}>Separate from health and workout settings</Text></View>
+        <View style={{ flex: 1, marginLeft: 12 }}><Text style={styles.title}>Social Profile</Text></View>
       </View>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.photoCard}>
@@ -90,7 +90,6 @@ export default function SocialProfileSettingsScreen() {
           <View style={{ flex: 1 }}><Text style={styles.cardTitle}>Profile photo</Text><Text style={styles.cardSub}>Change the photo shown across your FitLip profile.</Text></View>
           <Pressable style={styles.photoBtn} onPress={choosePhoto} disabled={photoSaving}>{photoSaving ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.photoBtnText}>Change</Text>}</Pressable>
         </View>
-        <View style={styles.identityCard}><View style={styles.identityIcon}><LucideIcon name="people-outline" size={22} color={COLORS.primary} /></View><View style={{ flex: 1 }}><Text style={styles.cardTitle}>Your social profile</Text><Text style={styles.cardSub}>Username, bio and visibility control your public FitLip identity.</Text></View></View>
         <Text style={styles.label}>USERNAME</Text>
         <View style={styles.inputWrap}><Text style={styles.prefix}>@</Text><TextInput value={username} onChangeText={setUsername} autoCapitalize="none" autoCorrect={false} maxLength={30} style={styles.input} placeholder="your_username" placeholderTextColor={COLORS.textMuted} /></View>
         <Text style={styles.label}>BIO</Text>

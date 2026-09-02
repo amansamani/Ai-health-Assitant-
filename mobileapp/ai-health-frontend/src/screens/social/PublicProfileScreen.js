@@ -177,15 +177,7 @@ export default function PublicProfileScreen() {
         </FadeSlideIn>
 
         {profile.canView ? (
-          <FadeSlideIn delay={130}>
-            <View style={styles.infoCard}>
-              <LucideIcon name="fitness-outline" size={24} color={COLORS.primary} />
-              <View style={{ flex: 1, marginLeft: 12 }}>
-                <Text style={styles.infoTitle}>{profile.isSelf ? "Your public identity" : "FitLip profile"}</Text>
-                <Text style={styles.infoText}>{profile.isSelf ? "This is how other FitLip users can recognize you." : "Fitness activity can be shared here as you build your FitLip identity."}</Text>
-              </View>
-            </View>
-          </FadeSlideIn>
+
         ) : (
           <FadeSlideIn delay={130}>
             <View style={styles.privateCard}>

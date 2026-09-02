@@ -125,9 +125,6 @@ export default function ProfileSettingsScreen() {
           <View style={styles.headerCopy}>
             <Text style={styles.headerTitle}>Settings</Text>
 
-            <Text style={styles.headerSubtitle}>
-              Control how FitLip behaves
-            </Text>
           </View>
         </View>
 
@@ -149,9 +146,8 @@ export default function ProfileSettingsScreen() {
           />
         </View>
 
-        {/* APP PREFERENCES */}
         <Text style={styles.section}>
-          APP PREFERENCES
+          PREFERENCES
         </Text>
 
         <View style={styles.card}>
