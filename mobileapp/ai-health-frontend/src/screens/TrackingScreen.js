@@ -362,6 +362,7 @@ export default function TrackingScreen() {
   // steps or a completed workout), or null (Tier 3 / not yet logged today).
   const [caloriesSource, setCaloriesSource] = useState(null);
   const [calorieBreakdown, setCalorieBreakdown] = useState({ steps: 0, exercise: 0, activity: 0, manual: 0, activityEntries: [] });
+  const [quickAddConfirm, setQuickAddConfirm] = useState(null);
 
   const btnScale = useRef(new Animated.Value(1)).current;
   const onBtnIn  = () => Animated.spring(btnScale, { toValue: 0.97, useNativeDriver: true }).start();

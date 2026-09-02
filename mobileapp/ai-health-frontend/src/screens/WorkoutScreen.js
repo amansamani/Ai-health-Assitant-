@@ -541,11 +541,13 @@ const styles = StyleSheet.create({
     borderRadius: 16, padding: 18,
     flexDirection: "row", justifyContent: "space-around",
     alignItems: "center", marginBottom: 16,
+    backgroundColor: COLORS.primaryDark,
+    borderWidth: 1, borderColor: "rgba(255,255,255,0.08)",
   },
   statItem:   { alignItems: "center" },
   statNum:    { fontSize: 22, fontWeight: "800", color: "#fff", letterSpacing: -0.5 },
-  statLabel:  { fontSize: 11, color: "#B8AFD6", marginTop: 3, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.4 },
-  statDivider:{ width: 1, height: 32, backgroundColor: "rgba(255,255,255,0.08)" },
+  statLabel:  { fontSize: 11, color: "#D9D2E7", marginTop: 3, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.4 },
+  statDivider:{ width: 1, height: 32, backgroundColor: "rgba(255,255,255,0.12)" },
 
   // Toggle
   toggleWrap: { marginBottom: 20 },

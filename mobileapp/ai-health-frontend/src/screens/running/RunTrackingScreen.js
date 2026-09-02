@@ -92,6 +92,7 @@ export default function RunTrackingScreen() {
   const [distanceMeters, setDistanceMeters] = useState(0);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [currentRegion, setCurrentRegion] = useState(null);
+  const [mapReady, setMapReady] = useState(false);
 
   const applySession = useCallback((session) => {
     if (!session) return;
@@ -144,6 +145,7 @@ export default function RunTrackingScreen() {
       if (!session) {
         phaseRef.current = "idle";
         setPhase("idle");
+        setMapReady(false);
         return;
       }
 
@@ -276,6 +278,7 @@ export default function RunTrackingScreen() {
       startedAtRef.current = startedAt;
       phaseRef.current = "running";
       setPhase("running");
+      setMapReady(false);
       applySession(session);
 
       await ensureTrackingMode(result.bgGranted);
@@ -454,7 +457,7 @@ export default function RunTrackingScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.mapWrap}>
-        {currentRegion ? (
+        {currentRegion && mapReady ? (
           <RunRouteMap
             ref={mapRef}
             style={StyleSheet.absoluteFillObject}
@@ -464,14 +467,31 @@ export default function RunTrackingScreen() {
             showStartMarker
             showEndMarker={false}
             strokeWidth={5}
+            onMapReady={() => setMapReady(true)}
           />
         ) : (
           <View style={[StyleSheet.absoluteFillObject, styles.mapFallback]}>
+            <View style={styles.mapFallbackIcon}>
+              <LucideIcon name="map" size={24} color={COLORS.primary} />
+            </View>
+            <Text style={styles.mapFallbackTitle}>
+              {permissionDenied ? "Location access needed" : phase === "idle" ? "Ready to start" : "Preparing your route"}
+            </Text>
             <Text style={styles.mapFallbackText}>
               {permissionDenied
-                ? "Location permission is off — enable it in Settings to track a run."
-                : "Ready to start your activity"}
+                ? "Enable precise location access in Settings to track your route."
+                : phase === "idle"
+                ? "Choose an activity and tap Start to begin tracking."
+                : "Your route map is loading. Your distance and time are still being recorded."}
             </Text>
+            {currentRegion && !mapReady ? (
+              <Pressable
+                style={styles.mapRetryBtn}
+                onPress={() => setMapReady(true)}
+              >
+                <Text style={styles.mapRetryText}>Show route</Text>
+              </Pressable>
+            ) : null}
           </View>
         )}
 
@@ -599,9 +619,13 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   loadingText: { color: COLORS.textDark, fontSize: 16, fontWeight: "600" },
-  mapWrap: { flex: 1, backgroundColor: COLORS.surfaceMuted },
-  mapFallback: { alignItems: "center", justifyContent: "center", padding: 24 },
-  mapFallbackText: { color: COLORS.textLight, textAlign: "center", fontSize: 15 },
+  mapWrap: { flex: 1, backgroundColor: COLORS.primaryDark },
+  mapFallback: { alignItems: "center", justifyContent: "center", padding: 28, backgroundColor: "#F4F0F6" },
+  mapFallbackIcon: { width: 52, height: 52, borderRadius: 16, backgroundColor: "#EEE6F2", alignItems: "center", justifyContent: "center", marginBottom: 12 },
+  mapFallbackTitle: { color: COLORS.textDark, textAlign: "center", fontSize: 17, fontWeight: "800" },
+  mapFallbackText: { marginTop: 7, color: COLORS.textMuted, textAlign: "center", fontSize: 13, lineHeight: 19, maxWidth: 310 },
+  mapRetryBtn: { marginTop: 14, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, backgroundColor: COLORS.primaryDark },
+  mapRetryText: { color: COLORS.onPrimary, fontSize: 12, fontWeight: "800" },
   closeBtn: {
     position: "absolute",
     top: 12,

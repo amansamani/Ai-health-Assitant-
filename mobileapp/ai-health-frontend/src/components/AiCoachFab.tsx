@@ -1,8 +1,7 @@
 import { useEffect } from "react";
-import { View, Pressable, StyleSheet, Platform } from "react-native";
+import { View, Pressable, StyleSheet, Platform, Image } from "react-native";
 import { useRouter, usePathname } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import LucideIcon from "./ui/LucideIcon";
 import * as Haptics from "expo-haptics";
 import Animated, {
   Easing,
@@ -97,7 +96,12 @@ export default function AiCoachFab() {
       >
         <Animated.View style={buttonStyle}>
           <View style={styles.fab}>
-            <LucideIcon name="chatbubble-ellipses" size={24} color="#fff" />
+            <Image
+              source={require("../../assets/images/chatbot-avatar.png")}
+              style={styles.avatar}
+              resizeMode="contain"
+              accessibilityLabel="FitLip AI Coach"
+            />
           </View>
         </Animated.View>
       </Pressable>
@@ -122,9 +126,17 @@ const styles = StyleSheet.create({
   fab: {
     width: 56,
     height: 56,
-    borderRadius: 16,
+    borderRadius: 18,
     justifyContent: "center",
     alignItems: "center",
-    boxShadow: "0px 6px 16px rgba(73, 34, 91, 0.25)",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "rgba(73, 34, 91, 0.08)",
+    boxShadow: "0px 6px 16px rgba(73, 34, 91, 0.20)",
+  },
+  avatar: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
   },
 });
