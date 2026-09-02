@@ -358,8 +358,7 @@ async function buildAiContext(userId, options = {}) {
   const context = {
     generatedAt: now.toISOString(),
     timezone,
-    today: todayKey,
-    yesterday: yesterdayKey,
+    date: { today: todayKey, yesterday: yesterdayKey },
 
     user: {
       name: user.name,

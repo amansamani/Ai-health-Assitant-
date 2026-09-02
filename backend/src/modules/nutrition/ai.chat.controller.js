@@ -4,9 +4,11 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 const redis = require("../../config/redis");
 const logger = require("../../config/logger");
 const { buildAiContext, contextToPrompt } = require("../../services/aiContext.service");
+const { detectIntent, buildDeterministicReply } = require("../../services/aiIntent.service");
 
 let genAI;
 let model;
+const CHAT_MODEL = process.env.GEMINI_CHAT_MODEL || "gemini-3.6-flash";
 
 function getModel() {
   if (!model) {
@@ -14,7 +16,7 @@ function getModel() {
       throw new Error("GEMINI_API_KEY is not configured.");
     }
     genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    model = genAI.getGenerativeModel({ model: CHAT_MODEL });
   }
   return model;
 }
@@ -63,7 +65,7 @@ IMPORTANT DATA RULES:
 - Never invent, guess, or silently substitute a user's weight, calories, meals, water, workouts, runs, steps, sleep, goals, allergies, conditions, progress, achievements, or other app data.
 - If the requested data is not present in the context, clearly say that FitLip does not currently have that information available.
 - Distinguish logged data from estimates. If a value is estimated or device-derived, say so when it matters.
-- Use the user's local timezone and date labels. "today" means the context's today date.
+- Use the user's local timezone and date labels. "today" means the context.date.today value.
 - Do not reveal database IDs, tokens, credentials, internal implementation details, or private fields.
 - Only discuss the authenticated user's own data. Never infer or expose another user's private data.
 
@@ -85,22 +87,48 @@ HEALTH SAFETY:
 
 RESPONSE STYLE:
 - Answer the user's actual question first.
-- Be concise and practical by default, usually 3-8 sentences or a small bullet list.
+- Give a complete answer; never stop halfway through a sentence or list.
+- For simple factual questions, prefer a short complete answer. For advice/reasoning questions, give the useful explanation and practical next steps.
 - Use Indian food examples when food examples are useful.
 - Use metric units and kcal/g/ml/km unless the user asks otherwise.
 - If useful, show a short calculation (for example, target minus consumed).
 - Do not mention that you are reading a database or "context" unless the user asks how the feature works.
+- If the question is a standard FitLip app-data question, the application may provide a deterministic answer; do not contradict it.
 
 CURRENT FITLIP USER CONTEXT:
 ${contextToPrompt(context)}`;
 }
 
 
-function buildFitLipCards(message, context) {
+function buildFitLipCards(message, context, intent = "") {
   const q = String(message || "").toLowerCase();
   const cards = [];
   const t = context?.today || {};
   const targets = context?.targets || {};
+
+  if (intent === "TODAY_TRACK") {
+    const consumed = Number(t.nutrition?.caloriesConsumedFromMealLogs || 0);
+    const calorieTarget = Number(targets.targetCalories || 0);
+    const protein = Number(t.nutrition?.proteinGFromMealLogs || 0);
+    const proteinTarget = Number(targets.proteinTargetG || 0);
+    if (calorieTarget) {
+      cards.push({
+        type: "calories", title: "Today's calories", value: Math.round(consumed),
+        target: calorieTarget, unit: "kcal", percent: (consumed / calorieTarget) * 100,
+        subtitle: `${Math.max(Math.round(calorieTarget - consumed), 0)} kcal remaining`,
+        actionLabel: "Log a meal", actionTarget: "meals",
+      });
+    }
+    if (proteinTarget) {
+      cards.push({
+        type: "protein", title: "Today's protein", value: Math.round(protein),
+        target: proteinTarget, unit: "g", percent: (protein / proteinTarget) * 100,
+        subtitle: `${Math.max(Math.round(proteinTarget - protein), 0)} g remaining`,
+        actionLabel: "Log a meal", actionTarget: "meals",
+      });
+    }
+    return cards.slice(0, 2);
+  }
 
   if (/water|hydration|drink|thirst/.test(q)) {
     const h = t.hydration || {};
@@ -207,6 +235,22 @@ const aiChat = async (req, res, next) => {
       buildAiContext(userId),
     ]);
 
+    const intent = detectIntent(message);
+    const deterministicReply = buildDeterministicReply(intent, context);
+
+    // Common FitLip questions are answered by our own application logic.
+    // This avoids unnecessary LLM calls and guarantees complete, data-backed answers.
+    if (deterministicReply) {
+      const cards = buildFitLipCards(message, context, intent);
+      const reply = deterministicReply.trim();
+
+      history.push({ role: "user", parts: [{ text: message }], ts: Date.now() });
+      history.push({ role: "model", parts: [{ text: reply }], ts: Date.now() });
+      await saveHistory(userId, history);
+
+      return res.json({ reply, cards, intent, source: "fitlip" });
+    }
+
     const chat = getModel().startChat({
       history: [
         {
@@ -220,14 +264,32 @@ const aiChat = async (req, res, next) => {
         ...history.map(({ role, parts }) => ({ role, parts })),
       ],
       generationConfig: {
-        maxOutputTokens: 700,
-        temperature: 0.55,
+        maxOutputTokens: 1200,
+        temperature: 0.45,
       },
     });
 
-    const result = await chat.sendMessage(message);
-    const reply = result.response.text().trim();
-    const cards = buildFitLipCards(message, context);
+    let result = await chat.sendMessage(message);
+    let response = result.response;
+    let reply = response.text().trim();
+
+    // If Gemini was cut off by the output limit, retry once with a focused
+    // instruction so the user receives a complete answer instead of a fragment.
+    const finishReason = response.candidates?.[0]?.finishReason;
+    if (finishReason === "MAX_TOKENS") {
+      logger.warn({ userId, finishReason, intent }, "Gemini response hit max output tokens; retrying concisely");
+      result = await chat.sendMessage(
+        "Please rewrite your previous answer as one complete, self-contained answer. Do not stop mid-sentence. Keep only the information needed to answer the user's question, using a short heading or bullets when helpful."
+      );
+      response = result.response;
+      reply = response.text().trim();
+    }
+
+    if (!reply) {
+      reply = "I couldn't generate a complete answer right now. Please try again.";
+    }
+
+    const cards = [];
 
     history.push({
       role: "user",
@@ -242,7 +304,7 @@ const aiChat = async (req, res, next) => {
 
     await saveHistory(userId, history);
 
-    res.json({ reply, cards });
+    res.json({ reply, cards, intent, source: "gemini" });
   } catch (err) {
     logger.error({ err }, "AI chat error");
     next(err);

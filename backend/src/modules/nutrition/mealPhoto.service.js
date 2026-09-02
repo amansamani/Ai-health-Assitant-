@@ -177,9 +177,10 @@ function extractPer100gFromDoc(doc) {
     carbs,
     fats,
     fiber: typeof n.fiber === "number" ? n.fiber : 0,
-    // Docs declare their own serving base (usually 100g, but don't assume) —
-    // fall back to 100 only if `serving.grams` is missing.
-    baseGrams: typeof doc.serving?.grams === "number" ? doc.serving.grams : 100,
+    // `per100g` is explicitly normalized to a 100g nutrition basis.
+    // `serving.grams` describes a friendly serving size (for example,
+    // 1 roti = 40g) and must NOT be used as the nutrition denominator.
+    baseGrams: 100,
   };
 }
 
