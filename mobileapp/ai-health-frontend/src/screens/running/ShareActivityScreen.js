@@ -19,7 +19,7 @@ import { COLORS, SHADOW } from "../../constants/theme";
 import { getRunById } from "../../services/runService";
 import { formatDistanceKm, formatDuration, formatPace, paceSecPerKm } from "../../utils/runMath";
 
-const heroImage = require("../../../assets/images/run-hero-generated.png");
+const heroImage = require("./assets/run-hero-user.png");
 
 function initials(name) {
   return String(name || "U")

@@ -474,7 +474,7 @@ export default function RunTrackingScreen() {
           />
         ) : (
           <ImageBackground
-            source={require("../../assets/images/run-hero-user.png")}
+            source={require("./assets/run-hero-user.png")}
             resizeMode="cover"
             style={[StyleSheet.absoluteFillObject, styles.mapFallback]}
             imageStyle={styles.runHeroImage}
