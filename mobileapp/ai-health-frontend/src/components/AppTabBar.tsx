@@ -23,7 +23,7 @@ const TAB_META: Record<string, { label: string; icon: IconName; iconOutline: Ico
   home:     { label: "Home",     icon: "home",          iconOutline: "home-outline" },
   workout:  { label: "Exercise", icon: "barbell",        iconOutline: "barbell-outline" },
   diet:     { label: "Diet",     icon: "nutrition",      iconOutline: "nutrition-outline" },
-  tracking: { label: "Track",    icon: "bar-chart",      iconOutline: "bar-chart-outline" },
+  tracking: { label: "Track",    icon: "footsteps-outline", iconOutline: "footsteps-outline" },
 };
 
 function TabButton({
@@ -52,7 +52,7 @@ function TabButton({
     backgroundColor: interpolateColor(
       progress.value,
       [0, 1],
-      ["rgba(255,255,255,0)", COLORS.primary]
+      [COLORS.surfaceMuted, COLORS.primary]
     ),
     transform: [
       { scale: press.value },

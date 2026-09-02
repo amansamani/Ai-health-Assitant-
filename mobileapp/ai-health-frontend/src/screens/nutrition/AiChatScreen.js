@@ -1,44 +1,40 @@
 "use strict";
 import React, { useState, useRef, useContext, useCallback, useEffect } from "react";
-import {
-  Image,
+import { Image,
   View, Text, TextInput, StyleSheet, FlatList,
   TouchableOpacity, KeyboardAvoidingView, Platform,
   ActivityIndicator, Animated, Pressable,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
 import LucideIcon from "../../components/ui/LucideIcon";
 import { AuthContext } from "../../context/AuthContext";
 import API from "../../services/api";
 import { COLORS, RADIUS, SPACING, TYPOGRAPHY, SHADOW } from "../../constants/theme";
 
-const BRAND_AVATAR = require("../../../assets/images/chatbot-avatar.png");
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const QUICK_QUESTIONS = [
-  "How am I doing today?",
-  "How much water do I still need?",
-  "What should I eat for my next meal?",
-  "What is my workout today?",
-  "How is my progress this week?",
+  "Can I eat rice with my condition?",
+  "What's a good high-protein snack?",
+  "How much water should I drink daily?",
+  "What foods should I avoid for my goal?",
+  "Is my calorie target correct?",
 ];
 
-function formatTime(date) {
-  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-}
+// ─── Typing Indicator ─────────────────────────────────────────────────────────
 
 function TypingDots() {
   const dot1 = useRef(new Animated.Value(0)).current;
   const dot2 = useRef(new Animated.Value(0)).current;
   const dot3 = useRef(new Animated.Value(0)).current;
 
-  useEffect(() => {
+  React.useEffect(() => {
     const anim = (dot, delay) =>
       Animated.loop(
         Animated.sequence([
           Animated.delay(delay),
           Animated.timing(dot, { toValue: -5, duration: 300, useNativeDriver: true }),
-          Animated.timing(dot, { toValue: 0, duration: 300, useNativeDriver: true }),
+          Animated.timing(dot, { toValue: 0,  duration: 300, useNativeDriver: true }),
         ])
       ).start();
     anim(dot1, 0);
@@ -55,127 +51,21 @@ function TypingDots() {
   );
 }
 
-function RichText({ text }) {
-  const lines = String(text || "").split(/\n/);
+const td = StyleSheet.create({
+  wrap: { flexDirection: "row", alignItems: "center", gap: 4, paddingVertical: 6 },
+  dot:  { width: 7, height: 7, borderRadius: 4, backgroundColor: COLORS.primary },
+});
 
-  const renderInline = (line, keyPrefix) => {
-    const chunks = String(line).split(/(\*\*[^*]+\*\*|`[^`]+`)/g).filter(Boolean);
-    return (
-      <Text key={keyPrefix} style={rt.paragraph}>
-        {chunks.map((chunk, i) => {
-          if (/^\*\*[^*]+\*\*$/.test(chunk)) {
-            return <Text key={`${keyPrefix}-b-${i}`} style={rt.bold}>{chunk.slice(2, -2)}</Text>;
-          }
-          if (/^`[^`]+`$/.test(chunk)) {
-            return <Text key={`${keyPrefix}-c-${i}`} style={rt.code}>{chunk.slice(1, -1)}</Text>;
-          }
-          return chunk;
-        })}
-      </Text>
-    );
-  };
+// ─── Message Bubble ───────────────────────────────────────────────────────────
 
-  return (
-    <View>
-      {lines.map((line, i) => {
-        const trimmed = line.trim();
-
-        if (!trimmed) return <View key={`sp-${i}`} style={{ height: 6 }} />;
-
-        if (/^#{1,3}\s/.test(trimmed)) {
-          return (
-            <Text key={`h-${i}`} style={rt.heading}>
-              {trimmed.replace(/^#{1,3}\s/, "")}
-            </Text>
-          );
-        }
-
-        if (/^[-•]\s/.test(trimmed)) {
-          return (
-            <View key={`b-${i}`} style={rt.bulletRow}>
-              <View style={rt.bullet} />
-              <Text style={rt.listText}>{renderInline(trimmed.replace(/^[-•]\s/, ""), `bullet-${i}`).props.children}</Text>
-            </View>
-          );
-        }
-
-        if (/^\d+\.\s/.test(trimmed)) {
-          const match = trimmed.match(/^(\d+)\.\s(.*)$/);
-          return (
-            <View key={`n-${i}`} style={rt.bulletRow}>
-              <Text style={rt.number}>{match[1]}.</Text>
-              <Text style={rt.listText}>{renderInline(match[2], `number-${i}`).props.children}</Text>
-            </View>
-          );
-        }
-
-        if (/^>\s?/.test(trimmed)) {
-          return (
-            <View key={`q-${i}`} style={rt.quote}>
-              <Text style={rt.quoteText}>{trimmed.replace(/^>\s?/, "")}</Text>
-            </View>
-          );
-        }
-
-        return renderInline(line, `p-${i}`);
-      })}
-    </View>
-  );
-}
-
-function FitLipCard({ card }) {
-  const iconByType = {
-    calories: "flame",
-    protein: "dumbbell",
-    hydration: "droplet",
-    activity: "footprints",
-    running: "route",
-    workout: "dumbbell",
-    weight: "scale",
-  };
-
-  return (
-    <View style={fc.card}>
-      <View style={fc.topRow}>
-        <View style={fc.iconWrap}>
-          <LucideIcon name={iconByType[card.type] || "activity"} size={17} color={COLORS.primary} />
-        </View>
-        <Text style={fc.title}>{card.title}</Text>
-      </View>
-
-      <Text style={fc.value}>{card.value}</Text>
-      <Text style={fc.secondary}>{card.secondary}</Text>
-
-      {typeof card.progress === "number" && (
-        <View style={fc.track}>
-          <View style={[fc.fill, { width: `${Math.round(card.progress * 100)}%` }]} />
-        </View>
-      )}
-
-      <Text style={fc.detail}>{card.detail}</Text>
-    </View>
-  );
-}
-
-const ROUTES = {
-  home: "/(app)/(tabs)/home",
-  nutrition: "/(app)/(tabs)/diet",
-  water: "/(app)/water-tracking",
-  workout: "/(app)/(tabs)/workout",
-  tracking: "/(app)/(tabs)/tracking",
-  running: "/(app)/run-tracking",
-  progress: "/(app)/nutrition/progress",
-  profile: "/(app)/profile",
-};
-
-function MessageBubble({ message, onAction }) {
+function MessageBubble({ message }) {
   const isUser = message.role === "user";
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(isUser ? 20 : -20)).current;
 
-  useEffect(() => {
+  React.useEffect(() => {
     Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+      Animated.timing(fadeAnim,  { toValue: 1, duration: 300, useNativeDriver: true }),
       Animated.timing(slideAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
     ]).start();
   }, []);
@@ -188,42 +78,16 @@ function MessageBubble({ message, onAction }) {
     ]}>
       {!isUser && (
         <View style={mb.avatar}>
-          <Image source={BRAND_AVATAR} style={mb.avatarImage} />
+          <Image source={require("../../../assets/images/chatbot-avatar.png")} style={mb.avatarImage} />
         </View>
       )}
-
-      <View style={mb.contentWrap}>
-        <View style={[mb.bubble, isUser ? mb.bubbleUser : mb.bubbleAi]}>
-          {isUser ? (
-            <Text style={mb.textUser}>{message.content}</Text>
-          ) : (
-            <RichText text={message.content} />
-          )}
-
-          {!isUser && Array.isArray(message.cards) && message.cards.map((card, i) => (
-            <FitLipCard key={`${message.id}-card-${i}`} card={card} />
-          ))}
-
-          {!isUser && Array.isArray(message.actions) && message.actions.length > 0 && (
-            <View style={mb.actions}>
-              {message.actions.map((action, i) => (
-                <TouchableOpacity
-                  key={`${message.id}-action-${i}`}
-                  style={mb.actionChip}
-                  onPress={() => onAction(action)}
-                  activeOpacity={0.75}
-                >
-                  <Text style={mb.actionText}>{action.label}</Text>
-                  <LucideIcon name="arrow-up-right" size={13} color={COLORS.primary} />
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-
-          <Text style={[mb.time, isUser ? mb.timeUser : mb.timeAi]}>
-            {message.time}
-          </Text>
-        </View>
+      <View style={[mb.bubble, isUser ? mb.bubbleUser : mb.bubbleAi]}>
+        <Text style={[mb.text, isUser ? mb.textUser : mb.textAi]}>
+          {message.content}
+        </Text>
+        <Text style={[mb.time, isUser ? mb.timeUser : mb.timeAi]}>
+          {message.time}
+        </Text>
       </View>
     </Animated.View>
   );
@@ -231,89 +95,56 @@ function MessageBubble({ message, onAction }) {
 
 const mb = StyleSheet.create({
   avatarImage: { width: 28, height: 28, borderRadius: 14 },
-  row: { flexDirection: "row", marginBottom: 14, alignItems: "flex-end", gap: 8 },
-  rowUser: { justifyContent: "flex-end" },
-  rowAi: { justifyContent: "flex-start" },
+  row:        { flexDirection: "row", marginBottom: 12, alignItems: "flex-end", gap: 8 },
+  rowUser:    { justifyContent: "flex-end" },
+  rowAi:      { justifyContent: "flex-start" },
   avatar: {
     width: 32, height: 32, borderRadius: 16,
     backgroundColor: COLORS.surfaceMuted,
     borderWidth: 1, borderColor: COLORS.borderSubtle,
     justifyContent: "center", alignItems: "center",
   },
-  contentWrap: { maxWidth: "86%" },
-  bubble: { borderRadius: 18, paddingHorizontal: 14, paddingVertical: 11 },
-  bubbleUser: { backgroundColor: COLORS.primary, borderBottomRightRadius: 5 },
+  avatarTxt:  { fontSize: 16 },
+  bubble: {
+    maxWidth: "78%", borderRadius: 16, paddingHorizontal: 14, paddingVertical: 10,
+  },
+  bubbleUser: {
+    backgroundColor: COLORS.primary,
+    borderBottomRightRadius: 4,
+  },
   bubbleAi: {
-    backgroundColor: COLORS.surface,
-    borderBottomLeftRadius: 5,
-    borderWidth: 1, borderColor: COLORS.borderSubtle,
-    ...SHADOW,
+    backgroundColor: "#F1EDF5",
+    borderBottomLeftRadius: 4,
+    borderWidth: 1, borderColor: "#E3DAE9",
   },
-  textUser: { color: "#fff", ...TYPOGRAPHY.bodyMedium },
-  time: { fontSize: 10, marginTop: 7 },
-  timeUser: { color: "rgba(255,255,255,0.62)", textAlign: "right" },
-  timeAi: { color: COLORS.textMuted },
-  actions: { gap: 7, marginTop: 10 },
-  actionChip: {
-    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    minHeight: 38, paddingHorizontal: 11,
-    borderRadius: 10, backgroundColor: COLORS.background,
-    borderWidth: 1, borderColor: COLORS.borderSubtle,
-  },
-  actionText: { color: COLORS.primaryDark, fontSize: 12, fontWeight: "700" },
+  text:     { fontSize: 14, lineHeight: 21 },
+  textUser: { color: "#fff", fontWeight: "500" },
+  textAi:   { color: COLORS.textDark, fontWeight: "400" },
+  time:     { fontSize: 10, marginTop: 4 },
+  timeUser: { color: "rgba(255,255,255,0.6)", textAlign: "right" },
+  timeAi:   { color: COLORS.textMuted },
 });
 
-const rt = StyleSheet.create({
-  paragraph: { ...TYPOGRAPHY.body, color: COLORS.textDark },
-  bold: { fontWeight: "700", color: COLORS.textDark },
-  code: { fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace", fontSize: 13, color: COLORS.primaryDark },
-  heading: { ...TYPOGRAPHY.h3, color: COLORS.textDark, marginBottom: 5, marginTop: 2 },
-  bulletRow: { flexDirection: "row", alignItems: "flex-start", gap: 8, marginTop: 4 },
-  bullet: { width: 5, height: 5, borderRadius: 3, backgroundColor: COLORS.primary, marginTop: 8 },
-  number: { width: 18, color: COLORS.primary, fontWeight: "700", fontSize: 13, marginTop: 1 },
-  listText: { flex: 1, ...TYPOGRAPHY.body, color: COLORS.textDark },
-  quote: { borderLeftWidth: 3, borderLeftColor: COLORS.primaryLight, paddingLeft: 10, paddingVertical: 3, marginTop: 4 },
-  quoteText: { ...TYPOGRAPHY.body, color: COLORS.textLight, fontStyle: "italic" },
-});
+// ─── Main Screen ──────────────────────────────────────────────────────────────
 
-const fc = StyleSheet.create({
-  card: {
-    marginTop: 10, backgroundColor: COLORS.background,
-    borderRadius: 13, padding: 12,
-    borderWidth: 1, borderColor: COLORS.borderSubtle,
-  },
-  topRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  iconWrap: {
-    width: 28, height: 28, borderRadius: 9,
-    backgroundColor: COLORS.primaryLight,
-    alignItems: "center", justifyContent: "center",
-  },
-  title: { ...TYPOGRAPHY.label, color: COLORS.textLight, flex: 1 },
-  value: { marginTop: 8, ...TYPOGRAPHY.h2, color: COLORS.textDark },
-  secondary: { marginTop: 2, fontSize: 12, color: COLORS.textMuted },
-  track: { height: 6, backgroundColor: COLORS.surfaceMuted, borderRadius: 3, marginTop: 10, overflow: "hidden" },
-  fill: { height: "100%", borderRadius: 3, backgroundColor: COLORS.primary },
-  detail: { marginTop: 7, fontSize: 11, color: COLORS.textMuted },
-});
-
-export default function AiChatScreen() {
+export default function AiChatScreen({ navigation }) {
   const { user } = useContext(AuthContext);
-  const router = useRouter();
 
   const [messages, setMessages] = useState([
     {
-      id: "welcome",
-      role: "assistant",
-      content: `Hi${user?.name ? ` ${user.name}` : ""} 👋\n\nI’m your **FitLip Coach**. I can use your current meals, hydration, workouts, runs, activity and progress to help you make better decisions.\n\nTry asking me what you should focus on today.`,
-      time: formatTime(new Date()),
-      cards: [],
-      actions: [],
+      id:      "welcome",
+      role:    "assistant",
+      content: `Hi! 👋 I'm your AI nutrition assistant.\n\nI already know your health profile — ask me anything about your diet, meals, conditions, or fitness goal.`,
+      time:    formatTime(new Date()),
     },
   ]);
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const listRef = useRef(null);
+  const [input, setInput]           = useState("");
+  const [loading, setLoading]       = useState(false);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
+  const listRef                     = useRef(null);
 
+  // Chat history lives server-side for 7 days (Redis) — restore it on mount
+  // so leaving and returning to this screen doesn't wipe the conversation.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -322,45 +153,42 @@ export default function AiChatScreen() {
         const stored = res.data?.messages || [];
         if (!cancelled && stored.length > 0) {
           setMessages((prev) => [
-            prev[0],
+            prev[0], // keep the welcome message at the top
             ...stored.map((m) => ({
-              id: m.id,
-              role: m.role,
+              id:      m.id,
+              role:    m.role,
               content: m.content,
-              time: m.ts ? formatTime(new Date(m.ts)) : "",
-              cards: [],
-              actions: [],
+              time:    m.ts ? formatTime(new Date(m.ts)) : "",
             })),
           ]);
         }
       } catch (err) {
+        // Non-fatal — just start fresh with the welcome message if this fails.
         console.warn("Could not load chat history:", err.message);
+      } finally {
+        if (!cancelled) setHistoryLoaded(true);
       }
     })();
     return () => { cancelled = true; };
   }, []);
 
+  function formatTime(date) {
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+
   const scrollToBottom = useCallback(() => {
     setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
   }, []);
-
-  const handleAction = useCallback((action) => {
-    const target = ROUTES[action?.target];
-    if (target) router.push(target);
-  }, [router]);
 
   const sendMessage = useCallback(async (text) => {
     const trimmed = (text || input).trim();
     if (!trimmed || loading) return;
 
-    const now = new Date();
     const userMsg = {
-      id: Date.now().toString(),
-      role: "user",
+      id:      Date.now().toString(),
+      role:    "user",
       content: trimmed,
-      time: formatTime(now),
-      cards: [],
-      actions: [],
+      time:    formatTime(new Date()),
     };
 
     setMessages((prev) => [...prev, userMsg]);
@@ -371,29 +199,28 @@ export default function AiChatScreen() {
     try {
       const res = await API.post("/nutrition/ai-chat", { message: trimmed });
       const aiMsg = {
-        id: `${Date.now()}_ai`,
-        role: "assistant",
+        id:      Date.now().toString() + "_ai",
+        role:    "assistant",
         content: res.data?.reply || "Sorry, I couldn't understand that.",
-        cards: Array.isArray(res.data?.cards) ? res.data.cards : [],
-        actions: Array.isArray(res.data?.actions) ? res.data.actions : [],
-        time: formatTime(new Date()),
+        time:    formatTime(new Date()),
       };
       setMessages((prev) => [...prev, aiMsg]);
     } catch (err) {
       const backendMsg = err.response?.data?.message;
-      setMessages((prev) => [...prev, {
-        id: `${Date.now()}_err`,
-        role: "assistant",
-        content: backendMsg || "I couldn't reach FitLip right now. Please try again.",
-        cards: [],
-        actions: [],
-        time: formatTime(new Date()),
-      }]);
+      const errMsg = {
+        id:      Date.now().toString() + "_err",
+        role:    "assistant",
+        content: backendMsg || "Sorry, something went wrong. Please try again.",
+        time:    formatTime(new Date()),
+      };
+      setMessages((prev) => [...prev, errMsg]);
     } finally {
       setLoading(false);
       scrollToBottom();
     }
-  }, [input, loading, scrollToBottom]);
+  }, [input, loading]);
+
+  const handleQuickQuestion = (q) => sendMessage(q);
 
   return (
     <SafeAreaView style={s.container}>
@@ -402,21 +229,20 @@ export default function AiChatScreen() {
         style={{ flex: 1 }}
         keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
       >
+        {/* ── Header ── */}
         <View style={s.header}>
           <View style={s.headerCenter}>
-            <View style={s.headerAvatar}>
-              <Image source={BRAND_AVATAR} style={s.headerAvatarImage} />
+            <View style={s.headerIconWrap}>
+              <Image source={require("../../../assets/images/chatbot-avatar.png")} style={s.headerAvatarImage} />
             </View>
             <View>
-              <Text style={s.headerTitle}>FitLip Coach</Text>
-              <View style={s.statusRow}>
-                <View style={s.statusDot} />
-                <Text style={s.headerSub}>Personalized to your FitLip data</Text>
-              </View>
+              <Text style={s.headerTitle}>AI Nutrition Coach</Text>
+              <Text style={s.headerSub}>Your personal health assistant</Text>
             </View>
           </View>
         </View>
 
+        {/* ── Messages ── */}
         <FlatList
           ref={listRef}
           data={messages}
@@ -424,12 +250,12 @@ export default function AiChatScreen() {
           contentContainerStyle={s.messageList}
           showsVerticalScrollIndicator={false}
           onContentSizeChange={scrollToBottom}
-          renderItem={({ item }) => <MessageBubble message={item} onAction={handleAction} />}
+          renderItem={({ item }) => <MessageBubble message={item} />}
           ListFooterComponent={
             loading ? (
               <View style={s.typingRow}>
                 <View style={mb.avatar}>
-                  <Image source={BRAND_AVATAR} style={mb.avatarImage} />
+                  <Image source={require("../../../assets/images/chatbot-avatar.png")} style={mb.avatarImage} />
                 </View>
                 <View style={[mb.bubbleAi, { paddingHorizontal: 14 }]}>
                   <TypingDots />
@@ -439,9 +265,10 @@ export default function AiChatScreen() {
           }
         />
 
+        {/* ── Quick Questions ── */}
         {messages.length <= 1 && (
           <View style={s.quickWrap}>
-            <Text style={s.quickLabel}>Try FitLip Coach</Text>
+            <Text style={s.quickLabel}>Quick questions</Text>
             <FlatList
               horizontal
               data={QUICK_QUESTIONS}
@@ -451,7 +278,7 @@ export default function AiChatScreen() {
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={s.quickChip}
-                  onPress={() => sendMessage(item)}
+                  onPress={() => handleQuickQuestion(item)}
                   activeOpacity={0.7}
                 >
                   <Text style={s.quickChipTxt}>{item}</Text>
@@ -461,10 +288,11 @@ export default function AiChatScreen() {
           </View>
         )}
 
+        {/* ── Input Bar ── */}
         <View style={s.inputBar}>
           <TextInput
             style={s.input}
-            placeholder="Ask FitLip Coach anything…"
+            placeholder="Ask about your diet, meals, conditions…"
             placeholderTextColor="#9A94AE"
             value={input}
             onChangeText={setInput}
@@ -491,54 +319,67 @@ export default function AiChatScreen() {
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+  container: { flex: 1, backgroundColor: "#F8F6F9" },
+
   header: {
     flexDirection: "row", alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16, paddingVertical: 12,
     backgroundColor: COLORS.surface,
     borderBottomWidth: 1, borderBottomColor: COLORS.borderSubtle,
   },
-  headerCenter: { flexDirection: "row", alignItems: "center", gap: 10 },
-  headerAvatar: {
-    width: 42, height: 42, borderRadius: 13,
+  backBtn: {
+    width: 40, height: 40, borderRadius: 20,
     backgroundColor: COLORS.surfaceMuted,
-    borderWidth: 1, borderColor: COLORS.borderSubtle,
     justifyContent: "center", alignItems: "center",
   },
-  headerAvatarImage: { width: 31, height: 31, borderRadius: 10 },
-  headerTitle: { fontSize: 16, fontWeight: "800", color: COLORS.textDark },
-  statusRow: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 2 },
-  statusDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.success },
-  headerSub: { fontSize: 10, color: COLORS.textMuted, fontWeight: "500" },
-  messageList: { padding: 16, paddingBottom: 8 },
-  typingRow: { flexDirection: "row", alignItems: "flex-end", gap: 8, paddingHorizontal: 16, marginBottom: 8 },
-  quickWrap: { paddingTop: 8, paddingBottom: 4 },
-  quickLabel: {
-    ...TYPOGRAPHY.label, color: COLORS.textMuted,
-    paddingHorizontal: 16, marginBottom: 8, textTransform: "uppercase",
+  backIcon:     { fontSize: 18, color: COLORS.textDark, fontWeight: "700" },
+  headerCenter: { flexDirection: "row", alignItems: "center", gap: 10 },
+  headerIconWrap: {
+    width: 40, height: 40, borderRadius: 12,
+    backgroundColor: COLORS.surfaceMuted,
+    justifyContent: "center", alignItems: "center",
+    overflow: "hidden",
   },
+  headerAvatarImage: { width: 32, height: 32, borderRadius: 16 },
+  headerIcon:  { fontSize: 20 },
+  headerTitle: { fontSize: 15, fontWeight: "800", color: COLORS.textDark },
+  headerSub:   { fontSize: 11, color: COLORS.primary, fontWeight: "500", marginTop: 1 },
+
+  messageList: { padding: 16, paddingBottom: 8 },
+  typingRow:   { flexDirection: "row", alignItems: "flex-end", gap: 8, paddingHorizontal: 16, marginBottom: 8 },
+
+  quickWrap:  { paddingTop: 8, paddingBottom: 4 },
+  quickLabel: { fontSize: 11, fontWeight: "700", color: COLORS.textMuted, paddingHorizontal: 16, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 },
   quickChip: {
     backgroundColor: COLORS.surface, borderRadius: 12,
-    paddingHorizontal: 13, paddingVertical: 9,
+    paddingHorizontal: 14, paddingVertical: 9,
     borderWidth: 1, borderColor: COLORS.borderSubtle,
   },
-  quickChipTxt: { fontSize: 12, color: COLORS.primaryDark, fontWeight: "600" },
+  quickChipTxt: { fontSize: 12, color: COLORS.textLight, fontWeight: "600" },
+
   inputBar: {
     flexDirection: "row", alignItems: "flex-end",
     paddingHorizontal: 12, paddingVertical: 10,
-    backgroundColor: COLORS.surface,
-    borderTopWidth: 1, borderTopColor: COLORS.borderSubtle, gap: 8,
+    backgroundColor: "#FCFBFD",
+    borderTopWidth: 1, borderTopColor: COLORS.borderSubtle,
+    gap: 8,
   },
   input: {
     flex: 1, backgroundColor: COLORS.background,
     borderRadius: 16, borderWidth: 1.5, borderColor: COLORS.border,
     paddingHorizontal: 16, paddingVertical: 10,
-    fontSize: 14, color: COLORS.textDark, fontWeight: "500", maxHeight: 100,
+    fontSize: 14, color: COLORS.textDark, fontWeight: "500",
+    maxHeight: 100,
   },
   sendBtn: {
     width: 44, height: 44, borderRadius: 16,
-    backgroundColor: COLORS.primary, justifyContent: "center", alignItems: "center",
+    backgroundColor: COLORS.primary,
+    justifyContent: "center", alignItems: "center",
   },
   sendBtnDisabled: { backgroundColor: COLORS.primaryLight },
+  sendIcon:        { fontSize: 16, color: "#fff", fontWeight: "800" },
 });

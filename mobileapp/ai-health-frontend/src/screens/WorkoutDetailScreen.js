@@ -613,7 +613,7 @@ const styles = StyleSheet.create({
   statRow: {
     flexDirection: "row", justifyContent: "space-between",
     paddingHorizontal: 12, paddingVertical: 16,
-    backgroundColor: COLORS.surface, marginBottom: 10,
+    backgroundColor: COLORS.surfaceMuted, marginBottom: 10,
   },
   statPill: { flex: 1, alignItems: "center" },
   statNum: { fontSize: 21, fontWeight: "800", color: COLORS.textDark, letterSpacing: -0.5 },
@@ -635,11 +635,12 @@ const styles = StyleSheet.create({
     padding: 14, overflow: "hidden",
   },
   cardIdle: { backgroundColor: COLORS.surfaceMuted, borderColor: COLORS.border, borderWidth: 1 },
-  cardCompleted: { opacity: 0.58, backgroundColor: COLORS.surface },
+  cardCompleted: { opacity: 1, backgroundColor: "#F3F8F4", borderWidth: 1, borderColor: "#CFE6D4" },
   cardDoneTint: {
     position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: "rgba(34,197,94,0.04)", borderWidth: 1.5,
-    borderColor: "#22C55E40", borderRadius: 20,
+    backgroundColor: "rgba(34,197,94,0.045)",
+    borderWidth: 1, borderColor: "rgba(34,197,94,0.18)",
+    borderRadius: 20,
   },
   iconWrap: {
     width: 68, height: 68, borderRadius: 16,

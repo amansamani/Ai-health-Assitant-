@@ -92,7 +92,8 @@ export default function ProfileScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <>
+      <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
         <FadeSlideIn delay={0}>
           <View style={styles.headerRow}>
@@ -182,8 +183,8 @@ export default function ProfileScreen() {
         </FadeSlideIn>
 
         <Text style={styles.footerText}>FitLip · Your fitness journey, your account</Text>
-      </ScrollView>
-    </SafeAreaView>
+        </ScrollView>
+      </SafeAreaView>
       <ConfirmModal
         visible={logoutConfirmVisible}
         title="Log out?"
@@ -194,6 +195,7 @@ export default function ProfileScreen() {
         onCancel={() => setLogoutConfirmVisible(false)}
         onConfirm={async () => { setLogoutConfirmVisible(false); await logout(); }}
       />
+    </>
   );
 }
 

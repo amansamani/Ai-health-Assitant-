@@ -176,9 +176,7 @@ export default function PublicProfileScreen() {
           </View>
         </FadeSlideIn>
 
-        {profile.canView ? (
-
-        ) : (
+        {!profile.canView && (
           <FadeSlideIn delay={130}>
             <View style={styles.privateCard}>
               <View style={styles.lockCircle}><LucideIcon name="lock-closed" size={22} color={COLORS.primary} /></View>

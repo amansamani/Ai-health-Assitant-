@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef, useContext } from "react";
 import {
   View, Text, TextInput, Pressable, StyleSheet,
   ActivityIndicator, Animated, Dimensions, KeyboardAvoidingView,
-  Platform, ScrollView,
+  Platform, ScrollView, InteractionManager,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
@@ -497,6 +497,9 @@ export default function TrackingScreen() {
       } catch (err) {
         console.log("Auto-sync save failed:", err.response?.data?.message || err.message);
       }
+    } catch (err) {
+      console.warn("Device health sync failed:", err?.message || err);
+      setSyncStatus("unavailable");
     } finally {
       setSyncing(false);
     }
@@ -505,8 +508,21 @@ export default function TrackingScreen() {
   useFocusEffect(
     useCallback(() => {
       if (!token) return;
+      let cancelled = false;
       setLoading(true);
-      fetchToday().then(runDeviceSync);
+
+      fetchToday().finally(() => {
+        if (cancelled) return;
+        InteractionManager.runAfterInteractions(() => {
+          if (!cancelled) {
+            runDeviceSync().catch((err) => {
+              console.warn("Device sync did not complete:", err?.message || err);
+            });
+          }
+        });
+      });
+
+      return () => { cancelled = true; };
     }, [token, fetchToday, runDeviceSync])
   );
 
