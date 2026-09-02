@@ -25,6 +25,9 @@ export const getRunFeed = (page = 1, limit = 20) =>
 
 export const getRunById = (id) => API.get(`/runs/${id}`).then((r) => r.data);
 
+export const getUserRuns = (userId, page = 1, limit = 12) =>
+  API.get(`/runs/user/${encodeURIComponent(userId)}`, { params: { page, limit } }).then((r) => r.data);
+
 export const toggleRunLike = (id) =>
   API.post(`/runs/${id}/like`).then((r) => r.data);
 

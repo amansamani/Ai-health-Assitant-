@@ -190,6 +190,60 @@ exports.getMyRuns = async (req, res) => {
 /**
  * GET /api/runs/:id
  */
+/**
+ * GET /api/runs/user/:userId?page=1&limit=12
+ *
+ * Activity history for a profile. Owners see all of their runs; other users
+ * see public activities, plus follower-only activities when the follow
+ * relationship is accepted.
+ */
+exports.getUserRuns = async (req, res) => {
+  try {
+    const limit = Math.min(Math.max(Number(req.query.limit) || 12, 1), 50);
+    const page = Math.max(Number(req.query.page) || 1, 1);
+    const viewerId = String(req.user.id);
+    const targetId = String(req.params.userId);
+
+    const isOwner = viewerId === targetId;
+    let visibilityQuery = { visibility: "public" };
+
+    if (isOwner) {
+      visibilityQuery = {};
+    } else {
+      const accepted = await Follow.exists({
+        follower: req.user.id,
+        following: req.params.userId,
+        status: "accepted",
+      });
+      if (accepted) visibilityQuery = { visibility: { $in: ["public", "followers"] } };
+    }
+
+    const filter = { user: req.params.userId, ...visibilityQuery };
+    const [runs, total] = await Promise.all([
+      RunLog.find(filter)
+        .sort({ startedAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .populate("user", PUBLIC_USER_FIELDS)
+        .lean({ virtuals: true }),
+      RunLog.countDocuments(filter),
+    ]);
+
+    return res.status(200).json({
+      runs: runs.map((run) => ({
+        ...run,
+        likedByMe: (run.likes || []).some((id) => String(id) === viewerId),
+      })),
+      total,
+      page,
+      limit,
+    });
+  } catch (error) {
+    logger.error({ err: error }, "Get user runs error");
+    return res.status(500).json({ message: "Failed to fetch user activities" });
+  }
+};
+
 exports.getRunById = async (req, res) => {
   try {
     const run = await RunLog.findById(req.params.id)
@@ -254,16 +308,16 @@ exports.getFeed = async (req, res) => {
       .lean();
 
     const followingIds = followingRows.map((row) => row.following);
-    const audienceIds = [...followingIds, req.user.id];
-
     const query = {
       $or: [
-        { user: req.user.id }, // always see your own, any visibility
+        // Your own activities are always visible in your feed, regardless of
+        // their posting visibility. Other people's activities appear only
+        // when you follow them and their activity is public/follower-visible.
+        { user: req.user.id },
         {
           user: { $in: followingIds },
           visibility: { $in: ["public", "followers"] },
         },
-        { visibility: "public", user: { $nin: audienceIds } },
       ],
     };
 

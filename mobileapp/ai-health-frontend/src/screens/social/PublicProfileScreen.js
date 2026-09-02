@@ -6,7 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import LucideIcon from "../../components/ui/LucideIcon";
 import { LinearGradient } from "expo-linear-gradient";
 import API, { API_BASE_URL } from "../../services/api";
-import { getMyRuns } from "../../services/runService";
+import { getMyRuns, getUserRuns } from "../../services/runService";
 import { formatDistanceKm, formatDuration, formatPace, paceSecPerKm } from "../../utils/runMath";
 import { getToken } from "../../utils/secureToken";
 import { COLORS, SHADOW } from "../../constants/theme";
@@ -39,9 +39,11 @@ export default function PublicProfileScreen() {
       const data = profileRes.data;
       setProfile(data);
       setToken(currentToken);
-      if (data.isSelf) {
+      if (data.canView) {
         try {
-          const runs = await getMyRuns(1, 12);
+          const runs = data.isSelf
+            ? await getMyRuns(1, 12)
+            : await getUserRuns(data._id, 1, 12);
           setMyRuns(runs.runs || []);
         } catch (_) { setMyRuns([]); }
       } else {
@@ -149,18 +151,18 @@ export default function PublicProfileScreen() {
         <FadeSlideIn delay={125}>
           <View style={styles.postsCard}>
             <View style={styles.postsHeader}>
-              <View><Text style={styles.postsTitle}>Posts</Text><Text style={styles.postsSubtitle}>{myRuns.length ? `${myRuns.length} recent activities` : "Your shared running activities"}</Text></View>
+              <View><Text style={styles.postsTitle}>Posts</Text><Text style={styles.postsSubtitle}>{myRuns.length ? `${myRuns.length} recent activities` : "Shared running activities"}</Text></View>
               {myRuns.length > 0 && <Pressable onPress={() => router.push("/(app)/run-feed")}><Text style={styles.seeAll}>See all</Text></Pressable>}
             </View>
-            {profile.isSelf && myRuns.length === 0 ? (
+            {profile.canView && myRuns.length === 0 ? (
               <View style={styles.emptyPosts}><LucideIcon name="walk-outline" size={28} color={COLORS.textLight} /><Text style={styles.emptyPostsText}>Your running posts will appear here after you finish and save a run.</Text></View>
-            ) : profile.isSelf ? (
+            ) : profile.canView ? (
               myRuns.map((run) => {
-                const pace = paceSecPerKm(run.durationSeconds, run.distanceMeters);
+                const pace = paceSecPerKm(run.distanceMeters, run.durationSeconds);
                 const date = run.startedAt ? new Date(run.startedAt) : null;
                 const timeLabel = date && !Number.isNaN(date.getTime()) ? date.toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) : "";
                 return (
-                  <Pressable key={run._id} onPress={() => router.push("/(app)/run-feed")} style={styles.postRow}>
+                  <Pressable key={run._id} onPress={() => router.push({ pathname: "/(app)/share-activity", params: { runId: run._id } })} style={styles.postRow}>
                     <View style={styles.postIcon}><LucideIcon name={run.activityType === "cycle" ? "bicycle-outline" : run.activityType === "walk" ? "walk-outline" : "footsteps-outline"} size={19} color={COLORS.primary} /></View>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.postActivity}>{run.activityType === "cycle" ? "Cycling" : run.activityType === "walk" ? "Walk" : "Run"}</Text>

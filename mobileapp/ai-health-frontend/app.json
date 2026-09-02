@@ -11,8 +11,10 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSCameraUsageDescription": "FitLip needs camera access to check your exercise form."
-      }
+        "NSCameraUsageDescription": "FitLip needs camera access to check your exercise form.",
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "bundleIdentifier": "com.amansamani.aihealthfrontend"
     },
     "android": {
       "config": {
@@ -25,7 +27,13 @@
         "android.permission.CAMERA",
         "android.permission.health.READ_STEPS",
         "android.permission.health.READ_SLEEP",
-        "android.permission.health.READ_ACTIVE_CALORIES_BURNED"
+        "android.permission.health.READ_ACTIVE_CALORIES_BURNED",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_LOCATION",
+        "android.permission.RECORD_AUDIO"
       ],
       "adaptiveIcon": {
         "backgroundColor": "#29195A",

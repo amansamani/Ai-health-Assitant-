@@ -32,7 +32,7 @@ function timeAgo(iso) {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
-function RunCard({ run, onToggleLike }) {
+function RunCard({ run, onToggleLike, onShare }) {
   const region =
     run.route?.length > 1
       ? (() => {
@@ -83,14 +83,20 @@ function RunCard({ run, onToggleLike }) {
         <Stat value={`${run.caloriesBurned}`} label="kcal" />
       </View>
 
-      <Pressable style={styles.likeRow} onPress={() => onToggleLike(run)}>
-        <LucideIcon
-          name={run.likedByMe ? "heart" : "heart-outline"}
-          size={20}
-          color={run.likedByMe ? COLORS.error : COLORS.textLight}
-        />
-        <Text style={styles.likeCount}>{run.likesCount || 0}</Text>
-      </Pressable>
+      <View style={styles.actionsRow}>
+        <Pressable style={styles.actionBtn} onPress={() => onToggleLike(run)} accessibilityRole="button" accessibilityLabel={run.likedByMe ? "Unlike activity" : "Like activity"}>
+          <LucideIcon
+            name={run.likedByMe ? "heart" : "heart-outline"}
+            size={20}
+            color={run.likedByMe ? COLORS.error : COLORS.textLight}
+          />
+          <Text style={styles.likeCount}>{run.likesCount || 0}</Text>
+        </Pressable>
+        <Pressable style={styles.actionBtn} onPress={() => onShare(run)} accessibilityRole="button" accessibilityLabel="Share activity">
+          <LucideIcon name="share" size={19} color={COLORS.textLight} />
+          <Text style={styles.actionText}>Share</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -128,6 +134,10 @@ export default function RunFeedScreen() {
     }, [load])
   );
 
+  const handleShare = (run) => {
+    router.push({ pathname: "/(app)/share-activity", params: { runId: run._id } });
+  };
+
   const handleToggleLike = async (run) => {
     // Optimistic — feed feel should be instant, like every other social app.
     setRuns((prev) =>
@@ -161,7 +171,7 @@ export default function RunFeedScreen() {
           data={runs}
           keyExtractor={(item) => item._id}
           contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
-          renderItem={({ item }) => <RunCard run={item} onToggleLike={handleToggleLike} />}
+          renderItem={({ item }) => <RunCard run={item} onToggleLike={handleToggleLike} onShare={handleShare} />}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -223,8 +233,10 @@ const styles = StyleSheet.create({
   statItem: { alignItems: "center", flex: 1 },
   statValue: { fontWeight: "700", color: COLORS.textDark, fontSize: 14 },
   statLabel: { fontSize: 10, color: COLORS.textLight, marginTop: 2 },
-  likeRow: { flexDirection: "row", alignItems: "center", gap: 6, paddingTop: 6 },
+  actionsRow: { flexDirection: "row", alignItems: "center", gap: 18, paddingTop: 5 },
+  actionBtn: { flexDirection: "row", alignItems: "center", gap: 6, minHeight: 36 },
   likeCount: { color: COLORS.textLight, fontSize: 13, fontWeight: "600" },
+  actionText: { color: COLORS.textLight, fontSize: 13, fontWeight: "600" },
   empty: { alignItems: "center", marginTop: 60, gap: 10, paddingHorizontal: 40 },
   emptyText: { color: COLORS.textLight, textAlign: "center", fontSize: 13 },
 });

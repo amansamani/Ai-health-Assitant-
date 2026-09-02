@@ -13,6 +13,7 @@ import {
   View,
   Text,
   Pressable,
+  ImageBackground,
   StyleSheet,
   Alert,
   Dimensions,
@@ -472,29 +473,37 @@ export default function RunTrackingScreen() {
             onMapReady={() => setMapReady(true)}
           />
         ) : (
-          <View style={[StyleSheet.absoluteFillObject, styles.mapFallback]}>
-            <View style={styles.mapFallbackIcon}>
-              <LucideIcon name="map" size={24} color={COLORS.primary} />
+          <ImageBackground
+            source={require("../../assets/images/run-hero-user.png")}
+            resizeMode="cover"
+            style={[StyleSheet.absoluteFillObject, styles.mapFallback]}
+            imageStyle={styles.runHeroImage}
+          >
+            <View style={styles.runHeroOverlay} />
+            <View style={styles.runHeroContent}>
+              <View style={styles.mapFallbackIcon}>
+                <LucideIcon name={permissionDenied ? "location-outline" : "walk-outline"} size={24} color={COLORS.primary} />
+              </View>
+              <Text style={styles.mapFallbackTitle}>
+                {permissionDenied ? "Location access needed" : phase === "idle" ? "Ready to start" : "Preparing your route"}
+              </Text>
+              <Text style={styles.mapFallbackText}>
+                {permissionDenied
+                  ? "Enable precise location access in Settings to track your route."
+                  : phase === "idle"
+                  ? "Choose an activity and tap Start to begin tracking."
+                  : "Your route map is loading. Your distance and time are still being recorded."}
+              </Text>
+              {currentRegion && !mapReady ? (
+                <Pressable
+                  style={styles.mapRetryBtn}
+                  onPress={() => setMapReady(true)}
+                >
+                  <Text style={styles.mapRetryText}>Show route</Text>
+                </Pressable>
+              ) : null}
             </View>
-            <Text style={styles.mapFallbackTitle}>
-              {permissionDenied ? "Location access needed" : phase === "idle" ? "Ready to start" : "Preparing your route"}
-            </Text>
-            <Text style={styles.mapFallbackText}>
-              {permissionDenied
-                ? "Enable precise location access in Settings to track your route."
-                : phase === "idle"
-                ? "Choose an activity and tap Start to begin tracking."
-                : "Your route map is loading. Your distance and time are still being recorded."}
-            </Text>
-            {currentRegion && !mapReady ? (
-              <Pressable
-                style={styles.mapRetryBtn}
-                onPress={() => setMapReady(true)}
-              >
-                <Text style={styles.mapRetryText}>Show route</Text>
-              </Pressable>
-            ) : null}
-          </View>
+          </ImageBackground>
         )}
 
         <Pressable style={styles.closeBtn} onPress={handleDiscard}>
@@ -622,10 +631,13 @@ const styles = StyleSheet.create({
   },
   loadingText: { color: COLORS.textDark, fontSize: 16, fontWeight: "600" },
   mapWrap: { flex: 1, backgroundColor: COLORS.primaryDark },
-  mapFallback: { alignItems: "center", justifyContent: "center", padding: 28, backgroundColor: "#F4F0F6" },
-  mapFallbackIcon: { width: 52, height: 52, borderRadius: 16, backgroundColor: "#EEE6F2", alignItems: "center", justifyContent: "center", marginBottom: 12 },
-  mapFallbackTitle: { color: COLORS.textDark, textAlign: "center", fontSize: 17, fontWeight: "800" },
-  mapFallbackText: { marginTop: 7, color: COLORS.textMuted, textAlign: "center", fontSize: 13, lineHeight: 19, maxWidth: 310 },
+  mapFallback: { alignItems: "center", justifyContent: "center", overflow: "hidden" },
+  runHeroImage: { transform: [{ scale: 1.06 }] },
+  runHeroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(5, 12, 16, 0.48)" },
+  runHeroContent: { width: "88%", maxWidth: 360, alignItems: "center", padding: 24, borderRadius: 28, backgroundColor: "rgba(8, 18, 24, 0.58)", borderWidth: 1, borderColor: "rgba(255,255,255,0.16)", overflow: "hidden" },
+  mapFallbackIcon: { width: 52, height: 52, borderRadius: 18, backgroundColor: "rgba(152, 230, 37, 0.16)", borderWidth: 1, borderColor: "rgba(152,230,37,0.24)", alignItems: "center", justifyContent: "center", marginBottom: 12 },
+  mapFallbackTitle: { color: "#fff", textAlign: "center", fontSize: 24, fontWeight: "850" },
+  mapFallbackText: { marginTop: 8, color: "rgba(255,255,255,0.82)", textAlign: "center", fontSize: 13, lineHeight: 19, maxWidth: 310 },
   mapRetryBtn: { marginTop: 14, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, backgroundColor: COLORS.primaryDark },
   mapRetryText: { color: COLORS.onPrimary, fontSize: 12, fontWeight: "800" },
   closeBtn: {

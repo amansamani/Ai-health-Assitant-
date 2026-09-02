@@ -7,6 +7,7 @@ import {
   Animated,
   Dimensions,
   Image,
+  ActivityIndicator,
 } from "react-native";
 import { useState, useCallback, useContext, useRef, useEffect, useMemo } from "react";
 import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
@@ -18,10 +19,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { COLORS } from "../constants/theme";
 import CircularProgressRing from "../components/CircularProgressRing";
 import WeeklyInsightCard from "../components/WeeklyInsightCard";
-import { StepsIcon, SleepIcon, ManualLogIcon, MotivationSkyIllustration, getMotivationCopy } from "../components/icons/MotionIcons";
+import { StepsIcon, SleepIcon, ManualLogIcon, MotivationSkyIllustration, getMotivationCopy, SunriseIcon, SunIcon, MoonStarIcon } from "../components/icons/MotionIcons";
 import { useReplayOnFocus } from "../hooks/useReplayOnFocus";
 import { useActiveCalorieGoal } from "../hooks/useActiveCalorieGoal";
 import AiCoachFab from "../components/AiCoachFab";
+import { getRunFeed, toggleRunLike } from "../services/runService";
+import { formatDistanceKm, formatDuration, formatPace, paceSecPerKm } from "../utils/runMath";
 
 const { width } = Dimensions.get("window");
 
@@ -216,6 +219,8 @@ export default function HomeScreen() {
   const [today, setToday]     = useState(null);
   const [loading, setLoading] = useState(true);
   const [greeting, setGreeting] = useState("Good Morning");
+  const [activityFeed, setActivityFeed] = useState([]);
+  const [activityFeedLoading, setActivityFeedLoading] = useState(true);
 
   const STEP_GOAL  = 10000;
   const SLEEP_GOAL = 8;
@@ -242,6 +247,34 @@ export default function HomeScreen() {
     }
   }, []);
 
+  const fetchActivityFeed = useCallback(async () => {
+    try {
+      setActivityFeedLoading(true);
+      const res = await getRunFeed(1, 4);
+      setActivityFeed(Array.isArray(res.runs) ? res.runs.slice(0, 4) : []);
+    } catch {
+      setActivityFeed([]);
+    } finally {
+      setActivityFeedLoading(false);
+    }
+  }, []);
+
+  const handleFeedLike = useCallback(async (run) => {
+    setActivityFeed((prev) => prev.map((item) => item._id === run._id
+      ? { ...item, likedByMe: !item.likedByMe, likesCount: Math.max(0, (item.likesCount || 0) + (item.likedByMe ? -1 : 1)) }
+      : item
+    ));
+    try {
+      await toggleRunLike(run._id);
+    } catch {
+      fetchActivityFeed();
+    }
+  }, [fetchActivityFeed]);
+
+  const handleFeedShare = useCallback((run) => {
+    router.push({ pathname: "/(app)/share-activity", params: { runId: run._id } });
+  }, [router]);
+
   useFocusEffect(
     useCallback(() => {
       if (!token) return;
@@ -259,7 +292,8 @@ export default function HomeScreen() {
         setLoading(true);
         fetchToday();
       }
-    }, [updatedTodayParam, token, fetchToday])
+      fetchActivityFeed();
+    }, [updatedTodayParam, token, fetchToday, fetchActivityFeed])
   );
 
   const steps    = today?.steps ?? 0;
@@ -267,11 +301,10 @@ export default function HomeScreen() {
   const sleep    = today?.sleep ?? 0;
   const stepPct  = Math.round(Math.min(steps / STEP_GOAL, 1) * 100);
 
-  const greetIcon =
-    greeting === "Good Morning"   ? "partly-sunny-outline"
-    : greeting === "Good Afternoon" ? "sunny-outline"
-    : greeting === "Good Evening"   ? "cloudy-night-outline"
-    : "moon-outline";
+  const GreetingIcon =
+    greeting === "Good Morning" ? SunriseIcon
+    : greeting === "Good Afternoon" ? SunIcon
+    : MoonStarIcon;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -283,7 +316,7 @@ export default function HomeScreen() {
         <FadeSlideIn delay={0}>
           <View style={styles.headerRow}>
             <View style={styles.greetingRow}>
-              <LucideIcon name={greetIcon} size={20} color={COLORS.primary} style={{ marginRight: 6 }} />
+              <GreetingIcon trigger={iconTrigger} size={22} color={COLORS.primary} />
               <View>
                 <Text style={styles.greeting}>
                   {greeting}{firstName ? `, ${firstName}` : ""}!
@@ -432,6 +465,69 @@ export default function HomeScreen() {
           </Pressable>
         </FadeSlideIn>
 
+        {/* ── FRIEND ACTIVITY FEED ── */}
+        <FadeSlideIn delay={190}>
+          <View style={styles.feedSection}>
+            <View style={styles.sectionHeader}>
+              <View>
+                <Text style={styles.sectionTitle}>Activity</Text>
+                <Text style={styles.feedSubtitle}>See what your fitness circle is doing</Text>
+              </View>
+              <Pressable onPress={() => router.push("/(app)/run-feed")} style={styles.feedSeeAll}>
+                <Text style={styles.feedSeeAllText}>See all</Text>
+                <LucideIcon name="chevron-forward" size={15} color={COLORS.primary} />
+              </Pressable>
+            </View>
+
+            {activityFeedLoading ? (
+              <View style={styles.feedLoading}><ActivityIndicator size="small" color={COLORS.primary} /></View>
+            ) : activityFeed.length === 0 ? (
+              <View style={styles.feedEmpty}>
+                <View style={styles.feedEmptyIcon}><LucideIcon name="people-outline" size={20} color={COLORS.primary} /></View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.feedEmptyTitle}>Your activity feed is ready</Text>
+                  <Text style={styles.feedEmptyText}>Follow friends to see their runs, walks and rides here.</Text>
+                </View>
+              </View>
+            ) : (
+              activityFeed.map((run) => {
+                const pace = paceSecPerKm(run.distanceMeters, run.durationSeconds);
+                const activityLabel = run.activityType === "cycle" ? "Cycling" : run.activityType === "walk" ? "Walk" : "Run";
+                const username = run.user?.username;
+                const profileIdentifier = username || run.user?._id;
+                return (
+                  <View key={run._id} style={styles.feedCard}>
+                    <Pressable
+                      style={({ pressed }) => [styles.feedMainRow, { opacity: pressed ? 0.92 : 1 }]}
+                      onPress={() => profileIdentifier && router.push({ pathname: "/(app)/social/profile", params: { identifier: profileIdentifier } })}
+                    >
+                    <View style={styles.feedAvatar}>
+                      <Text style={styles.feedAvatarText}>{String(run.user?.name || "U").trim().charAt(0).toUpperCase()}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.feedName}>{run.user?.name || "Someone you follow"}</Text>
+                      <Text style={styles.feedActivity}>{activityLabel} · {formatDistanceKm(run.distanceMeters)} km · {formatDuration(run.durationSeconds)}</Text>
+                      <Text style={styles.feedMetrics}>{pace ? `${formatPace(pace)} /km` : "Activity complete"}{run.caloriesBurned ? ` · ${run.caloriesBurned} kcal` : ""}</Text>
+                    </View>
+                      <LucideIcon name={run.activityType === "cycle" ? "bicycle-outline" : run.activityType === "walk" ? "walk-outline" : "footsteps-outline"} size={19} color={COLORS.primary} />
+                    </Pressable>
+                    <View style={styles.feedActions}>
+                      <Pressable style={styles.feedAction} onPress={() => handleFeedLike(run)}>
+                        <LucideIcon name={run.likedByMe ? "heart" : "heart-outline"} size={16} color={run.likedByMe ? COLORS.error : COLORS.textLight} />
+                        <Text style={styles.feedActionText}>{run.likesCount || 0}</Text>
+                      </Pressable>
+                      <Pressable style={styles.feedAction} onPress={() => handleFeedShare(run)}>
+                        <LucideIcon name="share" size={16} color={COLORS.textLight} />
+                        <Text style={styles.feedActionText}>Share</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                );
+              })
+            )}
+          </View>
+        </FadeSlideIn>
+
         <View style={{ height: 32 }} />
       </ScrollView>
       <AiCoachFab />
@@ -497,6 +593,25 @@ const styles = StyleSheet.create({
     alignItems: "center", marginBottom: 14,
   },
   sectionTitle: { fontSize: 18, fontWeight: "800", color: COLORS.textDark, letterSpacing: -0.3 },
+  feedSubtitle: { marginTop: 3, fontSize: 11.5, color: COLORS.textLight },
+  feedSection: { marginTop: 2, marginBottom: 20 },
+  feedSeeAll: { flexDirection: "row", alignItems: "center", gap: 2, paddingVertical: 6 },
+  feedSeeAllText: { color: COLORS.primary, fontSize: 12, fontWeight: "800" },
+  feedLoading: { backgroundColor: COLORS.surface, borderRadius: 18, paddingVertical: 24, alignItems: "center", borderWidth: 1, borderColor: COLORS.border },
+  feedEmpty: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: COLORS.surface, borderRadius: 18, padding: 14, borderWidth: 1, borderColor: COLORS.border },
+  feedEmptyIcon: { width: 40, height: 40, borderRadius: 13, backgroundColor: COLORS.primary + "18", alignItems: "center", justifyContent: "center" },
+  feedEmptyTitle: { color: COLORS.textDark, fontSize: 13, fontWeight: "800" },
+  feedEmptyText: { marginTop: 3, color: COLORS.textLight, fontSize: 11.5, lineHeight: 16 },
+  feedCard: { backgroundColor: COLORS.surface, borderRadius: 18, borderWidth: 1, borderColor: COLORS.border, padding: 13, marginBottom: 9 },
+  feedMainRow: { flexDirection: "row", alignItems: "center", gap: 11 },
+  feedActions: { flexDirection: "row", alignItems: "center", gap: 18, marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: COLORS.border },
+  feedAction: { flexDirection: "row", alignItems: "center", gap: 5, minHeight: 28 },
+  feedActionText: { color: COLORS.textLight, fontSize: 10.5, fontWeight: "700" },
+  feedAvatar: { width: 40, height: 40, borderRadius: 14, backgroundColor: COLORS.primaryDark, alignItems: "center", justifyContent: "center" },
+  feedAvatarText: { color: "#fff", fontSize: 15, fontWeight: "850" },
+  feedName: { color: COLORS.textDark, fontSize: 13, fontWeight: "800" },
+  feedActivity: { marginTop: 2, color: COLORS.textDark, fontSize: 11.5, fontWeight: "700" },
+  feedMetrics: { marginTop: 3, color: COLORS.textLight, fontSize: 10.5, fontWeight: "600" },
   editBtn:      {
     flexDirection: "row", alignItems: "center", gap: 4,
     backgroundColor: COLORS.surfaceMuted, borderRadius: 16,

@@ -118,7 +118,7 @@ export default function RunSummaryScreen() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await saveRun({
+      const savedRun = await saveRun({
         activityType: draft.activityType,
         route: draft.route,
         distanceMeters: draft.distanceMeters,
@@ -131,7 +131,10 @@ export default function RunSummaryScreen() {
         photoBase64: photo?.base64 || null,
       });
       clearDraftRun();
-      router.replace("/(app)/(tabs)/tracking");
+      router.replace({
+        pathname: "/(app)/share-activity",
+        params: { runId: savedRun?._id },
+      });
     } catch (err) {
       showToast(
         err?.response?.data?.message || "Please try again.",

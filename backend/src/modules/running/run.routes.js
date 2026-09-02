@@ -10,6 +10,7 @@ const { runCreateSchema } = require("./run.validation");
 const {
   createRun,
   getMyRuns,
+  getUserRuns,
   getRunById,
   getFeed,
   toggleLike,
@@ -19,6 +20,7 @@ const {
 router.post("/", authMiddleware, validate(runCreateSchema), createRun);
 router.get("/me", authMiddleware, getMyRuns);
 router.get("/feed", authMiddleware, getFeed);
+router.get("/user/:userId", authMiddleware, getUserRuns);
 router.get("/:id", authMiddleware, getRunById);
 router.post("/:id/like", authMiddleware, toggleLike);
 router.delete("/:id", authMiddleware, deleteRun);
