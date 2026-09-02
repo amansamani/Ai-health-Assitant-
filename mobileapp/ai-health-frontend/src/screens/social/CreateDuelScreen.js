@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { showToast } from "../../services/uiFeedback";
 import { View, Text, Pressable, StyleSheet, ActivityIndicator, ScrollView, Alert } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import LucideIcon from "../../components/ui/LucideIcon";
 import { SafeAreaView } from "react-native-safe-area-context";
 import API from "../../services/api";
 import { COLORS } from "../../constants/theme";
@@ -72,7 +72,7 @@ export default function CreateDuelScreen() {
             <ActivityIndicator size="small" color={COLORS.primary} style={{ marginVertical: 16 }} />
           ) : friends.length === 0 ? (
             <View style={styles.emptyState}>
-              <Ionicons name="people-outline" size={28} color={COLORS.textLight} />
+              <LucideIcon name="people-outline" size={28} color={COLORS.textLight} />
               <Text style={styles.emptyText}>Add a friend first to start a duel</Text>
             </View>
           ) : (
@@ -84,7 +84,7 @@ export default function CreateDuelScreen() {
               >
                 <Avatar name={f.name} size={36} />
                 <Text style={styles.friendPickName}>{f.name}</Text>
-                {opponentId === f._id && <Ionicons name="checkmark-circle" size={20} color={COLORS.primary} />}
+                {opponentId === f._id && <LucideIcon name="checkmark-circle" size={20} color={COLORS.primary} />}
               </Pressable>
             ))
           )}
@@ -103,7 +103,7 @@ export default function CreateDuelScreen() {
                   metric === m.key && { backgroundColor: m.color + "18", borderColor: m.color },
                 ]}
               >
-                <Ionicons name={m.icon} size={16} color={metric === m.key ? m.color : COLORS.textMuted} />
+                <LucideIcon name={m.icon} size={16} color={metric === m.key ? m.color : COLORS.textMuted} />
                 <Text style={[styles.metricChipText, metric === m.key && { color: m.color }]}>{m.label}</Text>
               </Pressable>
             ))}
@@ -135,7 +135,7 @@ export default function CreateDuelScreen() {
         >
           {sending ? <ActivityIndicator size="small" color="#fff" /> : (
             <>
-              <Ionicons name="flash" size={18} color="#fff" />
+              <LucideIcon name="flash" size={18} color="#fff" />
               <Text style={styles.sendBtnText}>Send Challenge</Text>
             </>
           )}

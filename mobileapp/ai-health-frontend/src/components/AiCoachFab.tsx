@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { View, Pressable, StyleSheet, Platform } from "react-native";
 import { useRouter, usePathname } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import LucideIcon from "./ui/LucideIcon";
 import * as Haptics from "expo-haptics";
 import Animated, {
   Easing,
@@ -97,7 +97,7 @@ export default function AiCoachFab() {
       >
         <Animated.View style={buttonStyle}>
           <View style={styles.fab}>
-            <Ionicons name="chatbubble-ellipses" size={24} color="#fff" />
+            <LucideIcon name="chatbubble-ellipses" size={24} color="#fff" />
           </View>
         </Animated.View>
       </Pressable>

@@ -3,13 +3,14 @@ import React, { useEffect, useState, useCallback, useContext, useRef } from "rea
 import { showToast } from "../../services/uiFeedback";
 import {
   View, Text, ActivityIndicator, ScrollView, StyleSheet,
-  TouchableOpacity, RefreshControl, Modal, FlatList, Alert, Animated,
+  TouchableOpacity, RefreshControl, Modal, FlatList, Animated,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import LucideIcon from "../../components/ui/LucideIcon";
 import { SafeAreaView } from "react-native-safe-area-context";
 import API from "../../services/api";
 import { AuthContext } from "../../context/AuthContext";
 import MealCompletionCard from "../../components/MealCompletionCard";
+import ConfirmModal from "../../components/ui/ConfirmModal";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -53,7 +54,7 @@ function AiAdviceBanner({ advice, warnings }) {
       {/* Header row */}
       <View style={ai.headerRow}>
         <View style={ai.iconWrap}>
-          <Ionicons name="sparkles" size={18} color="#6E3482" />
+          <LucideIcon name="sparkles" size={18} color="#6E3482" />
         </View>
         <View style={{ flex: 1 }}>
           <View style={ai.titleRow}>
@@ -88,7 +89,7 @@ function AiAdviceBanner({ advice, warnings }) {
         <View style={ai.warningsWrap}>
           {warnings.map((w, i) => (
             <View key={i} style={ai.warningChip}>
-              <Ionicons name="warning" size={13} color="#D97706" style={{ marginRight: 4 }} />
+              <LucideIcon name="warning" size={13} color="#D97706" style={{ marginRight: 4 }} />
               <Text style={ai.warningTxt}>{w}</Text>
             </View>))}
         </View>
@@ -187,7 +188,7 @@ function SwapModal({ visible, mealType, combo, onClose, onSwapped }) {
               <Text style={sw.sub}>{meta.label} alternatives</Text>
             </View>
             <TouchableOpacity onPress={onClose} style={sw.closeBtn} accessibilityRole="button" accessibilityLabel="Close">
-              <Ionicons name="close" size={14} color="#777" />
+              <LucideIcon name="close" size={14} color="#777" />
             </TouchableOpacity>
           </View>
 
@@ -300,7 +301,7 @@ function MealCard({ mealType, combos, meta, onSwap, onRegenerate }) {
                 </View>
                 <View style={s.macroPill}>
                   <View style={[s.calChip, { backgroundColor: meta.bg, flexDirection: "row", alignItems: "center" }]}>
-                    <Ionicons name="flame" size={12} color={meta.color} style={{ marginRight: 3 }} />
+                    <LucideIcon name="flame" size={12} color={meta.color} style={{ marginRight: 3 }} />
                     <Text style={[s.calChipTxt, { color: meta.color }]}>{combo.calories} kcal</Text>
                   </View>
                 </View>
@@ -311,7 +312,7 @@ function MealCard({ mealType, combos, meta, onSwap, onRegenerate }) {
                   accessibilityRole="button"
                   accessibilityLabel="Swap meal"
                 >
-                  <Ionicons name="swap-horizontal" size={13} color={meta.color} style={{ marginRight: 3 }} />
+                  <LucideIcon name="swap-horizontal" size={13} color={meta.color} style={{ marginRight: 3 }} />
                   <Text style={[s.swapChipTxt, { color: meta.color }]}>Swap</Text>
                 </TouchableOpacity>
               </View>
@@ -343,7 +344,7 @@ function MealCard({ mealType, combos, meta, onSwap, onRegenerate }) {
         <View style={s.emptyMeal}>
           <Text style={s.emptyMealTxt}>No foods planned for this meal</Text>
           <TouchableOpacity style={[s.regenSmall, { borderColor: meta.color, flexDirection: "row", alignItems: "center", justifyContent: "center" }]} onPress={onRegenerate} accessibilityRole="button" accessibilityLabel="Regenerate plan">
-            <Ionicons name="refresh" size={13} color={meta.color} style={{ marginRight: 4 }} />
+            <LucideIcon name="refresh" size={13} color={meta.color} style={{ marginRight: 4 }} />
             <Text style={[s.regenSmallTxt, { color: meta.color }]}>Regenerate Plan</Text>
           </TouchableOpacity>
         </View>
@@ -358,6 +359,7 @@ export default function NutritionDashboardScreen({ navigation }) {
   const [plan, setPlan]             = useState(null);
   const [loading, setLoading]       = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [regenerateConfirm, setRegenerateConfirm] = useState(false);
   const { userGoal }                = useContext(AuthContext);
   const [swapState, setSwapState]   = useState({ visible: false, mealType: null, combo: null });
 
@@ -400,27 +402,18 @@ export default function NutritionDashboardScreen({ navigation }) {
     }
   };
 
-  const handleRegenerate = () => {
-    Alert.alert(
-      "Regenerate Plan",
-      "This will create a new diet plan for today. Continue?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Regenerate",
-          onPress: async () => {
-            setLoading(true);
-            try {
-              await API.post("/nutrition/generate");
-              await fetchPlan();
-            } catch {
-              showToast("Could not regenerate plan. Try again.", { title: "Couldn't regenerate plan", type: "error" });
-              setLoading(false);
-            }
-          },
-        },
-      ]
-    );
+  const handleRegenerate = () => setRegenerateConfirm(true);
+
+  const confirmRegenerate = async () => {
+    setRegenerateConfirm(false);
+    setLoading(true);
+    try {
+      await API.post("/nutrition/generate");
+      await fetchPlan();
+    } catch {
+      showToast("Could not regenerate plan. Try again.", { title: "Couldn't regenerate plan", type: "error" });
+      setLoading(false);
+    }
   };
 
   if (loading) {
@@ -494,7 +487,7 @@ export default function NutritionDashboardScreen({ navigation }) {
         <View style={s.screenHeader}>
           <Text style={s.screenTitle}>Diet</Text>
           <View style={s.headerIconWrap}>
-            <Ionicons name="restaurant-outline" size={18} color="#6E3482" />
+            <LucideIcon name="restaurant-outline" size={18} color="#6E3482" />
           </View>
         </View>
 
@@ -509,7 +502,7 @@ export default function NutritionDashboardScreen({ navigation }) {
             )}
           </View>
           <TouchableOpacity style={s.regenBtn} onPress={handleRegenerate} accessibilityRole="button" accessibilityLabel="Regenerate plan">
-            <Ionicons name="refresh" size={16} color="#6E3482" />
+            <LucideIcon name="refresh" size={16} color="#6E3482" />
           </TouchableOpacity>
         </View>
 
@@ -524,7 +517,7 @@ export default function NutritionDashboardScreen({ navigation }) {
         {/* ── Calorie summary card ── */}
         <View style={s.card}>
           <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 4 }}>
-            <Ionicons name="flag" size={13} color="#6E3482" style={{ marginRight: 5 }} />
+            <LucideIcon name="flag" size={13} color="#6E3482" style={{ marginRight: 5 }} />
             <Text style={s.cardHeading}>CALORIE BUDGET</Text>
           </View>
           <View style={s.calRow}>
@@ -613,6 +606,7 @@ export default function NutritionDashboardScreen({ navigation }) {
         onClose={() => setSwapState({ visible: false, mealType: null, combo: null })}
         onSwapped={fetchPlan}
       />
+      <ConfirmModal visible={regenerateConfirm} title="Regenerate today’s plan?" message="Your current plan for today will be replaced with a new plan." confirmText="Regenerate" icon="refresh-outline" onCancel={() => setRegenerateConfirm(false)} onConfirm={confirmRegenerate} />
     </SafeAreaView>
   );
 }

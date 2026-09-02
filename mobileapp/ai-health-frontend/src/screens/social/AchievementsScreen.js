@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { View, Text, Pressable, StyleSheet, ActivityIndicator, ScrollView, Share, Modal } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
-import { Ionicons } from "@expo/vector-icons";
+import LucideIcon from "../../components/ui/LucideIcon";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import API from "../../services/api";
@@ -23,7 +23,7 @@ function AchievementCard({ achievement }) {
   return (
     <LinearGradient colors={gradient} style={cardStyles.card}>
       <View style={cardStyles.iconWrap}>
-        <Ionicons name={achievement.icon} size={36} color="#fff" />
+        <LucideIcon name={achievement.icon} size={36} color="#fff" />
       </View>
       <Text style={cardStyles.title}>{achievement.title}</Text>
       <Text style={cardStyles.description}>{achievement.description}</Text>
@@ -70,7 +70,7 @@ export default function AchievementsScreen() {
           <ActivityIndicator size="small" color={COLORS.primary} style={{ marginTop: 30 }} />
         ) : achievements.length === 0 ? (
           <View style={styles.emptyState}>
-            <Ionicons name="ribbon-outline" size={32} color={COLORS.textLight} />
+            <LucideIcon name="ribbon-outline" size={32} color={COLORS.textLight} />
             <Text style={styles.emptyText}>No badges yet — keep your streaks going to earn your first one</Text>
           </View>
         ) : (
@@ -79,13 +79,13 @@ export default function AchievementsScreen() {
               <FadeSlideIn key={a._id} delay={i * 30} style={styles.gridItem}>
                 <Pressable onPress={() => setSelected(a)} style={styles.badgeRow}>
                   <View style={[styles.badgeIconWrap, { backgroundColor: (a.category === "duel" ? COLORS.primary : "#F97316") + "18" }]}>
-                    <Ionicons name={a.icon} size={22} color={a.category === "duel" ? COLORS.primary : "#F97316"} />
+                    <LucideIcon name={a.icon} size={22} color={a.category === "duel" ? COLORS.primary : "#F97316"} />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.badgeTitle}>{a.title}</Text>
                     <Text style={styles.badgeDesc} numberOfLines={1}>{a.description}</Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={16} color={COLORS.textLight} />
+                  <LucideIcon name="chevron-forward" size={16} color={COLORS.textLight} />
                 </Pressable>
               </FadeSlideIn>
             ))}
@@ -102,7 +102,7 @@ export default function AchievementsScreen() {
                 <Text style={styles.modalCloseBtnText}>Close</Text>
               </Pressable>
               <Pressable onPress={() => selected && handleShare(selected)} style={[styles.modalBtn, styles.modalShareBtn]}>
-                <Ionicons name="share-outline" size={16} color="#fff" />
+                <LucideIcon name="share-outline" size={16} color="#fff" />
                 <Text style={styles.modalShareBtnText}>Share</Text>
               </Pressable>
             </View>

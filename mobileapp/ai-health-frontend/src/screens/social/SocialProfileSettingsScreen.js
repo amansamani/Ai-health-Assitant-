@@ -8,7 +8,7 @@ import { getToken } from "../../utils/secureToken";
 import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import LucideIcon from "../../components/ui/LucideIcon";
 import API from "../../services/api";
 import { COLORS, SHADOW } from "../../constants/theme";
 
@@ -75,7 +75,7 @@ export default function SocialProfileSettingsScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <View style={styles.header}>
-        <Pressable style={styles.back} onPress={() => router.back()}><Ionicons name="chevron-back" size={22} color={COLORS.textDark} /></Pressable>
+        <Pressable style={styles.back} onPress={() => router.back()}><LucideIcon name="chevron-back" size={22} color={COLORS.textDark} /></Pressable>
         <View style={{ flex: 1, marginLeft: 12 }}><Text style={styles.title}>Social Identity</Text><Text style={styles.subtitle}>Separate from health and workout settings</Text></View>
       </View>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -84,13 +84,13 @@ export default function SocialProfileSettingsScreen() {
             {profilePhoto?.hasProfilePhoto && profilePhoto?._id && token ? (
               <Image source={{ uri: `${API_BASE_URL}/user/profile/photo/${profilePhoto._id}?v=${encodeURIComponent(profilePhoto.profileImageUpdatedAt || "1")}`, headers: { Authorization: `Bearer ${token}` } }} style={styles.photo} />
             ) : (
-              <View style={styles.photoFallback}><Ionicons name="person" size={30} color={COLORS.textMuted} /></View>
+              <View style={styles.photoFallback}><LucideIcon name="person" size={30} color={COLORS.textMuted} /></View>
             )}
           </View>
           <View style={{ flex: 1 }}><Text style={styles.cardTitle}>Profile photo</Text><Text style={styles.cardSub}>Change the photo shown across your FitLip profile.</Text></View>
           <Pressable style={styles.photoBtn} onPress={choosePhoto} disabled={photoSaving}>{photoSaving ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.photoBtnText}>Change</Text>}</Pressable>
         </View>
-        <View style={styles.identityCard}><View style={styles.identityIcon}><Ionicons name="people-outline" size={22} color={COLORS.primary} /></View><View style={{ flex: 1 }}><Text style={styles.cardTitle}>Your social profile</Text><Text style={styles.cardSub}>Username, bio and visibility control your public FitLip identity.</Text></View></View>
+        <View style={styles.identityCard}><View style={styles.identityIcon}><LucideIcon name="people-outline" size={22} color={COLORS.primary} /></View><View style={{ flex: 1 }}><Text style={styles.cardTitle}>Your social profile</Text><Text style={styles.cardSub}>Username, bio and visibility control your public FitLip identity.</Text></View></View>
         <Text style={styles.label}>USERNAME</Text>
         <View style={styles.inputWrap}><Text style={styles.prefix}>@</Text><TextInput value={username} onChangeText={setUsername} autoCapitalize="none" autoCorrect={false} maxLength={30} style={styles.input} placeholder="your_username" placeholderTextColor={COLORS.textMuted} /></View>
         <Text style={styles.label}>BIO</Text>
@@ -99,14 +99,14 @@ export default function SocialProfileSettingsScreen() {
         <View style={styles.visibilityRow}>
           {[{key:"public",icon:"globe-outline",title:"Public",sub:"Anyone can find you"},{key:"private",icon:"lock-closed-outline",title:"Private",sub:"Approve follow requests"}].map((opt) => (
             <Pressable key={opt.key} onPress={() => setVisibility(opt.key)} style={[styles.visibilityCard, visibility === opt.key && styles.visibilitySelected]}>
-              <Ionicons name={opt.icon} size={20} color={visibility === opt.key ? COLORS.primary : COLORS.textMuted} />
+              <LucideIcon name={opt.icon} size={20} color={visibility === opt.key ? COLORS.primary : COLORS.textMuted} />
               <Text style={[styles.visibilityTitle, visibility === opt.key && {color:COLORS.primary}]}>{opt.title}</Text>
               <Text style={styles.visibilitySub}>{opt.sub}</Text>
-              {visibility === opt.key && <Ionicons name="checkmark-circle" size={16} color={COLORS.primary} style={styles.check} />}
+              {visibility === opt.key && <LucideIcon name="checkmark-circle" size={16} color={COLORS.primary} style={styles.check} />}
             </Pressable>
           ))}
         </View>
-        <Pressable onPress={save} disabled={saving} style={[styles.saveBtn, saving && {opacity:0.65}]}>{saving ? <ActivityIndicator color="#fff" /> : <><Ionicons name="save-outline" size={18} color="#fff" /><Text style={styles.saveText}>Save Social Profile</Text></>}</Pressable>
+        <Pressable onPress={save} disabled={saving} style={[styles.saveBtn, saving && {opacity:0.65}]}>{saving ? <ActivityIndicator color="#fff" /> : <><LucideIcon name="save-outline" size={18} color="#fff" /><Text style={styles.saveText}>Save Social Profile</Text></>}</Pressable>
       </ScrollView>
     </SafeAreaView>
   );

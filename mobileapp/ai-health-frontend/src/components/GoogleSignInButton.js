@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import LucideIcon from "./ui/LucideIcon";
 import {
   GoogleSignin,
   isErrorWithCode,
@@ -84,7 +84,7 @@ export default function GoogleSignInButton({ onSuccess }) {
         <ActivityIndicator color={COLORS.primary} />
       ) : (
         <>
-          <Ionicons name="logo-google" size={18} color={COLORS.primary} />
+          <LucideIcon name="logo-google" size={18} color={COLORS.primary} />
           <Text style={styles.googleText}>Continue with Google</Text>
         </>
       )}

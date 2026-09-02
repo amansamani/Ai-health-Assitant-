@@ -2,14 +2,15 @@ import React, { useState, useCallback } from "react";
 import { showToast } from "../../services/uiFeedback";
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  ActivityIndicator, Alert, RefreshControl,
+  ActivityIndicator, RefreshControl,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import LucideIcon from "../../components/ui/LucideIcon";
 import { useFocusEffect } from "@react-navigation/native";
 import {
   getTodayLog, getMealHistory, deleteMealLog, getHealthProfile, getCurrentPlan,
 } from "../../services/nutritionService";
 import { COLORS } from "../../constants/theme";
+import ConfirmModal from "../../components/ui/ConfirmModal";
 import { SunriseIcon, SunIcon, MoonStarIcon, AppleIcon } from "../../components/icons/MotionIcons";
 import { useReplayOnFocus } from "../../hooks/useReplayOnFocus";
 
@@ -82,6 +83,7 @@ function MacroBar({ label, consumed, goal, color }) {
 export default function MealLoggerScreen({ navigation }) {
   const [loading, setLoading]       = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [todayLog, setTodayLog]     = useState(null);
   const [history, setHistory]       = useState([]);
   const [goals, setGoals]           = useState({
@@ -185,21 +187,18 @@ export default function MealLoggerScreen({ navigation }) {
 
   const handleRefresh = () => { setRefreshing(true); loadData(); };
 
-  const handleDelete = (mealId, mealName) => {
-    Alert.alert("Delete?", `Remove "${mealName}" from today's log?`, [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete", style: "destructive",
-        onPress: async () => {
-          try {
-            await deleteMealLog(mealId);
-            loadData();
-          } catch {
-            showToast("Could not delete meal.", { title: "Couldn't delete meal", type: "error" });
-          }
-        },
-      },
-    ]);
+  const handleDelete = (mealId, mealName) => setDeleteConfirm({ mealId, mealName });
+
+  const confirmDeleteMeal = async () => {
+    if (!deleteConfirm) return;
+    const { mealId } = deleteConfirm;
+    setDeleteConfirm(null);
+    try {
+      await deleteMealLog(mealId);
+      loadData();
+    } catch {
+      showToast("Could not delete meal.", { title: "Couldn't delete meal", type: "error" });
+    }
   };
 
   const formatDate = (dateStr) => {
@@ -273,12 +272,12 @@ export default function MealLoggerScreen({ navigation }) {
         onPress={() => navigation.navigate("LogMealPhoto")}
         activeOpacity={0.85}
       >
-        <Ionicons name="camera-outline" size={22} color="#6E3482" />
+        <LucideIcon name="camera-outline" size={22} color="#6E3482" />
         <View style={{ flex: 1, marginLeft: 12 }}>
           <Text style={s.photoEntryTitle}>Snap a Photo</Text>
           <Text style={s.photoEntrySub}>Let AI estimate your meal's calories</Text>
         </View>
-        <Ionicons name="arrow-forward" size={18} color="#6E3482" />
+        <LucideIcon name="arrow-forward" size={18} color="#6E3482" />
       </TouchableOpacity>
 
       <Text style={s.sectionTitle}>Today's Meals</Text>
@@ -336,7 +335,7 @@ export default function MealLoggerScreen({ navigation }) {
                         accessibilityRole="button"
                         accessibilityLabel={`Delete ${item.food?.name ?? "item"}`}
                       >
-                        <Ionicons name="trash-outline" size={13} color={COLORS.error} />
+                        <LucideIcon name="trash-outline" size={13} color={COLORS.error} />
                       </TouchableOpacity>
                     </View>
                   </View>

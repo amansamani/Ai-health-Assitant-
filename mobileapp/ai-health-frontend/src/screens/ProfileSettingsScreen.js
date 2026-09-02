@@ -11,7 +11,7 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import LucideIcon from "../components/ui/LucideIcon";
 import { COLORS } from "../constants/theme";
 
 const KEYS = {
@@ -36,7 +36,7 @@ function SettingRow({
       ]}
     >
       <View style={styles.icon}>
-        <Ionicons
+        <LucideIcon
           name={icon}
           size={19}
           color={COLORS.primary}
@@ -53,7 +53,7 @@ function SettingRow({
 
       {trailing ??
         (onPress ? (
-          <Ionicons
+          <LucideIcon
             name="chevron-forward"
             size={18}
             color={COLORS.textMuted}
@@ -115,7 +115,7 @@ export default function ProfileSettingsScreen() {
             style={styles.back}
             onPress={() => router.back()}
           >
-            <Ionicons
+            <LucideIcon
               name="chevron-back"
               size={22}
               color={COLORS.textDark}
@@ -254,9 +254,7 @@ export default function ProfileSettingsScreen() {
             title="Help & Support"
             subtitle="Get help with your FitLip account and features"
             onPress={() =>
-              router.push(
-                "/(app)/social/index"
-              )
+              router.push("/(app)/help-support")
             }
           />
 

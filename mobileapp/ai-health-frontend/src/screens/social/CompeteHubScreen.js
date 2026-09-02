@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { View, Text, Pressable, StyleSheet, ScrollView, TextInput, ActivityIndicator } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import LucideIcon from "../../components/ui/LucideIcon";
 import { SafeAreaView } from "react-native-safe-area-context";
 import API, { API_BASE_URL } from "../../services/api";
 import { getToken } from "../../utils/secureToken";
@@ -16,7 +16,7 @@ function HubTile({ icon, color, title, subtitle, badge, onPress, delay }) {
     <FadeSlideIn delay={delay} style={{ width: "48%" }}>
       <Pressable onPress={onPress} style={({ pressed }) => [styles.tile, pressed && { transform: [{ scale: 0.98 }] }]}>
         <View style={[styles.tileIconWrap, { backgroundColor: color + "18" }]}>
-          <Ionicons name={icon} size={24} color={color} />
+          <LucideIcon name={icon} size={24} color={color} />
         </View>
         {badge != null && badge > 0 && <View style={[styles.tileBadge, { backgroundColor: color }]}><Text style={styles.tileBadgeText}>{badge}</Text></View>}
         <Text style={styles.tileTitle}>{title}</Text>
@@ -38,7 +38,7 @@ function ProfileResult({ user, token, onPress }) {
         <Text style={styles.resultHandle}>@{user.username}</Text>
         <Text style={styles.resultMeta}>{user.followerCount || 0} followers</Text>
       </View>
-      <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
+      <LucideIcon name="chevron-forward" size={18} color={COLORS.textMuted} />
     </Pressable>
   );
 }
@@ -98,32 +98,24 @@ export default function CompeteHubScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <Pressable style={styles.greatnessCard} onPress={() => router.push("/social/gamification")}>
-        <LinearGradient colors={[COLORS.primaryDark, COLORS.primary, COLORS.primaryLight]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.greatnessInner}>
-          <View style={styles.greatnessIcon}><Ionicons name="barbell-outline" size={22} color="#fff" /></View>
-          <View style={{ flex: 1 }}><Text style={styles.greatnessEyebrow}>YOUR GREATNESS</Text><Text style={styles.greatnessTitle}>Build your Dumbbell rank</Text><Text style={styles.greatnessSub}>Earn XP from real fitness actions and climb with friends.</Text></View>
-          <Ionicons name="chevron-forward" size={20} color="#fff" />
-        </LinearGradient>
-      </Pressable>
-
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <ScreenHeader title="Compete" subtitle="Build your FitLip identity" />
 
         <FadeSlideIn delay={0}>
           <Pressable onPress={() => router.push("/(app)/profile")} style={({ pressed }) => [styles.identityCard, pressed && { opacity: 0.9 }]}>
-            <View style={styles.identityIcon}><Ionicons name="person-circle-outline" size={27} color={COLORS.primary} /></View>
+            <View style={styles.identityIcon}><LucideIcon name="person-circle-outline" size={27} color={COLORS.primary} /></View>
             <View style={{ flex: 1 }}>
               <Text style={styles.identityTitle}>Your social profile</Text>
               <Text style={styles.identitySubtitle}>Username, profile photo, followers & visibility</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color={COLORS.textMuted} />
+            <LucideIcon name="chevron-forward" size={20} color={COLORS.textMuted} />
           </Pressable>
         </FadeSlideIn>
 
         <Text style={styles.sectionLabel}>FIND PEOPLE</Text>
         <FadeSlideIn delay={50}>
           <View style={styles.searchWrap}>
-            <Ionicons name="search-outline" size={19} color={COLORS.textMuted} />
+            <LucideIcon name="search-outline" size={19} color={COLORS.textMuted} />
             <TextInput
               value={query}
               onChangeText={setQuery}
@@ -153,6 +145,15 @@ export default function CompeteHubScreen() {
           <HubTile icon="podium-outline" color="#22C55E" title="Streak Battles" subtitle="See who's ahead" onPress={() => router.push("/(app)/social/streaks")} delay={160} />
           <HubTile icon="ribbon-outline" color="#8E24AA" title="Achievements" subtitle={`${counts.achievements} earned`} onPress={() => router.push("/(app)/social/achievements")} delay={200} />
         </View>
+
+        <Text style={[styles.sectionLabel, { marginTop: 20 }]}>YOUR GREATNESS</Text>
+        <Pressable style={styles.greatnessCard} onPress={() => router.push("/social/gamification")}>
+          <LinearGradient colors={[COLORS.primaryDark, COLORS.primary, COLORS.primaryLight]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.greatnessInner}>
+            <View style={styles.greatnessIcon}><LucideIcon name="barbell-outline" size={22} color="#fff" /></View>
+            <View style={{ flex: 1 }}><Text style={styles.greatnessEyebrow}>YOUR GREATNESS</Text><Text style={styles.greatnessTitle}>Build your Dumbbell rank</Text><Text style={styles.greatnessSub}>Earn XP from real fitness actions and climb with friends.</Text></View>
+            <LucideIcon name="chevron-forward" size={20} color="#fff" />
+          </LinearGradient>
+        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );
@@ -182,8 +183,8 @@ const styles = StyleSheet.create({
   tileBadgeText: { color: "#fff", fontSize: 11, fontWeight: "800" },
   tileTitle: { fontSize: 15, fontWeight: "800", color: COLORS.textDark, marginBottom: 3 },
   tileSubtitle: { fontSize: 11.5, color: COLORS.textMuted, fontWeight: "600" },
-  greatnessCard: { marginBottom: 16, borderRadius: 20, overflow: "hidden" },
-  greatnessInner: { padding: 16, flexDirection: "row", alignItems: "center", gap: 12 },
+  greatnessCard: { marginTop: 2, borderRadius: 16, overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.06)" },
+  greatnessInner: { padding: 15, flexDirection: "row", alignItems: "center", gap: 12 },
   greatnessIcon: { width: 46, height: 46, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.14)", alignItems: "center", justifyContent: "center" },
   greatnessEyebrow: { color: "rgba(255,255,255,0.72)", fontSize: 10, fontWeight: "800", letterSpacing: 1.1 },
   greatnessTitle: { color: "#fff", fontSize: 18, fontWeight: "800", marginTop: 2 },

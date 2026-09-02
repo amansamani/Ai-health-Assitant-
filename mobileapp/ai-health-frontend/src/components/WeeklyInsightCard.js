@@ -13,7 +13,7 @@ import {
   View, Text, StyleSheet, Pressable,
   Animated,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import LucideIcon from "./ui/LucideIcon";
 import API from "../services/api";
 import { COLORS } from "../constants/theme";
 
@@ -37,7 +37,7 @@ function DeltaBadge({ delta }) {
   if (delta == null || delta === 0) {
     return (
       <View style={[db.wrap, { backgroundColor: "#F0FDF4" }]}>
-        <Ionicons name="checkmark-circle" size={13} color="#15803D" />
+        <LucideIcon name="checkmark-circle" size={13} color="#15803D" />
         <Text style={[db.txt, { color: "#15803D" }]}>On track</Text>
       </View>
     );
@@ -47,7 +47,7 @@ function DeltaBadge({ delta }) {
   const bg    = up ? "#FEF3C7" : "#EFF6FF";
   return (
     <View style={[db.wrap, { backgroundColor: bg }]}>
-      <Ionicons name={up ? "arrow-up" : "arrow-down"} size={13} color={color} />
+      <LucideIcon name={up ? "arrow-up" : "arrow-down"} size={13} color={color} />
       <Text style={[db.txt, { color }]}>{Math.abs(delta)} kcal/day</Text>
     </View>
   );
@@ -133,7 +133,7 @@ export default function WeeklyInsightCard({ onPress }) {
       <View style={s.headerRow}>
         <View style={s.headerLeft}>
           <View style={s.iconWrap}>
-            <Ionicons name="stats-chart-outline" size={18} color={COLORS.primary} />
+            <LucideIcon name="stats-chart-outline" size={18} color={COLORS.primary} />
           </View>
           <View>
             <Text style={s.title}>Weekly Insight</Text>
@@ -147,7 +147,7 @@ export default function WeeklyInsightCard({ onPress }) {
           accessibilityRole="button"
           accessibilityLabel={expanded ? "Collapse weekly insight" : "Expand weekly insight"}
         >
-          <Ionicons name={expanded ? "chevron-up" : "chevron-down"} size={14} color={COLORS.primary} />
+          <LucideIcon name={expanded ? "chevron-up" : "chevron-down"} size={14} color={COLORS.primary} />
         </Pressable>
       </View>
 

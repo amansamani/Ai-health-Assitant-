@@ -5,7 +5,7 @@ import {
   Pressable, ScrollView, StyleSheet, Text, TextInput, View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import LucideIcon from "../components/ui/LucideIcon";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -198,7 +198,7 @@ export default function CustomWorkoutBuilderScreen() {
       <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
           <View style={styles.headerRow}>
-            <Pressable onPress={() => router.back()} style={styles.iconButton}><Ionicons name="chevron-back" size={22} color={COLORS.textDark} /></Pressable>
+            <Pressable onPress={() => router.back()} style={styles.iconButton}><LucideIcon name="chevron-back" size={22} color={COLORS.textDark} /></Pressable>
             <View style={{ flex: 1 }}>
               <Text style={styles.title}>{editing ? "Edit Workout Plan" : "Create Your Plan"}</Text>
               <Text style={styles.subtitle}>Choose your split, days and exercises.</Text>
@@ -212,7 +212,7 @@ export default function CustomWorkoutBuilderScreen() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.templateRow}>
             {TEMPLATES.map((item) => (
               <Pressable key={item.key} onPress={() => applyTemplate(item.key)} style={[styles.templateChip, template === item.key && styles.templateChipActive]}>
-                <Ionicons name={item.icon} size={16} color={template === item.key ? "#fff" : COLORS.textMuted} />
+                <LucideIcon name={item.icon} size={16} color={template === item.key ? "#fff" : COLORS.textMuted} />
                 <Text style={[styles.templateText, template === item.key && styles.templateTextActive]}>{item.label}</Text>
               </Pressable>
             ))}
@@ -248,14 +248,14 @@ export default function CustomWorkoutBuilderScreen() {
               {!selected.isRestDay && <Text style={styles.dayEditorSub}>{selected.exercises.length} exercises selected</Text>}
             </View>
             <Pressable onPress={() => setDays((prev) => prev.map((day) => day.dayOfWeek === selectedDay ? { ...day, isRestDay: !day.isRestDay } : day))} style={styles.restToggle}>
-              <Ionicons name={selected.isRestDay ? "bed" : "bed-outline"} size={15} color={selected.isRestDay ? "#6339B8" : COLORS.textMuted} />
+              <LucideIcon name={selected.isRestDay ? "bed" : "bed-outline"} size={15} color={selected.isRestDay ? "#6339B8" : COLORS.textMuted} />
               <Text style={[styles.restToggleText, selected.isRestDay && { color: "#6339B8" }]}>{selected.isRestDay ? "Rest day" : "Mark rest"}</Text>
             </Pressable>
           </View>
 
           {!selected.isRestDay && (
             <>
-              <View style={styles.searchWrap}><Ionicons name="search" size={18} color={COLORS.textMuted} /><TextInput value={query} onChangeText={setQuery} placeholder="Search exercises" placeholderTextColor={COLORS.textMuted} style={styles.searchInput} /></View>
+              <View style={styles.searchWrap}><LucideIcon name="search" size={18} color={COLORS.textMuted} /><TextInput value={query} onChangeText={setQuery} placeholder="Search exercises" placeholderTextColor={COLORS.textMuted} style={styles.searchInput} /></View>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
                 {MUSCLES.map((item) => <Pressable key={item} onPress={() => setMuscle(item)} style={[styles.filterChip, muscle === item && styles.filterChipActive]}><Text style={[styles.filterText, muscle === item && styles.filterTextActive]}>{item.replace("_", " ")}</Text></Pressable>)}
               </ScrollView>
@@ -266,9 +266,9 @@ export default function CustomWorkoutBuilderScreen() {
                   const active = selectedIds.has(String(exercise._id));
                   return (
                     <Pressable key={String(exercise._id)} onPress={() => toggleExercise(exercise)} style={[styles.libraryItem, active && styles.libraryItemActive]}>
-                      <View style={styles.libraryIcon}><Ionicons name="barbell-outline" size={17} color={active ? "#6339B8" : COLORS.textMuted} /></View>
+                      <View style={styles.libraryIcon}><LucideIcon name="barbell-outline" size={17} color={active ? "#6339B8" : COLORS.textMuted} /></View>
                       <View style={{ flex: 1 }}><Text style={styles.libraryName}>{exercise.name}</Text><Text style={styles.libraryMeta}>{exercise.primaryMuscle} · {exercise.category} · {exercise.defaultSets} × {exercise.defaultReps}</Text></View>
-                      <Ionicons name={active ? "checkmark-circle" : "add-circle-outline"} size={22} color={active ? "#22C55E" : COLORS.primary} />
+                      <LucideIcon name={active ? "checkmark-circle" : "add-circle-outline"} size={22} color={active ? "#22C55E" : COLORS.primary} />
                     </Pressable>
                   );
                 })}
@@ -286,7 +286,7 @@ export default function CustomWorkoutBuilderScreen() {
                         <TextInput keyboardType="number-pad" value={String(entry.sets)} onChangeText={(v) => updateSelectedExercise(entry.exerciseId, "sets", v)} style={styles.tinyInput} />
                         <Text style={styles.by}>×</Text>
                         <TextInput value={String(entry.reps)} onChangeText={(v) => updateSelectedExercise(entry.exerciseId, "reps", v)} style={[styles.tinyInput, { width: 64 }]} />
-                        <Pressable onPress={() => removeSelectedExercise(entry.exerciseId)} style={styles.removeButton}><Ionicons name="trash-outline" size={16} color="#DC2626" /></Pressable>
+                        <Pressable onPress={() => removeSelectedExercise(entry.exerciseId)} style={styles.removeButton}><LucideIcon name="trash-outline" size={16} color="#DC2626" /></Pressable>
                       </View>
                     );
                   })}
@@ -297,7 +297,7 @@ export default function CustomWorkoutBuilderScreen() {
 
           <Pressable onPress={savePlan} disabled={saving} style={[styles.saveButton, saving && { opacity: 0.65 }]}>
             <LinearGradient colors={[COLORS.primary, COLORS.primaryDark]} style={styles.saveGradient}>
-              {saving ? <ActivityIndicator color="#fff" /> : <><Ionicons name="save-outline" size={19} color="#fff" /><Text style={styles.saveText}>{editing ? "Save Changes" : "Save & Activate Plan"}</Text></>}
+              {saving ? <ActivityIndicator color="#fff" /> : <><LucideIcon name="save-outline" size={19} color="#fff" /><Text style={styles.saveText}>{editing ? "Save Changes" : "Save & Activate Plan"}</Text></>}
             </LinearGradient>
           </Pressable>
         </ScrollView>

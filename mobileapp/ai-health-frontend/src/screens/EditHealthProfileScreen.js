@@ -1,4 +1,6 @@
+import { COLORS } from "../constants/theme";
 import React, { useState, useRef, useEffect, useContext } from "react";
+import { showToast } from "../services/uiFeedback";
 import {
   View, Text, TextInput, StyleSheet, ScrollView,
   Pressable, ActivityIndicator, Animated, KeyboardAvoidingView,
@@ -6,7 +8,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
-import { Ionicons } from "@expo/vector-icons";
+import LucideIcon from "../components/ui/LucideIcon";
 import { AuthContext } from "../context/AuthContext";
 import API from "../services/api";
 
@@ -194,7 +196,7 @@ export default function EditHealthProfileScreen({ navigation }) {
 
   const saveProfile = async () => {
     if (!form.age || !form.height || !form.weight) {
-      Alert.alert("Missing Fields", "Please fill in Age, Height, and Weight.");
+      showToast("Please fill in Age, Height, and Weight.", { title: "Missing fields", type: "warning" });
       return;
     }
     try {
@@ -216,7 +218,7 @@ export default function EditHealthProfileScreen({ navigation }) {
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch (err) {
-      Alert.alert("Error", err.response?.data?.message || "Failed to save profile.");
+      showToast(err.response?.data?.message || "Failed to save profile.", { title: "Couldn't save profile", type: "error" });
       return;
     } finally {
       setSaving(false);
@@ -226,12 +228,10 @@ export default function EditHealthProfileScreen({ navigation }) {
     try {
       setRegenerating(true);
       await API.post("/nutrition/generate");
-      Alert.alert("✅ Done!", "Diet plan updated with your new profile.", [
-        { text: "View Plan", onPress: () => navigation?.navigate("NutritionDashboard") },
-        { text: "OK" },
-      ]);
+      showToast("Diet plan updated with your new profile.", { title: "Profile updated", type: "success", duration: 1800 });
+      setTimeout(() => navigation?.navigate("NutritionDashboard"), 450);
     } catch {
-      Alert.alert("⚠️ Saved", "Profile saved but plan regeneration failed. Try again later.");
+      showToast("Profile saved but plan regeneration failed. Try again later.", { title: "Profile saved", type: "warning", duration: 4200 });
     } finally {
       setRegenerating(false);
     }
@@ -241,12 +241,10 @@ export default function EditHealthProfileScreen({ navigation }) {
     try {
       setRegenerating(true);
       await API.post("/nutrition/generate");
-      Alert.alert("✅ Done!", "Diet plan updated with your new profile.", [
-        { text: "View Plan", onPress: () => navigation?.navigate("NutritionDashboard") },
-        { text: "OK" },
-      ]);
+      showToast("Diet plan updated with your new profile.", { title: "Profile updated", type: "success", duration: 1800 });
+      setTimeout(() => navigation?.navigate("NutritionDashboard"), 450);
     } catch {
-      Alert.alert("Error", "Could not regenerate plan. Try again.");
+      showToast("Could not regenerate plan. Try again.", { title: "Couldn't regenerate plan", type: "error" });
     } finally {
       setRegenerating(false);
     }
@@ -275,7 +273,7 @@ export default function EditHealthProfileScreen({ navigation }) {
           {/* ── HEADER ── */}
           <Animated.View style={[styles.headerRow, { opacity: headerOpacity, transform: [{ translateY: headerY }] }]}>
             <Pressable onPress={() => navigation?.goBack()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Go back">
-              <Ionicons name="chevron-back" size={20} color="#1B1730" />
+              <LucideIcon name="chevron-back" size={20} color="#1B1730" />
             </Pressable>
             <View>
               <Text style={styles.headerTitle}>Health Profile</Text>
@@ -391,14 +389,14 @@ export default function EditHealthProfileScreen({ navigation }) {
             style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1, marginTop: 8 }]}
           >
             <LinearGradient
-              colors={saved ? ["#22C55E", "#16A34A"] : ["#6E3482", "#6339B8"]}
+              colors={saved ? ["#22C55E", "#16A34A"] : [COLORS.primary, COLORS.primaryDark]}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
               style={styles.saveBtn}
             >
               {(saving || regenerating)
                 ? <ActivityIndicator color="#fff" size="small" />
                 : <View style={{ flexDirection: "row", alignItems: "center" }}>
-                    {saved && <Ionicons name="checkmark" size={17} color="#fff" style={{ marginRight: 6 }} />}
+                    {saved && <LucideIcon name="checkmark" size={17} color="#fff" style={{ marginRight: 6 }} />}
                     <Text style={styles.saveBtnText}>{saved ? "Saved!" : "Save Changes"}</Text>
                   </View>
               }
@@ -434,7 +432,7 @@ const styles = StyleSheet.create({
   headerSub:   { fontSize: 12, color: "#9A94AE", fontWeight: "500", textAlign: "center", marginTop: 2 },
 
   section: {
-    backgroundColor: "#fff", borderRadius: 22,
+    backgroundColor: "#fff", borderRadius: 20,
     padding: 18, marginBottom: 14,
     shadowColor: "#1B1730", shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.07, shadowRadius: 12, elevation: 3,
@@ -453,7 +451,7 @@ const styles = StyleSheet.create({
   inputLabel: { fontSize: 11, fontWeight: "700", color: "#6B667D", marginBottom: 6, letterSpacing: 0.3, textTransform: "uppercase" },
   inputWrap: {
     flexDirection: "row", alignItems: "center",
-    backgroundColor: "#F5F3FF", borderRadius: 14,
+    backgroundColor: "#F5F3FF", borderRadius: 12,
     borderWidth: 1.5, paddingHorizontal: 12,
   },
   inputIcon: { fontSize: 15, marginRight: 8 },
@@ -465,7 +463,7 @@ const styles = StyleSheet.create({
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   chip: {
     flexDirection: "row", alignItems: "center",
-    backgroundColor: "#F5F3FF", borderRadius: 24,
+    backgroundColor: "#F5F3FF", borderRadius: 20,
     borderWidth: 1.5, borderColor: "#E7DBEF",
     paddingVertical: 10, paddingHorizontal: 18, gap: 6,
   },
@@ -488,10 +486,10 @@ const styles = StyleSheet.create({
   selDesc:  { fontSize: 10, color: "#9A94AE", textAlign: "center", fontWeight: "500" },
 
   saveBtn: {
-    borderRadius: 18, paddingVertical: 17,
+    borderRadius: 16, paddingVertical: 17,
     alignItems: "center", justifyContent: "center",
     shadowColor: "#6E3482", shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35, shadowRadius: 16, elevation: 8,
   },
-  saveBtnText: { color: "#fff", fontSize: 16, fontWeight: "900", letterSpacing: 0.3 },
+  saveBtnText: { color: "#fff", fontSize: 16, fontWeight: "800", letterSpacing: 0.3 },
 });

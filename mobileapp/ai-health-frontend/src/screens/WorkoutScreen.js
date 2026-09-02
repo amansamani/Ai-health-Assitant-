@@ -5,13 +5,14 @@ import {
 } from "react-native";
 import { useEffect, useState, useCallback, useRef, useContext } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Ionicons } from "@expo/vector-icons";
+import LucideIcon from "../components/ui/LucideIcon";
 import API from "../services/api";
 import { AuthContext } from "../context/AuthContext";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { COLORS } from "../constants/theme";
+import ChoiceModal from "../components/ui/ChoiceModal";
 
 const { width } = Dimensions.get("window");
 const PLAN_PREF_KEY = "@fitlip_workout_plan_mode";
@@ -89,26 +90,26 @@ function WorkoutCard({ item, index, onPress }) {
               <Text style={styles.cardTitle} numberOfLines={1}>{item.title}</Text>
               <View style={styles.cardMeta}>
                 <View style={styles.metaPill}>
-                  <Ionicons name={isRestDay ? "bed-outline" : "barbell-outline"} size={11} color={COLORS.textLight} />
+                  <LucideIcon name={isRestDay ? "bed-outline" : "barbell-outline"} size={11} color={COLORS.textLight} />
                   <Text style={styles.metaText}>{isRestDay ? "Rest day" : `${item.exercises.length} exercises`}</Text>
                 </View>
                 {item.duration ? (
                   <View style={[styles.metaPill, { marginLeft: 8 }]}>
-                    <Ionicons name="time-outline" size={11} color={COLORS.textLight} />
+                    <LucideIcon name="time-outline" size={11} color={COLORS.textLight} />
                     <Text style={styles.metaText}>{item.duration} min</Text>
                   </View>
                 ) : null}
               </View>
               {item.todayCompleted ? (
                 <View style={styles.todayDoneRow}>
-                  <Ionicons name="checkmark-circle" size={12} color="#16A34A" />
+                  <LucideIcon name="checkmark-circle" size={12} color="#16A34A" />
                   <Text style={styles.todayDoneText}>
                     Completed today · {Math.round(item.todayCaloriesBurned || 0)} kcal
                   </Text>
                 </View>
               ) : item.todayCompletedCount > 0 ? (
                 <View style={styles.todayDoneRow}>
-                  <Ionicons name="ellipse" size={8} color="#F97316" />
+                  <LucideIcon name="ellipse" size={8} color="#F97316" />
                   <Text style={[styles.todayDoneText, { color: "#C2410C" }]}>
                     {item.todayCompletedCount}/{item.exercises.length} done today
                   </Text>
@@ -117,7 +118,7 @@ function WorkoutCard({ item, index, onPress }) {
             </View>
 
             <View style={[styles.cardArrow, { backgroundColor: accentColor + "15" }]}>
-              <Ionicons name={isRestDay ? "bed-outline" : "arrow-forward"} size={16} color={accentColor} />
+              <LucideIcon name={isRestDay ? "bed-outline" : "arrow-forward"} size={16} color={accentColor} />
             </View>
           </View>
         </Animated.View>
@@ -135,6 +136,7 @@ export default function WorkoutScreen() {
   const [error, setError]       = useState("");
   const [mode, setMode]         = useState("bodyweight");
   const [planMode, setPlanMode] = useState(null);
+  const [planChoiceVisible, setPlanChoiceVisible] = useState(false);
   const [planPreferenceLoading, setPlanPreferenceLoading] = useState(true);
   const [customPlans, setCustomPlans] = useState([]);
   const [customLoading, setCustomLoading] = useState(false);
@@ -162,28 +164,15 @@ export default function WorkoutScreen() {
     setPlanMode(nextMode);
   }, []);
 
-  const openPlanSwitcher = useCallback(() => {
-    Alert.alert(
-      "Change Workout Plan",
-      "Choose which weekly plan you want to use. Your other plan stays saved.",
-      [
-        {
-          text: "Recommended Plan",
-          onPress: () => choosePlanMode("standard"),
-        },
-        {
-          text: "Custom Plan",
-          onPress: () => {
-            if (customPlans.length > 0) {
-              choosePlanMode("custom");
-            } else {
-              showToast("Create a custom plan from Profile first.", { title: "No custom plan yet", type: "info" });
-            }
-          },
-        },
-        { text: "Cancel", style: "cancel" },
-      ]
-    );
+  const openPlanSwitcher = useCallback(() => setPlanChoiceVisible(true), []);
+
+  const choosePlanFromModal = useCallback(async (nextMode) => {
+    setPlanChoiceVisible(false);
+    if (nextMode === "custom" && customPlans.length === 0) {
+      showToast("Create a custom plan from Profile first.", { title: "No custom plan yet", type: "info" });
+      return;
+    }
+    await choosePlanMode(nextMode);
   }, [choosePlanMode, customPlans.length]);
 
   const fetchWorkouts = useCallback(async () => {
@@ -231,7 +220,7 @@ export default function WorkoutScreen() {
       return (
         <SafeAreaView style={styles.container}>
           <View style={[styles.center, { paddingHorizontal: 24 }]}>
-            <View style={styles.choiceIcon}><Ionicons name="construct-outline" size={28} color={COLORS.primary} /></View>
+            <View style={styles.choiceIcon}><LucideIcon name="construct-outline" size={28} color={COLORS.primary} /></View>
             <Text style={styles.choiceTitle}>Create your custom workout</Text>
             <Text style={styles.choiceText}>Set it up from your Profile. Once saved, it will automatically appear here with the same workout experience.</Text>
             <Pressable onPress={() => router.push("/(app)/profile")} style={styles.primarySmallButton}>
@@ -260,7 +249,7 @@ export default function WorkoutScreen() {
                   <Text style={styles.screenSub}>Your custom training plan</Text>
                 </View>
                 <Pressable onPress={openPlanSwitcher} style={styles.changePlanBtn} accessibilityRole="button" accessibilityLabel="Change workout plan">
-                  <Ionicons name="swap-horizontal" size={14} color="#fff" />
+                  <LucideIcon name="swap-horizontal" size={14} color="#fff" />
                   <Text style={styles.changePlanBtnText}>Change</Text>
                 </Pressable>
               </View>
@@ -277,7 +266,7 @@ export default function WorkoutScreen() {
                 </View>
                 <View style={styles.statDivider} />
                 <Pressable onPress={() => router.push("/(app)/profile")} style={styles.statItem}>
-                  <Ionicons name="settings-outline" size={20} color="#B8AFD6" />
+                  <LucideIcon name="settings-outline" size={20} color="#B8AFD6" />
                   <Text style={styles.statLabel}>Manage</Text>
                 </Pressable>
               </View>
@@ -307,7 +296,7 @@ export default function WorkoutScreen() {
           ListFooterComponent={() => (
             <Pressable onPress={() => router.push({ pathname: "/(app)/custom-workout", params: { planId: activePlan._id } })} style={styles.manageLink}>
               <Text style={styles.manageLinkText}>Manage custom plan in Profile</Text>
-              <Ionicons name="chevron-forward" size={14} color={COLORS.primary} />
+              <LucideIcon name="chevron-forward" size={14} color={COLORS.primary} />
             </Pressable>
           )}
         />
@@ -333,36 +322,36 @@ export default function WorkoutScreen() {
               <Text style={styles.screenSub}>Pick one plan style. You can change it later from Profile.</Text>
             </View>
             <View style={[styles.goalChip, { backgroundColor: goal.bg, borderColor: goal.color + "40" }]}>
-              <Ionicons name={goal.icon} size={14} color={goal.color} style={{ marginRight: 5 }} />
+              <LucideIcon name={goal.icon} size={14} color={goal.color} style={{ marginRight: 5 }} />
               <Text style={[styles.goalChipText, { color: goal.color }]}>{goal.label}</Text>
             </View>
           </View>
 
           <Pressable onPress={() => choosePlanMode("standard")} style={[styles.planChoiceCard, shadow(5)]}>
             <View style={[styles.choiceIcon, { backgroundColor: "#EDE9FE" }]}>
-              <Ionicons name="sparkles" size={24} color="#6339B8" />
+              <LucideIcon name="sparkles" size={24} color="#6339B8" />
             </View>
             <View style={styles.choiceCopy}>
               <Text style={styles.choiceCardTitle}>Recommended Plan</Text>
               <Text style={styles.choiceCardText}>Use FitLip's ready-made weekly plan based on your goal and equipment.</Text>
             </View>
-            <Ionicons name="chevron-forward" size={22} color="#6339B8" />
+            <LucideIcon name="chevron-forward" size={22} color="#6339B8" />
           </Pressable>
 
           <Pressable onPress={() => choosePlanMode("custom")} style={[styles.planChoiceCard, shadow(5)]}>
             <View style={[styles.choiceIcon, { backgroundColor: "#F3F4F6" }]}>
-              <Ionicons name="construct-outline" size={24} color={COLORS.textDark} />
+              <LucideIcon name="construct-outline" size={24} color={COLORS.textDark} />
             </View>
             <View style={styles.choiceCopy}>
               <Text style={styles.choiceCardTitle}>Custom Plan</Text>
               <Text style={styles.choiceCardText}>Use the plan you created from Profile and keep the same exercise flow.</Text>
             </View>
-            <Ionicons name="chevron-forward" size={22} color={COLORS.textMuted} />
+            <LucideIcon name="chevron-forward" size={22} color={COLORS.textMuted} />
           </Pressable>
 
           {!customPlans.length && (
             <View style={styles.choiceHint}>
-              <Ionicons name="information-circle-outline" size={16} color={COLORS.textMuted} />
+              <LucideIcon name="information-circle-outline" size={16} color={COLORS.textMuted} />
               <Text style={styles.choiceHintText}>No custom plan exists yet. Create one from Profile first.</Text>
             </View>
           )}
@@ -385,7 +374,7 @@ export default function WorkoutScreen() {
   if (!userGoal) {
     return (
       <View style={styles.center}>
-        <Ionicons name="flag-outline" size={40} color={COLORS.textMuted} style={{ marginBottom: 12 }} />
+        <LucideIcon name="flag-outline" size={40} color={COLORS.textMuted} style={{ marginBottom: 12 }} />
         <Text style={styles.errorText}>No goal set. Please update your profile.</Text>
       </View>
     );
@@ -395,7 +384,7 @@ export default function WorkoutScreen() {
   if (error) {
     return (
       <View style={styles.center}>
-        <Ionicons name="cloud-offline-outline" size={40} color={COLORS.textMuted} style={{ marginBottom: 12 }} />
+        <LucideIcon name="cloud-offline-outline" size={40} color={COLORS.textMuted} style={{ marginBottom: 12 }} />
         <Text style={styles.errorText}>{error}</Text>
         <Pressable
           onPress={fetchWorkouts}
@@ -413,7 +402,7 @@ export default function WorkoutScreen() {
   if (workouts.length === 0) {
     return (
       <View style={styles.center}>
-        <Ionicons name="calendar-outline" size={40} color={COLORS.textMuted} style={{ marginBottom: 12 }} />
+        <LucideIcon name="calendar-outline" size={40} color={COLORS.textMuted} style={{ marginBottom: 12 }} />
         <Text style={styles.errorText}>No workouts available.</Text>
       </View>
     );
@@ -439,7 +428,7 @@ export default function WorkoutScreen() {
                   <Text style={styles.screenSub}>Recommended weekly training plan</Text>
                 </View>
                 <Pressable onPress={openPlanSwitcher} style={styles.changePlanBtn} accessibilityRole="button" accessibilityLabel="Change workout plan">
-                  <Ionicons name="swap-horizontal" size={14} color="#fff" />
+                  <LucideIcon name="swap-horizontal" size={14} color="#fff" />
                   <Text style={styles.changePlanBtnText}>Change</Text>
                 </Pressable>
               </View>
@@ -461,7 +450,7 @@ export default function WorkoutScreen() {
                 </View>
                 <View style={styles.statDivider} />
                 <View style={styles.statItem}>
-                  <Ionicons
+                  <LucideIcon
                     name={equipmentModeOn ? "checkmark-circle" : "close-circle-outline"}
                     size={20}
                     color={equipmentModeOn ? "#22C55E" : "#B8AFD6"}
@@ -487,7 +476,7 @@ export default function WorkoutScreen() {
                       accessibilityState={{ selected: mode === opt.key }}
                       accessibilityLabel={opt.label}
                     >
-                      <Ionicons name={opt.icon} size={15} color={mode === opt.key ? "#fff" : COLORS.textMuted} style={{ marginRight: 6 }} />
+                      <LucideIcon name={opt.icon} size={15} color={mode === opt.key ? "#fff" : COLORS.textMuted} style={{ marginRight: 6 }} />
                       <Text style={[styles.toggleText, mode === opt.key && styles.toggleTextActive]}>
                         {opt.label}
                       </Text>
@@ -514,6 +503,7 @@ export default function WorkoutScreen() {
           />
         )}
       />
+    <ChoiceModal visible={planChoiceVisible} title="Change workout plan" message="Choose which weekly plan you want to use. Your other plan stays saved." onCancel={() => setPlanChoiceVisible(false)} options={[{ label: "Recommended Plan", subtitle: "FitLip’s standard weekly plan", icon: "sparkles-outline", onPress: () => choosePlanFromModal("standard") }, { label: "Custom Plan", subtitle: customPlans.length ? "Use your saved custom routine" : "Create one from Profile first", icon: "construct-outline", onPress: () => choosePlanFromModal("custom"), danger: false }]} />
     </SafeAreaView>
   );
 }

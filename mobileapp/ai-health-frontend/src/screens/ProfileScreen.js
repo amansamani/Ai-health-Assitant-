@@ -1,6 +1,6 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { View, Text, StyleSheet, Pressable, ActivityIndicator, ScrollView, Alert, Image } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { View, Text, StyleSheet, Pressable, ActivityIndicator, ScrollView, Image } from "react-native";
+import LucideIcon from "../components/ui/LucideIcon";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 import API, { API_BASE_URL } from "../services/api";
@@ -8,6 +8,7 @@ import { getToken } from "../utils/secureToken";
 import { AuthContext } from "../context/AuthContext";
 import { COLORS, SHADOW } from "../constants/theme";
 import FadeSlideIn from "../components/FadeSlideIn";
+import ConfirmModal from "../components/ui/ConfirmModal";
 
 function initials(name) {
   return String(name || "User")
@@ -36,13 +37,13 @@ function ProfileRow({ icon, title, subtitle, onPress, danger = false }) {
       accessibilityLabel={title}
     >
       <View style={[styles.rowIcon, danger && styles.rowIconDanger]}>
-        <Ionicons name={icon} size={20} color={danger ? COLORS.error : COLORS.primary} />
+        <LucideIcon name={icon} size={20} color={danger ? COLORS.error : COLORS.primary} />
       </View>
       <View style={styles.rowCopy}>
         <Text style={[styles.rowTitle, danger && { color: COLORS.error }]}>{title}</Text>
         {!!subtitle && <Text style={styles.rowSubtitle}>{subtitle}</Text>}
       </View>
-      <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
+      <LucideIcon name="chevron-forward" size={18} color={COLORS.textMuted} />
     </Pressable>
   );
 }
@@ -53,6 +54,7 @@ export default function ProfileScreen() {
   const [profile, setProfile] = useState(null);
   const [token, setToken] = useState(userToken || null);
   const [loading, setLoading] = useState(true);
+  const [logoutConfirmVisible, setLogoutConfirmVisible] = useState(false);
   const mountedRef = useRef(true);
 
   useEffect(() => () => { mountedRef.current = false; }, []);
@@ -78,12 +80,7 @@ export default function ProfileScreen() {
 
   const imageSource = useMemo(() => profileImageSource(profile, token), [profile, token]);
 
-  const confirmLogout = () => {
-    Alert.alert("Log out?", "You can sign back in any time.", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Log Out", style: "destructive", onPress: logout },
-    ]);
-  };
+  const confirmLogout = () => setLogoutConfirmVisible(true);
 
   if (loading || !profile) {
     return (
@@ -109,7 +106,7 @@ export default function ProfileScreen() {
               accessibilityRole="button"
               accessibilityLabel="Open settings"
             >
-              <Ionicons name="settings-outline" size={20} color={COLORS.textDark} />
+              <LucideIcon name="settings-outline" size={20} color={COLORS.textDark} />
             </Pressable>
           </View>
         </FadeSlideIn>
@@ -179,7 +176,7 @@ export default function ProfileScreen() {
             accessibilityRole="button"
             accessibilityLabel="Log out"
           >
-            <View style={styles.logoutIcon}><Ionicons name="log-out-outline" size={20} color={COLORS.error} /></View>
+            <View style={styles.logoutIcon}><LucideIcon name="log-out-outline" size={20} color={COLORS.error} /></View>
             <Text style={styles.logoutText}>Log Out</Text>
           </Pressable>
         </FadeSlideIn>
@@ -187,6 +184,16 @@ export default function ProfileScreen() {
         <Text style={styles.footerText}>FitLip · Your fitness journey, your account</Text>
       </ScrollView>
     </SafeAreaView>
+      <ConfirmModal
+        visible={logoutConfirmVisible}
+        title="Log out?"
+        message="You can sign back in any time."
+        confirmText="Log Out"
+        icon="log-out-outline"
+        tone="danger"
+        onCancel={() => setLogoutConfirmVisible(false)}
+        onConfirm={async () => { setLogoutConfirmVisible(false); await logout(); }}
+      />
   );
 }
 

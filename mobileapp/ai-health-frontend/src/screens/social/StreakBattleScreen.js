@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { View, Text, Pressable, StyleSheet, ActivityIndicator, ScrollView } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
-import { Ionicons } from "@expo/vector-icons";
+import LucideIcon from "../../components/ui/LucideIcon";
 import { SafeAreaView } from "react-native-safe-area-context";
 import API from "../../services/api";
 import { COLORS } from "../../constants/theme";
@@ -19,7 +19,7 @@ function StreakPill({ type, value }) {
   const meta = STREAK_ICONS[type];
   return (
     <View style={[pillStyles.pill, { backgroundColor: meta.color + "14" }]}>
-      <Ionicons name={meta.icon} size={12} color={meta.color} />
+      <LucideIcon name={meta.icon} size={12} color={meta.color} />
       <Text style={[pillStyles.text, { color: meta.color }]}>{value}d</Text>
     </View>
   );
@@ -75,7 +75,7 @@ export default function StreakBattleScreen() {
           <ActivityIndicator size="small" color={COLORS.primary} style={{ marginTop: 30 }} />
         ) : rows.length === 0 ? (
           <View style={styles.emptyState}>
-            <Ionicons name="podium-outline" size={32} color={COLORS.textLight} />
+            <LucideIcon name="podium-outline" size={32} color={COLORS.textLight} />
             <Text style={styles.emptyText}>Add friends to start comparing streaks</Text>
           </View>
         ) : (
@@ -97,7 +97,7 @@ export default function StreakBattleScreen() {
                       <StreakPill type="caloriesBurned" value={row.streaks.caloriesBurned} />
                     </View>
                   </View>
-                  {!row.isMe && <Ionicons name={isExpanded ? "chevron-up" : "chevron-down"} size={16} color={COLORS.textLight} />}
+                  {!row.isMe && <LucideIcon name={isExpanded ? "chevron-up" : "chevron-down"} size={16} color={COLORS.textLight} />}
                 </Pressable>
 
                 {isExpanded && (
@@ -112,7 +112,7 @@ export default function StreakBattleScreen() {
                           const theirs = compare.friend.streaks[key];
                           return (
                             <View key={key} style={styles.compareMetricRow}>
-                              <Ionicons name={meta.icon} size={13} color={meta.color} />
+                              <LucideIcon name={meta.icon} size={13} color={meta.color} />
                               <Text style={styles.compareMetricLabel}>{meta.label}</Text>
                               <Text style={[styles.compareValue, mine >= theirs && { color: meta.color }]}>{mine}d</Text>
                               <Text style={styles.compareVs}>vs</Text>

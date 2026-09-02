@@ -1,6 +1,6 @@
 import React, { forwardRef, useImperativeHandle } from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import LucideIcon from "./ui/LucideIcon";
 import { COLORS } from "../constants/theme";
 
 const RunRouteMap = forwardRef(function RunRouteMap(
@@ -15,7 +15,7 @@ const RunRouteMap = forwardRef(function RunRouteMap(
 
   return (
     <View style={[styles.fallback, style]}>
-      <Ionicons name="map-outline" size={30} color={COLORS.primary} />
+      <LucideIcon name="map-outline" size={30} color={COLORS.primary} />
       <Text style={styles.title}>Route preview</Text>
       <Text style={styles.sub}>
         {route.length > 1 ? `${route.length} GPS points recorded` : "GPS map is available in the mobile app"}

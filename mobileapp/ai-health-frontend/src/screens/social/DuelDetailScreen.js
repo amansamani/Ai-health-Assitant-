@@ -3,7 +3,7 @@ import { showToast } from "../../services/uiFeedback";
 import { View, Text, Pressable, StyleSheet, ActivityIndicator, ScrollView, Alert } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import LucideIcon from "../../components/ui/LucideIcon";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import API from "../../services/api";
@@ -94,7 +94,7 @@ export default function DuelDetailScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
         <LinearGradient colors={["#170F36", "#49225B"]} style={styles.hero}>
           <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={10} accessibilityRole="button" accessibilityLabel="Go back">
-            <Ionicons name="chevron-back" size={20} color="#fff" />
+            <LucideIcon name="chevron-back" size={20} color="#fff" />
           </Pressable>
 
           <View style={styles.vsRow}>
@@ -110,7 +110,7 @@ export default function DuelDetailScreen() {
           </View>
 
           <View style={styles.metaRow}>
-            <Ionicons name={meta.icon} size={13} color="#B8AFD6" />
+            <LucideIcon name={meta.icon} size={13} color="#B8AFD6" />
             <Text style={styles.metaText}>{meta.label} · {duel.durationDays}-day duel</Text>
           </View>
 
@@ -132,7 +132,7 @@ export default function DuelDetailScreen() {
 
               {duel.status === "completed" && (
                 <View style={[styles.resultBanner, iWon ? styles.wonBanner : iLost ? styles.lostBanner : styles.tieBanner]}>
-                  <Ionicons name={iWon ? "trophy" : isTie ? "flag-outline" : "sad-outline"} size={18} color={iWon ? "#15803D" : isTie ? COLORS.textMuted : "#B91C1C"} />
+                  <LucideIcon name={iWon ? "trophy" : isTie ? "flag-outline" : "sad-outline"} size={18} color={iWon ? "#15803D" : isTie ? COLORS.textMuted : "#B91C1C"} />
                   <Text style={[styles.resultBannerText, { color: iWon ? "#15803D" : isTie ? COLORS.textMuted : "#B91C1C" }]}>
                     {iWon ? "You won this duel!" : isTie ? "It's a tie" : `${them.name} won this one`}
                   </Text>

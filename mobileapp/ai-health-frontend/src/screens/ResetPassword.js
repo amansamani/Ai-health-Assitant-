@@ -47,9 +47,7 @@ export default function ResetPassword() {
   return (
     <AuthShell>
       <BackLink onPress={() => router.back()} />
-      <AuthHero
-        icon="lock-closed-outline"
-        title="New password"
+      <AuthHero title="New password"
         subtitle="Make it at least 8 characters"
         size="compact"
       />

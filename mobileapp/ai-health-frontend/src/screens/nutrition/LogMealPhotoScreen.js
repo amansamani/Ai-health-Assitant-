@@ -13,7 +13,7 @@ import {
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import LucideIcon from "../../components/ui/LucideIcon";
 import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
@@ -262,7 +262,7 @@ export default function LogMealPhotoScreen({ navigation, route }) {
             <Text style={s.screenSub}>AI reads your plate — you confirm before it's logged.</Text>
           </View>
           <View style={s.headerIconWrap}>
-            <Ionicons name="camera" size={20} color={COLORS.primary} />
+            <LucideIcon name="camera" size={20} color={COLORS.primary} />
           </View>
         </View>
 
@@ -291,7 +291,7 @@ export default function LogMealPhotoScreen({ navigation, route }) {
               end={{ x: 1, y: 1 }}
               style={s.captureIconWrap}
             >
-              <Ionicons name="camera-outline" size={34} color={COLORS.primary} />
+              <LucideIcon name="camera-outline" size={34} color={COLORS.primary} />
             </LinearGradient>
             <Text style={s.captureTitle}>Snap your meal</Text>
             <Text style={s.captureSub}>AI will estimate what's on your plate — you confirm before it's logged.</Text>
@@ -311,7 +311,7 @@ export default function LogMealPhotoScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel="Choose from gallery"
             >
-              <Ionicons name="images-outline" size={16} color={COLORS.primary} style={{ marginRight: 8 }} />
+              <LucideIcon name="images-outline" size={16} color={COLORS.primary} style={{ marginRight: 8 }} />
               <Text style={s.secondaryBtnText}>Choose from Gallery</Text>
             </Tappable>
           </View>
@@ -324,7 +324,7 @@ export default function LogMealPhotoScreen({ navigation, route }) {
                 <View key={i} style={s.photoThumbWrap}>
                   <Image source={{ uri: p.uri }} style={s.photoThumb} />
                   <TouchableOpacity style={s.photoRemove} onPress={() => removePhoto(i)} accessibilityRole="button" accessibilityLabel="Remove photo">
-                    <Ionicons name="close" size={13} color="#fff" />
+                    <LucideIcon name="close" size={13} color="#fff" />
                   </TouchableOpacity>
                 </View>
               ))}
@@ -335,7 +335,7 @@ export default function LogMealPhotoScreen({ navigation, route }) {
                 <View style={s.analyzingIconRow}>
                   <PulseIcon>
                     <View style={s.analyzingIconCircle}>
-                      <Ionicons name="sparkles" size={20} color={COLORS.primary} />
+                      <LucideIcon name="sparkles" size={20} color={COLORS.primary} />
                     </View>
                   </PulseIcon>
                   <View style={{ marginLeft: 12, flex: 1 }}>
@@ -351,7 +351,7 @@ export default function LogMealPhotoScreen({ navigation, route }) {
                 {photos.length < MAX_ANGLES && (
                   <Tappable style={s.angleBtn} onPress={pickFromCamera} accessibilityRole="button" accessibilityLabel="Add another angle">
                     <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center" }}>
-                      <Ionicons name="add" size={15} color={COLORS.primary} style={{ marginRight: 4 }} />
+                      <LucideIcon name="add" size={15} color={COLORS.primary} style={{ marginRight: 4 }} />
                       <Text style={s.angleBtnText}>Add another angle (improves portion accuracy)</Text>
                     </View>
                   </Tappable>
@@ -389,7 +389,7 @@ export default function LogMealPhotoScreen({ navigation, route }) {
             {items.length === 0 ? (
               <View style={s.emptyCard}>
                 <View style={s.emptyIconWrap}>
-                  <Ionicons name="help-circle-outline" size={32} color={COLORS.textMuted} />
+                  <LucideIcon name="help-circle-outline" size={32} color={COLORS.textMuted} />
                 </View>
                 <Text style={s.emptyTitle}>Couldn't identify any food</Text>
                 <Text style={s.emptySub}>{results.notes || "Try a clearer, well-lit photo of your plate."}</Text>

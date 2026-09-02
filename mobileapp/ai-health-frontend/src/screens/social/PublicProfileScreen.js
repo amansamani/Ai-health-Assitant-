@@ -3,7 +3,7 @@ import { showToast } from "../../services/uiFeedback";
 import { View, Text, StyleSheet, Pressable, ScrollView, ActivityIndicator, Image } from "react-native";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import LucideIcon from "../../components/ui/LucideIcon";
 import { LinearGradient } from "expo-linear-gradient";
 import API, { API_BASE_URL } from "../../services/api";
 import { getMyRuns } from "../../services/runService";
@@ -93,7 +93,7 @@ export default function PublicProfileScreen() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
         <View style={styles.topBar}>
-          <Pressable style={styles.topBtn} onPress={() => router.back()}><Ionicons name="chevron-back" size={22} color={COLORS.textDark} /></Pressable>
+          <Pressable style={styles.topBtn} onPress={() => router.back()}><LucideIcon name="chevron-back" size={22} color={COLORS.textDark} /></Pressable>
           <Text style={styles.topTitle}>Profile</Text>
           <View style={{ width: 40 }} />
         </View>
@@ -110,7 +110,7 @@ export default function PublicProfileScreen() {
             {!profile.isSelf && (
               <Pressable onPress={toggleFollow} disabled={busy} style={[styles.followBtn, profile.followStatus && styles.followBtnSecondary]}>
                 {busy ? <ActivityIndicator size="small" color={profile.followStatus ? COLORS.primary : "#fff"} /> : <>
-                  <Ionicons name={profile.isFollowing ? "checkmark" : profile.followStatus === "pending" ? "time-outline" : "person-add-outline"} size={16} color={profile.followStatus ? COLORS.primary : "#fff"} />
+                  <LucideIcon name={profile.isFollowing ? "checkmark" : profile.followStatus === "pending" ? "time-outline" : "person-add-outline"} size={16} color={profile.followStatus ? COLORS.primary : "#fff"} />
                   <Text style={[styles.followBtnText, profile.followStatus && { color: COLORS.primary }]}>
                     {profile.isFollowing ? "Following" : profile.followStatus === "pending" ? "Requested" : profile.profileVisibility === "private" ? "Request to follow" : "Follow"}
                   </Text>
@@ -122,7 +122,7 @@ export default function PublicProfileScreen() {
 
         <FadeSlideIn delay={70}>
           <View style={styles.rankStrip}>
-            <View style={styles.rankStripIcon}><Ionicons name={profile.rankIcon || "barbell-outline"} size={19} color={COLORS.primary} /></View>
+            <View style={styles.rankStripIcon}><LucideIcon name={profile.rankIcon || "barbell-outline"} size={19} color={COLORS.primary} /></View>
             <View style={{ flex: 1 }}><Text style={styles.rankStripTitle}>{profile.rankTitle || "Bronze Dumbbell"}</Text><Text style={styles.rankStripMeta}>Level {profile.level || 1} · {profile.totalXp || 0} XP</Text></View>
             <View style={styles.rankPill}><Text style={styles.rankPillText}>{profile.levelTitle || "Rookie"}</Text></View>
           </View>
@@ -140,7 +140,7 @@ export default function PublicProfileScreen() {
         <FadeSlideIn delay={105}>
           {profile.isSelf && (
             <Pressable style={styles.editProfileBtn} onPress={() => router.push("/(app)/social/profile-settings")}>
-              <Ionicons name="create-outline" size={16} color="#fff" />
+              <LucideIcon name="create-outline" size={16} color="#fff" />
               <Text style={styles.editProfileBtnText}>Edit Profile</Text>
             </Pressable>
           )}
@@ -153,7 +153,7 @@ export default function PublicProfileScreen() {
               {myRuns.length > 0 && <Pressable onPress={() => router.push("/(app)/run-feed")}><Text style={styles.seeAll}>See all</Text></Pressable>}
             </View>
             {profile.isSelf && myRuns.length === 0 ? (
-              <View style={styles.emptyPosts}><Ionicons name="walk-outline" size={28} color={COLORS.textLight} /><Text style={styles.emptyPostsText}>Your running posts will appear here after you finish and save a run.</Text></View>
+              <View style={styles.emptyPosts}><LucideIcon name="walk-outline" size={28} color={COLORS.textLight} /><Text style={styles.emptyPostsText}>Your running posts will appear here after you finish and save a run.</Text></View>
             ) : profile.isSelf ? (
               myRuns.map((run) => {
                 const pace = paceSecPerKm(run.durationSeconds, run.distanceMeters);
@@ -161,14 +161,14 @@ export default function PublicProfileScreen() {
                 const timeLabel = date && !Number.isNaN(date.getTime()) ? date.toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) : "";
                 return (
                   <Pressable key={run._id} onPress={() => router.push("/(app)/run-feed")} style={styles.postRow}>
-                    <View style={styles.postIcon}><Ionicons name={run.activityType === "cycle" ? "bicycle-outline" : run.activityType === "walk" ? "walk-outline" : "footsteps-outline"} size={19} color={COLORS.primary} /></View>
+                    <View style={styles.postIcon}><LucideIcon name={run.activityType === "cycle" ? "bicycle-outline" : run.activityType === "walk" ? "walk-outline" : "footsteps-outline"} size={19} color={COLORS.primary} /></View>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.postActivity}>{run.activityType === "cycle" ? "Cycling" : run.activityType === "walk" ? "Walk" : "Run"}</Text>
                       <Text style={styles.postMeta}>{formatDistanceKm(run.distanceMeters)} km · {formatDuration(run.durationSeconds)}{pace ? ` · ${formatPace(pace)} /km` : ""}</Text>
                       <Text style={styles.postTime}>{timeLabel}</Text>
                       {!!run.caption && <Text style={styles.postCaption} numberOfLines={2}>{run.caption}</Text>}
                     </View>
-                    <Ionicons name="chevron-forward" size={16} color={COLORS.textLight} />
+                    <LucideIcon name="chevron-forward" size={16} color={COLORS.textLight} />
                   </Pressable>
                 );
               })
@@ -179,7 +179,7 @@ export default function PublicProfileScreen() {
         {profile.canView ? (
           <FadeSlideIn delay={130}>
             <View style={styles.infoCard}>
-              <Ionicons name="fitness-outline" size={24} color={COLORS.primary} />
+              <LucideIcon name="fitness-outline" size={24} color={COLORS.primary} />
               <View style={{ flex: 1, marginLeft: 12 }}>
                 <Text style={styles.infoTitle}>{profile.isSelf ? "Your public identity" : "FitLip profile"}</Text>
                 <Text style={styles.infoText}>{profile.isSelf ? "This is how other FitLip users can recognize you." : "Fitness activity can be shared here as you build your FitLip identity."}</Text>
@@ -189,7 +189,7 @@ export default function PublicProfileScreen() {
         ) : (
           <FadeSlideIn delay={130}>
             <View style={styles.privateCard}>
-              <View style={styles.lockCircle}><Ionicons name="lock-closed" size={22} color={COLORS.primary} /></View>
+              <View style={styles.lockCircle}><LucideIcon name="lock-closed" size={22} color={COLORS.primary} /></View>
               <Text style={styles.privateTitle}>Private profile</Text>
               <Text style={styles.privateText}>Follow this account and wait for approval to see their shared activity.</Text>
             </View>

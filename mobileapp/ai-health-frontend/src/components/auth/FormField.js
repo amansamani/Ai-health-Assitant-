@@ -1,6 +1,6 @@
 import { View, Text, TextInput, Pressable, Animated, StyleSheet } from "react-native";
 import { useRef, useState } from "react";
-import { Ionicons } from "@expo/vector-icons";
+import LucideIcon from "../ui/LucideIcon";
 import { COLORS } from "../../constants/theme";
 
 // A visible label (not placeholder-only, per WCAG/form UX guidance) plus a
@@ -45,7 +45,7 @@ export default function FormField({
       {label ? <Text style={styles.label}>{label}</Text> : null}
       <Animated.View style={[styles.inputWrap, { borderColor }]}>
         {icon ? (
-          <Ionicons
+          <LucideIcon
             name={icon}
             size={18}
             color={focused ? COLORS.primary : COLORS.textMuted}
@@ -76,7 +76,7 @@ export default function FormField({
             accessibilityRole="button"
             accessibilityLabel={reveal ? "Hide password" : "Show password"}
           >
-            <Ionicons name={reveal ? "eye-off-outline" : "eye-outline"} size={18} color={COLORS.textMuted} />
+            <LucideIcon name={reveal ? "eye-off-outline" : "eye-outline"} size={18} color={COLORS.textMuted} />
           </Pressable>
         ) : null}
       </Animated.View>

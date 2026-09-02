@@ -1,5 +1,5 @@
 import { View, Text, Pressable, StyleSheet } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import LucideIcon from "./ui/LucideIcon";
 import { useRouter } from "expo-router";
 import { COLORS } from "../constants/theme";
 
@@ -18,7 +18,7 @@ export default function ScreenHeader({ title, subtitle, rightAction }) {
         accessibilityRole="button"
         accessibilityLabel="Go back"
       >
-        <Ionicons name="chevron-back" size={22} color={COLORS.textDark} />
+        <LucideIcon name="chevron-back" size={22} color={COLORS.textDark} />
       </Pressable>
       <View style={{ flex: 1 }}>
         <Text style={styles.title}>{title}</Text>

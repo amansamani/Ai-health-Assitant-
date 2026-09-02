@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { View, Pressable, StyleSheet, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import LucideIcon from "./ui/LucideIcon";
 import * as Haptics from "expo-haptics";
 import Animated, {
   useAnimatedStyle,
@@ -17,7 +17,7 @@ import { COLORS } from "@/src/constants/theme";
 // Keyed by the file-based route name (app/(app)/(tabs)/<name>.tsx).
 // "camera" is handled separately below — it renders as a raised, oversized
 // button instead of a normal tab, since food-logging is the primary action.
-type IconName = keyof typeof Ionicons.glyphMap;
+type IconName = string;
 
 const TAB_META: Record<string, { label: string; icon: IconName; iconOutline: IconName }> = {
   home:     { label: "Home",     icon: "home",          iconOutline: "home-outline" },
@@ -82,7 +82,7 @@ function TabButton({
       style={styles.tabButton}
     >
       <Animated.View style={[styles.chip, chipStyle]}>
-        <Ionicons
+        <LucideIcon
           name={focused ? meta.icon : meta.iconOutline}
           size={20}
           color={focused ? COLORS.onPrimary : COLORS.textMuted}
@@ -133,7 +133,7 @@ function CameraTabButton({
       >
         <Animated.View style={[styles.cameraButton, buttonStyle]}>
           <View style={styles.cameraGradient}>
-            <Ionicons name="camera" size={24} color="#fff" />
+            <LucideIcon name="camera" size={24} color="#fff" />
           </View>
         </Animated.View>
       </Pressable>

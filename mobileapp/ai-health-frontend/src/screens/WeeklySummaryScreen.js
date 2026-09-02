@@ -4,7 +4,7 @@ import {
 } from "react-native";
 import { useEffect, useState, useRef, useCallback, useContext } from "react";
 import { useFocusEffect } from "@react-navigation/native";
-import { Ionicons } from "@expo/vector-icons";
+import LucideIcon from "../components/ui/LucideIcon";
 import { LinearGradient } from "expo-linear-gradient";
 import API from "../services/api";
 import { COLORS } from "../constants/theme";
@@ -88,7 +88,7 @@ function DaysRing({ days, total = 7 }) {
 function ScoreTag({ icon, color, text }) {
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-      <Ionicons name={icon} size={12} color={color} />
+      <LucideIcon name={icon} size={12} color={color} />
       <Text style={[s.statScore, { color }]}>{text}</Text>
     </View>
   );
@@ -140,7 +140,7 @@ export default function WeeklySummaryScreen() {
     return (
       <SafeAreaView style={s.container}>
         <View style={s.center}>
-          <Ionicons name="stats-chart-outline" size={48} color={COLORS.textMuted} />
+          <LucideIcon name="stats-chart-outline" size={48} color={COLORS.textMuted} />
           <Text style={s.emptyTitle}>No Data Yet</Text>
           <Text style={s.emptySub}>Start tracking your daily activity{"\n"}to see your weekly summary here.</Text>
         </View>
@@ -215,11 +215,11 @@ export default function WeeklySummaryScreen() {
               <Text style={s.heroLabel}>CONSISTENCY</Text>
               <Text style={s.heroTitle}>Days Tracked</Text>
               <View style={s.heroBestRow}>
-                <Ionicons name="medal-outline" size={12} color="#B8AFD6" />
+                <LucideIcon name="medal-outline" size={12} color="#B8AFD6" />
                 <Text style={s.heroBestDay}>Best: {bestDayStr}</Text>
               </View>
               <View style={[s.consistencyBadge, { backgroundColor: consistency.bg }]}>
-                <Ionicons name={consistency.icon} size={12} color={consistency.color} />
+                <LucideIcon name={consistency.icon} size={12} color={consistency.color} />
                 <Text style={[s.consistencyText, { color: consistency.color }]}>{consistency.text}</Text>
               </View>
             </View>
@@ -233,7 +233,7 @@ export default function WeeklySummaryScreen() {
         <Animated.View style={[s.statCard, { opacity: fadeAnim }]}>
           <View style={s.statHeader}>
             <View style={[s.statIconBox, { backgroundColor: "#dcfce7" }]}>
-              <Ionicons name="footsteps-outline" size={22} color="#22C55E" />
+              <LucideIcon name="footsteps-outline" size={22} color="#22C55E" />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={s.statLabel}>Average Steps</Text>
@@ -255,7 +255,7 @@ export default function WeeklySummaryScreen() {
         <Animated.View style={[s.statCard, { opacity: fadeAnim }]}>
           <View style={s.statHeader}>
             <View style={[s.statIconBox, { backgroundColor: "#ffedd5" }]}>
-              <Ionicons name="flame-outline" size={22} color="#F97316" />
+              <LucideIcon name="flame-outline" size={22} color="#F97316" />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={s.statLabel}>Average Active Burn</Text>
@@ -277,7 +277,7 @@ export default function WeeklySummaryScreen() {
         <Animated.View style={[s.statCard, { opacity: fadeAnim }]}>
           <View style={s.statHeader}>
             <View style={[s.statIconBox, { backgroundColor: COLORS.surfaceMuted }]}>
-              <Ionicons name="moon-outline" size={22} color={COLORS.primary} />
+              <LucideIcon name="moon-outline" size={22} color={COLORS.primary} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={s.statLabel}>Average Sleep</Text>
@@ -297,7 +297,7 @@ export default function WeeklySummaryScreen() {
 
         {/* Water — secondary, compact (manual-only, not part of the score) */}
         <Animated.View style={[s.waterStrip, { opacity: fadeAnim }]}>
-          <Ionicons name="water-outline" size={16} color="#3B82F6" />
+          <LucideIcon name="water-outline" size={16} color="#3B82F6" />
           <Text style={s.waterStripText}>
             Avg water logged: <Text style={s.waterStripValue}>{avgWater} L/day</Text>
           </Text>
@@ -315,7 +315,7 @@ export default function WeeklySummaryScreen() {
                 {score}<Text style={s.scoreOf}>/100</Text>
               </Text>
               <View style={s.scoreMsgRow}>
-                <Ionicons name={scoreIcon} size={13} color={COLORS.textLight} />
+                <LucideIcon name={scoreIcon} size={13} color={COLORS.textLight} />
                 <Text style={s.scoreMsg}>{scoreMsg}</Text>
               </View>
             </View>

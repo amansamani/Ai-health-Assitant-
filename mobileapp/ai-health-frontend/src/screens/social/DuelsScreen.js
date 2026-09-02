@@ -2,7 +2,7 @@ import { useState, useCallback, useContext } from "react";
 import { View, Text, Pressable, StyleSheet, ActivityIndicator, ScrollView } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import LucideIcon from "../../components/ui/LucideIcon";
 import { SafeAreaView } from "react-native-safe-area-context";
 import API from "../../services/api";
 import { AuthContext } from "../../context/AuthContext";
@@ -35,7 +35,7 @@ function DuelCard({ duel, myId, onPress }) {
             {duel.status === "pending" && !isChallenger ? "Challenged you" : `vs ${opponent.name}`}
           </Text>
           <View style={styles.duelMetaRow}>
-            <Ionicons name={meta.icon} size={12} color={meta.color} />
+            <LucideIcon name={meta.icon} size={12} color={meta.color} />
             <Text style={styles.duelMetaText}>{meta.label} · {duel.durationDays}d</Text>
           </View>
         </View>
@@ -105,7 +105,7 @@ export default function DuelsScreen() {
           subtitle={`${active.length} active`}
           rightAction={
             <Pressable onPress={() => router.push("/(app)/social/create-duel")} style={styles.newBtn} accessibilityRole="button" accessibilityLabel="New duel">
-              <Ionicons name="add" size={20} color="#fff" />
+              <LucideIcon name="add" size={20} color="#fff" />
             </Pressable>
           }
         />
@@ -114,7 +114,7 @@ export default function DuelsScreen() {
           <ActivityIndicator size="small" color={COLORS.primary} style={{ marginTop: 30 }} />
         ) : duels.length === 0 ? (
           <View style={styles.emptyState}>
-            <Ionicons name="flash-outline" size={32} color={COLORS.textLight} />
+            <LucideIcon name="flash-outline" size={32} color={COLORS.textLight} />
             <Text style={styles.emptyText}>No duels yet — challenge a friend to get started</Text>
           </View>
         ) : (

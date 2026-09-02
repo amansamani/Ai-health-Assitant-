@@ -2,6 +2,7 @@ import { useContext, useEffect } from "react";
 import { View, ActivityIndicator } from "react-native";
 import { Stack, Redirect } from "expo-router";
 import { AuthContext } from "@/src/context/AuthContext";
+import AppLoading from "@/src/components/ui/AppLoading";
 import { registerForPushNotificationsAsync } from "@/src/services/pushNotifications";
 
 export default function AppLayout() {
@@ -17,9 +18,7 @@ export default function AppLayout() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator size="large" />
-      </View>
+      <AppLoading />
     );
   }
 
@@ -38,6 +37,7 @@ export default function AppLayout() {
       />
       <Stack.Screen name="profile-settings" options={{ animation: "slide_from_right", animationDuration: 180 }} />
       <Stack.Screen name="about-fitlip" options={{ animation: "slide_from_right", animationDuration: 180 }} />
+      <Stack.Screen name="help-support" options={{ animation: "slide_from_right", animationDuration: 180 }} />
       <Stack.Screen
         name="coach"
         options={{ animation: "slide_from_bottom", animationDuration: 200 }}

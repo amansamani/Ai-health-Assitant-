@@ -2,17 +2,18 @@ import { useState, useCallback } from "react";
 import { showToast } from "../../services/uiFeedback";
 import {
   View, Text, TextInput, Pressable, StyleSheet,
-  ActivityIndicator, ScrollView, Share, Alert,
+  ActivityIndicator, ScrollView, Share,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import LucideIcon from "../../components/ui/LucideIcon";
 import { SafeAreaView } from "react-native-safe-area-context";
 import API from "../../services/api";
 import { COLORS } from "../../constants/theme";
 import ScreenHeader from "../../components/ScreenHeader";
 import FadeSlideIn from "../../components/FadeSlideIn";
 import Avatar from "../../components/Avatar";
+import ConfirmModal from "../../components/ui/ConfirmModal";
 
 export default function FriendsScreen() {
   const router = useRouter();
@@ -23,6 +24,7 @@ export default function FriendsScreen() {
   const [addCodeInput, setAddCodeInput] = useState("");
   const [adding, setAdding] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [removeConfirm, setRemoveConfirm] = useState(null);
 
   const fetchAll = useCallback(async () => {
     try {
@@ -65,25 +67,18 @@ export default function FriendsScreen() {
     }
   };
 
-  const handleRemove = (friend) => {
-    Alert.alert(
-      "Remove friend?",
-      `${friend.name} will be removed from your friends list.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Remove", style: "destructive",
-          onPress: async () => {
-            try {
-              await API.delete(`/social/friends/${friend._id}`);
-              setFriends((prev) => prev.filter((f) => f._id !== friend._id));
-            } catch (err) {
-              showToast(err.response?.data?.message || "Failed to remove friend", { title: "Couldn't remove friend", type: "error" });
-            }
-          },
-        },
-      ]
-    );
+  const handleRemove = (friend) => setRemoveConfirm(friend);
+
+  const confirmRemoveFriend = async () => {
+    if (!removeConfirm) return;
+    const friend = removeConfirm;
+    setRemoveConfirm(null);
+    try {
+      await API.delete(`/social/friends/${friend._id}`);
+      setFriends((prev) => prev.filter((f) => f._id !== friend._id));
+    } catch (err) {
+      showToast(err.response?.data?.message || "Failed to remove friend", { title: "Couldn’t remove friend", type: "error" });
+    }
   };
 
   return (
@@ -103,7 +98,7 @@ export default function FriendsScreen() {
               )}
             </View>
             <Pressable onPress={handleShareCode} style={styles.shareBtn} accessibilityRole="button" accessibilityLabel="Share your friend code">
-              <Ionicons name="share-outline" size={18} color="#fff" />
+              <LucideIcon name="share-outline" size={18} color="#fff" />
               <Text style={styles.shareBtnText}>Share</Text>
             </Pressable>
           </View>
@@ -127,7 +122,7 @@ export default function FriendsScreen() {
               disabled={adding || !addCodeInput.trim()}
               style={[styles.addBtn, (adding || !addCodeInput.trim()) && { opacity: 0.5 }]}
             >
-              {adding ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="add" size={20} color="#fff" />}
+              {adding ? <ActivityIndicator size="small" color="#fff" /> : <LucideIcon name="add" size={20} color="#fff" />}
             </Pressable>
           </View>
           {errorMsg ? <Text style={styles.errorText}>{errorMsg}</Text> : null}
@@ -139,7 +134,7 @@ export default function FriendsScreen() {
           <ActivityIndicator size="small" color={COLORS.primary} style={{ marginTop: 20 }} />
         ) : friends.length === 0 ? (
           <View style={styles.emptyState}>
-            <Ionicons name="people-outline" size={32} color={COLORS.textLight} />
+            <LucideIcon name="people-outline" size={32} color={COLORS.textLight} />
             <Text style={styles.emptyText}>No friends yet — share your code to get started</Text>
           </View>
         ) : (
@@ -158,7 +153,7 @@ export default function FriendsScreen() {
                       Friends since {new Date(f.since).toLocaleDateString("en-IN", { month: "short", year: "numeric" })}
                     </Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={17} color={COLORS.textMuted} />
+                  <LucideIcon name="chevron-forward" size={17} color={COLORS.textMuted} />
                 </Pressable>
                 <Pressable
                   onPress={() => router.push({ pathname: "/(app)/social/create-duel", params: { opponentId: f._id, opponentName: f.name } })}
@@ -166,7 +161,7 @@ export default function FriendsScreen() {
                   accessibilityRole="button"
                   accessibilityLabel={`Challenge ${f.name} to a duel`}
                 >
-                  <Ionicons name="flash-outline" size={16} color="#F97316" />
+                  <LucideIcon name="flash-outline" size={16} color="#F97316" />
                 </Pressable>
                 <Pressable
                   onPress={() => handleRemove(f)}
@@ -174,13 +169,14 @@ export default function FriendsScreen() {
                   accessibilityRole="button"
                   accessibilityLabel={`Remove ${f.name}`}
                 >
-                  <Ionicons name="close" size={16} color={COLORS.textMuted} />
+                  <LucideIcon name="close" size={16} color={COLORS.textMuted} />
                 </Pressable>
               </View>
             </FadeSlideIn>
           ))
         )}
       </ScrollView>
+    <ConfirmModal visible={!!removeConfirm} title="Remove friend?" message={removeConfirm ? `${removeConfirm.name} will be removed from your friends list.` : ""} confirmText="Remove" icon="person-remove-outline" tone="danger" onCancel={() => setRemoveConfirm(null)} onConfirm={confirmRemoveFriend} />
     </SafeAreaView>
   );
 }

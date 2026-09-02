@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { Animated, StyleSheet, Text, View } from "react-native";
+import { Animated, StyleSheet, Text, View, Image } from "react-native";
 import { COLORS, RADIUS, TYPOGRAPHY } from "../../constants/theme";
 
 export default function AppLoading({ label = "Loading" }) {
@@ -15,7 +15,7 @@ export default function AppLoading({ label = "Loading" }) {
   return (
     <View style={styles.container}>
       <Animated.View style={[styles.mark, { opacity: pulse }]}>
-        <View style={styles.inner} />
+        <Image source={require("../../../assets/images/icon.png")} style={styles.logoImage} resizeMode="contain" accessibilityLabel="FitLip logo" />
       </Animated.View>
       <Text style={styles.label}>{label}</Text>
     </View>
@@ -24,7 +24,7 @@ export default function AppLoading({ label = "Loading" }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background, alignItems: "center", justifyContent: "center", gap: 12 },
-  mark: { width: 44, height: 44, borderRadius: RADIUS.lg, backgroundColor: COLORS.primary, alignItems: "center", justifyContent: "center" },
-  inner: { width: 16, height: 16, borderRadius: 8, backgroundColor: "rgba(255,255,255,0.92)" },
+  mark: { width: 52, height: 52, borderRadius: RADIUS.lg, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, alignItems: "center", justifyContent: "center", overflow: "hidden" },
+  logoImage: { width: "100%", height: "100%" },
   label: { ...TYPOGRAPHY.caption, color: COLORS.textMuted },
 });

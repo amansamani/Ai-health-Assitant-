@@ -6,11 +6,12 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
-import { Ionicons } from "@expo/vector-icons";
+import LucideIcon from "../components/ui/LucideIcon";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { EXERCISE_IMAGES } from "../constants/exerciseImages";
 import { COLORS } from "../constants/theme";
 import API from "../services/api";
+import ConfirmModal from "../components/ui/ConfirmModal";
 
 const shadow = (elevation = 4, color = COLORS.textDark) =>
   Platform.select({
@@ -97,13 +98,13 @@ const ExerciseCard = memo(function ExerciseCard({
               </Text>
               {isCompleted && (
                 <View style={styles.doneBadge}>
-                  <Ionicons name="checkmark-circle" size={12} color="#16A34A" />
+                  <LucideIcon name="checkmark-circle" size={12} color="#16A34A" />
                   <Text style={styles.doneBadgeText}>Done</Text>
                 </View>
               )}
               {!isCompleted && isSelected && (
                 <View style={styles.selectedBadge}>
-                  <Ionicons name="checkmark-circle" size={12} color="#6339B8" />
+                  <LucideIcon name="checkmark-circle" size={12} color="#6339B8" />
                   <Text style={styles.selectedBadgeText}>Selected</Text>
                 </View>
               )}
@@ -111,23 +112,23 @@ const ExerciseCard = memo(function ExerciseCard({
 
             <View style={styles.metaRow}>
               <View style={styles.metaPill}>
-                <Ionicons name="repeat-outline" size={11} color={COLORS.textLight} />
+                <LucideIcon name="repeat-outline" size={11} color={COLORS.textLight} />
                 <Text style={styles.metaText}>{item.sets ?? "—"} sets</Text>
               </View>
               <View style={[styles.metaPill, styles.metaPillGap]}>
-                <Ionicons name="barbell-outline" size={11} color={COLORS.textLight} />
+                <LucideIcon name="barbell-outline" size={11} color={COLORS.textLight} />
                 <Text style={styles.metaText}>{item.reps ?? "—"} reps</Text>
               </View>
               {item.rest ? (
                 <View style={[styles.metaPill, styles.metaPillGap]}>
-                  <Ionicons name="time-outline" size={11} color={COLORS.textLight} />
+                  <LucideIcon name="time-outline" size={11} color={COLORS.textLight} />
                   <Text style={styles.metaText}>{item.rest}s</Text>
                 </View>
               ) : null}
             </View>
 
             <View style={styles.calorieRow}>
-              <Ionicons name="flame-outline" size={13} color="#F97316" />
+              <LucideIcon name="flame-outline" size={13} color="#F97316" />
               <Text style={styles.calorieText}>≈ {kcal} kcal</Text>
               {isSyncing && <Text style={styles.syncText}>Saving…</Text>}
             </View>
@@ -136,11 +137,11 @@ const ExerciseCard = memo(function ExerciseCard({
           <View style={styles.checkWrap}>
             {isCompleted ? (
               <LinearGradient colors={["#22C55E", "#16A34A"]} style={styles.checkDone}>
-                <Ionicons name="checkmark" size={18} color="#fff" />
+                <LucideIcon name="checkmark" size={18} color="#fff" />
               </LinearGradient>
             ) : isSelected ? (
               <View style={styles.checkSelected}>
-                <Ionicons name="checkmark" size={18} color="#6339B8" />
+                <LucideIcon name="checkmark" size={18} color="#6339B8" />
               </View>
             ) : (
               <View style={styles.checkEmpty} />
@@ -170,7 +171,7 @@ const ProgressBar = memo(function ProgressBar({ pct, completedCount, total, allD
         <Animated.View style={[styles.progressFill, { width: animatedWidth }]} />
       </View>
       <View style={styles.progressLabelRow}>
-        {allDone && <Ionicons name="sparkles" size={13} color="#22C55E" style={{ marginRight: 5 }} />}
+        {allDone && <LucideIcon name="sparkles" size={13} color="#22C55E" style={{ marginRight: 5 }} />}
         <Text style={styles.progressLabel}>
           {allDone ? "Workout complete!" : `${completedCount} / ${total} done`}
         </Text>
@@ -224,6 +225,7 @@ export default function WorkoutDetailScreen() {
   const [completed, setCompleted] = useState({});
   const [selected, setSelected] = useState({});
   const [syncing, setSyncing] = useState(false);
+  const [retryConfirm, setRetryConfirm] = useState(false);
   const [workoutCalories, setWorkoutCalories] = useState(0);
   const [attemptNumber, setAttemptNumber] = useState(1);
   const [completedToday, setCompletedToday] = useState(false);
@@ -352,34 +354,25 @@ export default function WorkoutDetailScreen() {
   }, [completed, selected, syncing, showCalorieToast, workout?._id, planType, dayOfWeek, exercises, exerciseKey, buildCompletedMap]);
 
   const retryWorkout = useCallback(() => {
-    Alert.alert(
-      "Retry today's workout?",
-      "Your previous attempt stays recorded. A fresh attempt will start with all exercises unselected, and calories will be counted again only when you actually complete them.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Start Retry",
-          style: "default",
-          onPress: async () => {
-            try {
-              const res = await API.post("/workouts/retry", { workoutPlanId: workout._id, planType, dayOfWeek });
-              const progress = res.data?.progress || {};
-              setCompleted({});
-              setSelected({});
-              setSyncing(false);
-              setWorkoutCalories(Number(progress.workoutCalories || 0));
-              setAttemptNumber(Number(progress.attemptNumber || 1));
-              setCompletedToday(Boolean(progress.completedToday));
-              showStatusToast(`Retry attempt ${progress.attemptNumber || 1} started`);
-            } catch (err) {
-              showToast("Please try again.", { title: "Couldn't start retry", type: "error" });
-              console.warn("Failed to start workout retry:", err?.message);
-            }
-          },
-        },
-      ],
-    );
-  }, [showStatusToast, workout?._id, planType, dayOfWeek]);
+    setRetryConfirm(true);
+  }, []);
+
+  const confirmRetryWorkout = useCallback(async () => {
+    setRetryConfirm(false);
+    try {
+      const res = await API.post("/workouts/retry", { workoutPlanId: workout._id, planType, dayOfWeek });
+      const progress = res.data?.progress || {};
+      setCompleted({});
+      setSelected({});
+      setSyncing(false);
+      setWorkoutCalories(Number(progress.workoutCalories || 0));
+      setAttemptNumber(Number(progress.attemptNumber || 1));
+      setCompletedToday(Boolean(progress.completedToday));
+      showStatusToast(`Retry attempt ${progress.attemptNumber || 1} started`);
+    } catch (err) {
+      showStatusToast(err.response?.data?.message || "Could not start retry.", "error");
+    }
+  }, [dayOfWeek, planType, workout?._id, showStatusToast]);
 
   const completedCount = useMemo(
     () => Object.values(completed).filter(Boolean).length,
@@ -422,10 +415,10 @@ export default function WorkoutDetailScreen() {
           accessibilityRole="button"
           accessibilityLabel="Go back"
         >
-          <Ionicons name="chevron-back" size={20} color="#fff" />
+          <LucideIcon name="chevron-back" size={20} color="#fff" />
         </Pressable>
         <View style={styles.heroBadgeWrap}>
-          <Ionicons name="calendar-outline" size={11} color="#FACC15" style={{ marginRight: 5 }} />
+          <LucideIcon name="calendar-outline" size={11} color="#FACC15" style={{ marginRight: 5 }} />
           <Text style={styles.heroBadge}>TODAY • {currentDateLabel.toUpperCase()}</Text>
         </View>
         <Text style={styles.heroTitle}>{workout?.title}</Text>
@@ -437,7 +430,7 @@ export default function WorkoutDetailScreen() {
       <StatsRow total={total} completedCount={completedCount} workoutCalories={workoutCalories} />
       {completedToday && !allDone && (
         <View style={styles.historyBanner}>
-          <Ionicons name="checkmark-circle" size={17} color="#16A34A" />
+          <LucideIcon name="checkmark-circle" size={17} color="#16A34A" />
           <Text style={styles.historyBannerText}>
             You already completed a full attempt today. This is retry attempt {attemptNumber}.
           </Text>
@@ -464,7 +457,7 @@ export default function WorkoutDetailScreen() {
             style={({ pressed }) => [styles.confirmBtn, pressed && styles.confirmBtnPressed, syncing && styles.confirmBtnDisabled]}
           >
             <LinearGradient colors={[COLORS.primary, COLORS.primaryDark]} style={styles.confirmBtnGradient}>
-              <Ionicons name="checkmark-circle" size={20} color="#fff" />
+              <LucideIcon name="checkmark-circle" size={20} color="#fff" />
               <Text style={styles.confirmBtnText}>{syncing ? "Recording…" : "Done — Record Exercises"}</Text>
             </LinearGradient>
           </Pressable>
@@ -472,14 +465,14 @@ export default function WorkoutDetailScreen() {
       )}
       {allDone && (
     <View style={[styles.doneCard, shadow(6, "#22C55E")]}>
-      <Ionicons name="trophy" size={40} color="#22C55E" style={{ marginBottom: 12 }} />
+      <LucideIcon name="trophy" size={40} color="#22C55E" style={{ marginBottom: 12 }} />
       <Text style={styles.doneTitle}>Workout Complete!</Text>
       <Text style={styles.doneSub}>
         {completedCount}/{total} exercises · {Math.round(workoutCalories)} kcal burned
       </Text>
       <Text style={styles.doneDate}>Recorded for {currentDateLabel}</Text>
       <Pressable onPress={retryWorkout} style={styles.retryWorkoutBtn}>
-        <Ionicons name="refresh" size={16} color="#fff" />
+        <LucideIcon name="refresh" size={16} color="#fff" />
         <Text style={styles.retryWorkoutText}>Retry Workout</Text>
       </Pressable>
     </View>
@@ -528,7 +521,7 @@ export default function WorkoutDetailScreen() {
           ]}
         >
           <View style={styles.calorieToastIconWrap}>
-            <Ionicons name="flame" size={16} color="#F97316" />
+            <LucideIcon name="flame" size={16} color="#F97316" />
           </View>
           <Text style={styles.calorieToastText}>
             +{calorieToast} kcal added to today's Active Burn
@@ -548,10 +541,11 @@ export default function WorkoutDetailScreen() {
             },
           ]}
         >
-          <Ionicons name="refresh-circle" size={18} color="#6339B8" />
+          <LucideIcon name="refresh-circle" size={18} color="#6339B8" />
           <Text style={styles.statusToastText}>{statusToast}</Text>
         </Animated.View>
       )}
+    <ConfirmModal visible={retryConfirm} title="Retry today’s workout?" message="Your previous attempt stays recorded. Start a fresh attempt with all exercises unselected." confirmText="Start Retry" icon="refresh-outline" onCancel={() => setRetryConfirm(false)} onConfirm={confirmRetryWorkout} />
     </SafeAreaView>
   );
 }

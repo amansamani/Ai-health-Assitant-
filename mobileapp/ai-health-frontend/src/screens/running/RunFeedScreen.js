@@ -12,7 +12,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
-import { Ionicons } from "@expo/vector-icons";
+import LucideIcon from "../../components/ui/LucideIcon";
 import RunRouteMap from "../../components/RunRouteMap";
 
 import { COLORS, SHADOW } from "../../constants/theme";
@@ -57,7 +57,7 @@ function RunCard({ run, onToggleLike }) {
           <Text style={styles.userName}>{run.user?.name || "Someone"}</Text>
           <Text style={styles.timeAgo}>{timeAgo(run.startedAt)}</Text>
         </View>
-        <Ionicons name={ACTIVITY_ICON[run.activityType] || "walk"} size={20} color={COLORS.primary} />
+        <LucideIcon name={ACTIVITY_ICON[run.activityType] || "walk"} size={20} color={COLORS.primary} />
       </View>
 
       {!!run.caption && <Text style={styles.caption}>{run.caption}</Text>}
@@ -84,7 +84,7 @@ function RunCard({ run, onToggleLike }) {
       </View>
 
       <Pressable style={styles.likeRow} onPress={() => onToggleLike(run)}>
-        <Ionicons
+        <LucideIcon
           name={run.likedByMe ? "heart" : "heart-outline"}
           size={20}
           color={run.likedByMe ? COLORS.error : COLORS.textLight}
@@ -149,7 +149,7 @@ export default function RunFeedScreen() {
       <View style={styles.headerRow}>
         <Text style={styles.headerTitle}>Activity</Text>
         <Pressable style={styles.startFab} onPress={() => router.push("/run-tracking")}>
-          <Ionicons name="add" size={20} color={COLORS.onPrimary} />
+          <LucideIcon name="add" size={20} color={COLORS.onPrimary} />
           <Text style={styles.startFabText}>Track</Text>
         </Pressable>
       </View>
@@ -173,7 +173,7 @@ export default function RunFeedScreen() {
           }
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Ionicons name="walk-outline" size={40} color={COLORS.textLight} />
+              <LucideIcon name="walk-outline" size={40} color={COLORS.textLight} />
               <Text style={styles.emptyText}>
                 No runs yet. Track one, or follow people to see theirs here.
               </Text>

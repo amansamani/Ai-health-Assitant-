@@ -1,5 +1,5 @@
 import { View, Text, Pressable, StyleSheet } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import LucideIcon from "../ui/LucideIcon";
 import { COLORS } from "../../constants/theme";
 
 export function Divider() {
@@ -18,7 +18,7 @@ export function Banner({ text, tone = "error" }) {
     : { bg: "#F0FDF4", border: "#BBF7D0", color: COLORS.success, icon: "checkmark-circle" };
   return (
     <View style={[styles.banner, { backgroundColor: toneStyles.bg, borderColor: toneStyles.border }]}>
-      <Ionicons name={toneStyles.icon} size={16} color={toneStyles.color} style={{ marginRight: 8 }} />
+      <LucideIcon name={toneStyles.icon} size={16} color={toneStyles.color} style={{ marginRight: 8 }} />
       <Text style={[styles.bannerText, { color: toneStyles.color }]}>{text}</Text>
     </View>
   );
@@ -27,7 +27,7 @@ export function Banner({ text, tone = "error" }) {
 export function BackLink({ label = "Back", onPress }) {
   return (
     <Pressable onPress={onPress} style={styles.backLink} hitSlop={10} accessibilityRole="button">
-      <Ionicons name="chevron-back" size={18} color={COLORS.primary} />
+      <LucideIcon name="chevron-back" size={18} color={COLORS.primary} />
       <Text style={styles.backLinkText}>{label}</Text>
     </Pressable>
   );

@@ -1,15 +1,15 @@
-import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
+import { View, Text, StyleSheet, Pressable, ScrollView, Image } from "react-native";
 import Constants from "expo-constants";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import LucideIcon from "../components/ui/LucideIcon";
 import { COLORS } from "../constants/theme";
 
 function InfoRow({ icon, title, value }) {
   return (
     <View style={styles.row}>
       <View style={styles.icon}>
-        <Ionicons name={icon} size={18} color={COLORS.primary} />
+        <LucideIcon name={icon} size={18} color={COLORS.primary} />
       </View>
       <View style={styles.copy}>
         <Text style={styles.rowTitle}>{title}</Text>
@@ -28,7 +28,7 @@ export default function AboutFitLipScreen() {
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <Pressable style={styles.back} onPress={() => router.back()}>
-            <Ionicons name="chevron-back" size={22} color={COLORS.textDark} />
+            <LucideIcon name="chevron-back" size={22} color={COLORS.textDark} />
           </Pressable>
           <View style={styles.headerCopy}>
             <Text style={styles.headerTitle}>About FitLip</Text>
@@ -38,7 +38,7 @@ export default function AboutFitLipScreen() {
 
         <View style={styles.hero}>
           <View style={styles.logo}>
-            <Ionicons name="fitness" size={34} color={COLORS.primary} />
+            <Image source={require("../../assets/images/icon.png")} style={styles.logoImage} resizeMode="contain" accessibilityLabel="FitLip logo" />
           </View>
           <Text style={styles.appName}>FitLip</Text>
           <Text style={styles.tagline}>Train smarter. Track better. Stay consistent.</Text>
@@ -102,7 +102,8 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 23, fontWeight: "800", color: COLORS.textDark },
   headerSubtitle: { marginTop: 2, fontSize: 11.5, fontWeight: "600", color: COLORS.textMuted },
   hero: { alignItems: "center", paddingVertical: 24, paddingHorizontal: 18, backgroundColor: COLORS.surface, borderRadius: 20, borderWidth: 1, borderColor: COLORS.border },
-  logo: { width: 72, height: 72, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.surfaceMuted, borderWidth: 1, borderColor: COLORS.border },
+  logo: { width: 72, height: 72, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, overflow: "hidden" },
+  logoImage: { width: "100%", height: "100%" },
   appName: { marginTop: 12, fontSize: 28, fontWeight: "800", color: COLORS.textDark },
   tagline: { marginTop: 6, fontSize: 12.5, fontWeight: "600", color: COLORS.textMuted, textAlign: "center" },
   version: { marginTop: 10, fontSize: 11, fontWeight: "800", color: COLORS.primary },

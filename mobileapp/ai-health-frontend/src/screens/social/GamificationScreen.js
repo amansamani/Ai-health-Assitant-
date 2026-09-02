@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
-import { Ionicons } from "@expo/vector-icons";
+import LucideIcon from "../../components/ui/LucideIcon";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import API from "../../services/api";
@@ -42,7 +42,7 @@ export default function GamificationScreen() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.headerRow}>
-          <Pressable onPress={() => router.back()} style={styles.backBtn}><Ionicons name="chevron-back" size={22} color={COLORS.textDark} /></Pressable>
+          <Pressable onPress={() => router.back()} style={styles.backBtn}><LucideIcon name="chevron-back" size={22} color={COLORS.textDark} /></Pressable>
           <View style={{ flex: 1 }}>
             <Text style={styles.title}>Your Greatness</Text>
             <Text style={styles.subtitle}>Progress that reflects consistency, not perfection.</Text>
@@ -51,7 +51,7 @@ export default function GamificationScreen() {
 
         <LinearGradient colors={[COLORS.primaryDark, COLORS.primary, COLORS.primaryLight]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
           <View style={styles.heroTop}>
-            <View style={styles.rankIcon}><Ionicons name={snapshot.rankIcon || "barbell-outline"} size={32} color="#fff" /></View>
+            <View style={styles.rankIcon}><LucideIcon name={snapshot.rankIcon || "barbell-outline"} size={32} color="#fff" /></View>
             <View style={{ flex: 1 }}>
               <Text style={styles.rankEyebrow}>DUMBBELL RANK</Text>
               <Text style={styles.rankTitle}>{snapshot.rankTitle}</Text>
@@ -70,7 +70,7 @@ export default function GamificationScreen() {
         </View>
 
         <View style={styles.card}>
-          <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>How XP works</Text><Ionicons name="sparkles-outline" size={20} color={COLORS.primary} /></View>
+          <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>How XP works</Text><LucideIcon name="sparkles-outline" size={20} color={COLORS.primary} /></View>
           <XpRow label="Confirm an exercise" xp="+10 XP" icon="barbell-outline" />
           <XpRow label="Complete a workout" xp="+50 XP" icon="fitness-outline" />
           <XpRow label="Log your meals" xp="+10 XP" icon="restaurant-outline" />
@@ -80,7 +80,7 @@ export default function GamificationScreen() {
         </View>
 
         <View style={styles.card}>
-          <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Friends leaderboard</Text><Ionicons name="podium-outline" size={20} color={COLORS.primary} /></View>
+          <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Friends leaderboard</Text><LucideIcon name="podium-outline" size={20} color={COLORS.primary} /></View>
           {leaderboard.map((row) => (
             <View key={String(row.user.id)} style={styles.leaderRow}>
               <Text style={[styles.position, row.isMe && styles.positionMe]}>#{row.position}</Text>
@@ -93,7 +93,7 @@ export default function GamificationScreen() {
         </View>
 
         <Pressable onPress={() => router.push("/(app)/social/achievements")} style={styles.achievementsButton}>
-          <Ionicons name="medal-outline" size={20} color="#fff" /><Text style={styles.achievementsButtonText}>View achievements</Text><Ionicons name="chevron-forward" size={18} color="#fff" />
+          <LucideIcon name="medal-outline" size={20} color="#fff" /><Text style={styles.achievementsButtonText}>View achievements</Text><LucideIcon name="chevron-forward" size={18} color="#fff" />
         </Pressable>
       </ScrollView>
     </SafeAreaView>
@@ -101,11 +101,11 @@ export default function GamificationScreen() {
 }
 
 function StatCard({ icon, label, value, compact }) {
-  return <View style={styles.statCard}><Ionicons name={icon} size={20} color={COLORS.primary} /><Text style={styles.statValue} numberOfLines={1}>{String(value)}</Text><Text style={styles.statLabel}>{label}</Text></View>;
+  return <View style={styles.statCard}><LucideIcon name={icon} size={20} color={COLORS.primary} /><Text style={styles.statValue} numberOfLines={1}>{String(value)}</Text><Text style={styles.statLabel}>{label}</Text></View>;
 }
 
 function XpRow({ icon, label, xp, last }) {
-  return <View style={[styles.xpRow, !last && styles.xpDivider]}><View style={styles.xpIcon}><Ionicons name={icon} size={18} color={COLORS.primary} /></View><Text style={styles.xpRowLabel}>{label}</Text><Text style={styles.xpRowValue}>{xp}</Text></View>;
+  return <View style={[styles.xpRow, !last && styles.xpDivider]}><View style={styles.xpIcon}><LucideIcon name={icon} size={18} color={COLORS.primary} /></View><Text style={styles.xpRowLabel}>{label}</Text><Text style={styles.xpRowValue}>{xp}</Text></View>;
 }
 
 const styles = StyleSheet.create({

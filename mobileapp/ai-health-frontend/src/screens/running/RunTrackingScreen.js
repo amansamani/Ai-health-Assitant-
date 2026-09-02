@@ -21,7 +21,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import LucideIcon from "../../components/ui/LucideIcon";
 import * as Location from "expo-location";
 import RunRouteMap from "../../components/RunRouteMap";
 
@@ -250,17 +250,7 @@ export default function RunTrackingScreen() {
     }
 
     await startForegroundFallback();
-    Alert.alert(
-      "Background tracking is off",
-      "Fitlip can still record while the app is open. To keep your run going when the phone is locked or you switch apps, allow background location in Settings.",
-      [
-        { text: "Continue here", style: "cancel" },
-        {
-          text: "Open Settings",
-          onPress: () => Linking.openSettings().catch(() => {}),
-        },
-      ]
-    );
+    setBackgroundConfirm(true);
   };
 
   const handleStart = async () => {
@@ -349,6 +339,9 @@ export default function RunTrackingScreen() {
     }
   };
 
+  const confirmDiscardShortRun = () => { setShortRunConfirm(false); handleDiscard(); };
+  const openBackgroundSettings = () => { setBackgroundConfirm(false); Linking.openSettings().catch(() => {}); };
+
   const handleFinish = async () => {
     const session = await loadRunSession();
     if (!session) return;
@@ -357,14 +350,8 @@ export default function RunTrackingScreen() {
     const finalDistanceMeters = Number(session.distanceMeters || 0);
 
     if (finalDistanceMeters < 20 && finalElapsedSeconds < 30) {
-      Alert.alert(
-        "Run too short",
-        "Track a bit more before finishing, or discard this run.",
-        [
-          { text: "Keep going", style: "cancel" },
-          { text: "Discard", style: "destructive", onPress: handleDiscard },
-        ]
-      );
+      setShortRunConfirm(true);
+      return;
       return;
     }
 
@@ -489,7 +476,7 @@ export default function RunTrackingScreen() {
         )}
 
         <Pressable style={styles.closeBtn} onPress={handleDiscard}>
-          <Ionicons name="close" size={24} color={COLORS.textDark} />
+          <LucideIcon name="close" size={24} color={COLORS.textDark} />
         </Pressable>
 
         {phase === "idle" && (
@@ -503,7 +490,7 @@ export default function RunTrackingScreen() {
                   activityType === a.key && styles.activityChipActive,
                 ]}
               >
-                <Ionicons
+                <LucideIcon
                   name={a.icon}
                   size={16}
                   color={activityType === a.key ? COLORS.onPrimary : COLORS.textDark}
@@ -557,7 +544,7 @@ export default function RunTrackingScreen() {
         <View style={styles.controls}>
           {phase === "idle" && (
             <Pressable style={[styles.controlBtn, styles.startBtn]} onPress={handleStart}>
-              <Ionicons name="play" size={26} color={COLORS.onPrimary} />
+              <LucideIcon name="play" size={26} color={COLORS.onPrimary} />
               <Text style={styles.controlBtnText}>Start</Text>
             </Pressable>
           )}
@@ -565,10 +552,10 @@ export default function RunTrackingScreen() {
           {phase === "running" && (
             <>
               <Pressable style={[styles.controlBtn, styles.pauseBtn]} onPress={handlePause}>
-                <Ionicons name="pause" size={24} color={COLORS.textDark} />
+                <LucideIcon name="pause" size={24} color={COLORS.textDark} />
               </Pressable>
               <Pressable style={[styles.controlBtn, styles.finishBtn]} onPress={handleFinish}>
-                <Ionicons name="stop" size={24} color={COLORS.onPrimary} />
+                <LucideIcon name="stop" size={24} color={COLORS.onPrimary} />
                 <Text style={styles.controlBtnText}>Finish</Text>
               </Pressable>
             </>
@@ -577,17 +564,19 @@ export default function RunTrackingScreen() {
           {phase === "paused" && (
             <>
               <Pressable style={[styles.controlBtn, styles.startBtn]} onPress={handleResume}>
-                <Ionicons name="play" size={24} color={COLORS.onPrimary} />
+                <LucideIcon name="play" size={24} color={COLORS.onPrimary} />
                 <Text style={styles.controlBtnText}>Resume</Text>
               </Pressable>
               <Pressable style={[styles.controlBtn, styles.finishBtn]} onPress={handleFinish}>
-                <Ionicons name="stop" size={24} color={COLORS.onPrimary} />
+                <LucideIcon name="stop" size={24} color={COLORS.onPrimary} />
                 <Text style={styles.controlBtnText}>Finish</Text>
               </Pressable>
             </>
           )}
         </View>
       </View>
+    <ConfirmModal visible={backgroundConfirm} title="Background tracking is off" message="FitLip can still record while the app is open. Allow background location in Settings to keep the run going when your phone is locked or you switch apps." confirmText="Open Settings" cancelText="Continue Here" icon="location-outline" onCancel={() => setBackgroundConfirm(false)} onConfirm={openBackgroundSettings} />
+    <ConfirmModal visible={shortRunConfirm} title="Run too short" message="Track a bit more before finishing, or discard this run." confirmText="Discard" cancelText="Keep Going" tone="danger" icon="trash-outline" onCancel={() => setShortRunConfirm(false)} onConfirm={confirmDiscardShortRun} />
     </SafeAreaView>
   );
 }

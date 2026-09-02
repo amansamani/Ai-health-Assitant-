@@ -3,21 +3,14 @@ import { Redirect, Stack } from "expo-router";
 import { useContext } from "react";
 
 import { AuthContext } from "@/src/context/AuthContext";
+import AppLoading from "@/src/components/ui/AppLoading";
 
 export default function AuthLayout() {
   const { userToken, loading } = useContext(AuthContext);
 
   if (loading) {
     return (
-      <View
-        style={{
-          flex: 1,
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-      >
-        <ActivityIndicator size="large" />
-      </View>
+      <AppLoading />
     );
   }
 

@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { useState, useCallback, useContext, useRef, useEffect, useMemo } from "react";
 import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import LucideIcon from "../components/ui/LucideIcon";
 import API, { API_BASE_URL } from "../services/api";
 import { LinearGradient } from "expo-linear-gradient";
 import { AuthContext } from "../context/AuthContext";
@@ -199,7 +199,7 @@ function MotivationCard({ iconTrigger }) {
         </View>
         <Text style={styles.motivationQuote}>{quote}</Text>
         <View style={styles.motivationHint}>
-          <Ionicons name="sunny-outline" size={13} color="rgba(255,255,255,0.85)" />
+          <LucideIcon name="sunny-outline" size={13} color="rgba(255,255,255,0.85)" />
           <Text style={styles.motivationHintText}>{hint}</Text>
         </View>
       </View>
@@ -283,7 +283,7 @@ export default function HomeScreen() {
         <FadeSlideIn delay={0}>
           <View style={styles.headerRow}>
             <View style={styles.greetingRow}>
-              <Ionicons name={greetIcon} size={20} color={COLORS.primary} style={{ marginRight: 6 }} />
+              <LucideIcon name={greetIcon} size={20} color={COLORS.primary} style={{ marginRight: 6 }} />
               <View>
                 <Text style={styles.greeting}>
                   {greeting}{firstName ? `, ${firstName}` : ""}!
@@ -327,7 +327,7 @@ export default function HomeScreen() {
             <View style={styles.heroDecorRing} />
             <View style={styles.heroLeft}>
               <View style={styles.heroBadgeWrap}>
-                <Ionicons name="flame" size={11} color="#FACC15" />
+                <LucideIcon name="flame" size={11} color="#FACC15" />
                 <Text style={styles.heroBadge}>TODAY&apos;S GOAL</Text>
               </View>
               <Text style={styles.heroTitle}>Step Count</Text>
@@ -361,7 +361,7 @@ export default function HomeScreen() {
               accessibilityRole="button"
               accessibilityLabel="Edit today's stats"
             >
-              <Ionicons name="create-outline" size={13} color={COLORS.primary} />
+              <LucideIcon name="create-outline" size={13} color={COLORS.primary} />
               <Text style={styles.editBtnText}>Edit</Text>
             </Pressable>
           </View>
@@ -400,13 +400,13 @@ export default function HomeScreen() {
           >
             <View style={styles.competeAccent} />
             <View style={styles.competeIconWrap}>
-              <Ionicons name="flash" size={20} color="#F97316" />
+              <LucideIcon name="flash" size={20} color="#F97316" />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.competeTitle}>Compete with Friends</Text>
               <Text style={styles.competeSub}>Duels, streak battles & achievements</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
+            <LucideIcon name="chevron-forward" size={18} color={COLORS.textMuted} />
           </Pressable>
         </FadeSlideIn>
 
@@ -428,7 +428,7 @@ export default function HomeScreen() {
               <Text style={styles.logFoodTitle}>Log Today&apos;s Food</Text>
               <Text style={styles.logFoodSub}>Search & add manually</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
+            <LucideIcon name="chevron-forward" size={18} color={COLORS.textMuted} />
           </Pressable>
         </FadeSlideIn>
 

@@ -1,7 +1,7 @@
 import { View, Text, Pressable, StyleSheet, Animated } from "react-native";
 import { useState, useRef, useContext } from "react";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import LucideIcon from "../components/ui/LucideIcon";
 import { AuthContext } from "../context/AuthContext";
 import API from "../services/api";
 import { COLORS } from "../constants/theme";
@@ -39,7 +39,7 @@ function GoalCard({ goal, selected, onPress }) {
           { transform: [{ scale }] },
         ]}
       >
-        <Ionicons name={goal.icon} size={22} color={selected ? goal.color : COLORS.textMuted} />
+        <LucideIcon name={goal.icon} size={22} color={selected ? goal.color : COLORS.textMuted} />
         <Text style={[styles.goalLabel, selected && { color: goal.color }]}>{goal.label}</Text>
         <Text style={styles.goalDesc}>{goal.desc}</Text>
       </Animated.View>
@@ -88,7 +88,7 @@ export default function RegisterScreen() {
 
   return (
     <AuthShell>
-      <AuthHero icon="person-add-outline" title="Create account" subtitle="Start your fitness journey today" size="compact" />
+      <AuthHero title="Create account" subtitle="Start your fitness journey today" size="compact" />
 
       <Banner text={error} />
 

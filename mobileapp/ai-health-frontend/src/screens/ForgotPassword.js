@@ -46,9 +46,7 @@ export default function ForgotPassword() {
   return (
     <AuthShell>
       <BackLink onPress={() => router.back()} />
-      <AuthHero
-        icon="key-outline"
-        title="Forgot password?"
+      <AuthHero title="Forgot password?"
         subtitle="Enter your email and we'll send you a 6-digit code"
         size="compact"
       />

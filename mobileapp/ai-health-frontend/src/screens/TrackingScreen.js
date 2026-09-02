@@ -2,11 +2,11 @@ import { useState, useEffect, useCallback, useRef, useContext } from "react";
 import {
   View, Text, TextInput, Pressable, StyleSheet,
   ActivityIndicator, Animated, Dimensions, KeyboardAvoidingView,
-  Platform, ScrollView, Alert,
+  Platform, ScrollView,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import LucideIcon from "../components/ui/LucideIcon";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import API from "../services/api";
@@ -20,6 +20,7 @@ import {
 import { useActiveCalorieGoal } from "../hooks/useActiveCalorieGoal";
 import { kcalFromMET, QUICK_ADD_ACTIVITIES } from "../utils/metCalories";
 import CircularProgressRing from "../components/CircularProgressRing";
+import ConfirmModal from "../components/ui/ConfirmModal";
 
 const { width } = Dimensions.get("window");
 
@@ -68,7 +69,7 @@ function TrackInputCard({ icon, label, unit, value, onChangeText, color, goal, p
 
       <View style={styles.trackCardInner}>
         <View style={[styles.trackIconWrap, { backgroundColor: color + "18" }]}>
-          <Ionicons name={icon} size={22} color={color} />
+          <LucideIcon name={icon} size={22} color={color} />
         </View>
 
         <View style={styles.trackMid}>
@@ -76,7 +77,7 @@ function TrackInputCard({ icon, label, unit, value, onChangeText, color, goal, p
             <Text style={styles.trackLabel}>{label}</Text>
             {synced && (
               <View style={[styles.syncedPill, { backgroundColor: color + "18" }]}>
-                <Ionicons name="sync" size={9} color={color} />
+                <LucideIcon name="sync" size={9} color={color} />
                 <Text style={[styles.syncedPillText, { color }]}>Synced</Text>
               </View>
             )}
@@ -125,7 +126,7 @@ function LogStat({ icon, label, value, color }) {
   return (
     <View style={styles.logStat}>
       <View style={[styles.logStatIcon, { backgroundColor: color + "18" }]}>
-        <Ionicons name={icon} size={18} color={color} />
+        <LucideIcon name={icon} size={18} color={color} />
       </View>
       <View style={styles.logStatText}>
         <Text style={styles.logStatLabel}>{label}</Text>
@@ -148,7 +149,7 @@ function SyncStatusBanner({ status, lastSyncedAt, syncing, onRefresh, onRetry })
       <View style={styles.syncBanner}>
         <View style={styles.syncBannerLeft}>
           <View style={styles.syncDotWrap}>
-            <Ionicons name="watch-outline" size={14} color="#22C55E" />
+            <LucideIcon name="watch-outline" size={14} color="#22C55E" />
           </View>
           <Text style={styles.syncBannerText}>
             {status === "synced"
@@ -157,7 +158,7 @@ function SyncStatusBanner({ status, lastSyncedAt, syncing, onRefresh, onRetry })
           </Text>
         </View>
         <Pressable onPress={onRefresh} disabled={syncing} hitSlop={8} accessibilityRole="button" accessibilityLabel="Refresh from device">
-          {syncing ? <ActivityIndicator size="small" color={COLORS.primary} /> : <Ionicons name="refresh" size={16} color={COLORS.primary} />}
+          {syncing ? <ActivityIndicator size="small" color={COLORS.primary} /> : <LucideIcon name="refresh" size={16} color={COLORS.primary} />}
         </Pressable>
       </View>
     );
@@ -167,7 +168,7 @@ function SyncStatusBanner({ status, lastSyncedAt, syncing, onRefresh, onRetry })
     return (
       <View style={[styles.syncBanner, { backgroundColor: COLORS.surfaceMuted }]}>
         <View style={styles.syncBannerLeft}>
-          <Ionicons name="information-circle-outline" size={16} color={COLORS.textMuted} />
+          <LucideIcon name="information-circle-outline" size={16} color={COLORS.textMuted} />
           <Text style={[styles.syncBannerText, { color: COLORS.textMuted }]}>
             Auto-sync isn't available on this device — enter your stats below.
           </Text>
@@ -180,7 +181,7 @@ function SyncStatusBanner({ status, lastSyncedAt, syncing, onRefresh, onRetry })
   return (
     <View style={[styles.syncBanner, { backgroundColor: COLORS.surfaceMuted }]}>
       <View style={styles.syncBannerLeft}>
-        <Ionicons name="alert-circle-outline" size={16} color={COLORS.textMuted} />
+        <LucideIcon name="alert-circle-outline" size={16} color={COLORS.textMuted} />
         <Text style={[styles.syncBannerText, { color: COLORS.textMuted }]}>
           Device sync isn't connected — enter your stats below.
         </Text>
@@ -243,7 +244,7 @@ function ActiveBurnCard({ value, goal, source, syncing, onQuickAdd, onManualChan
           <View style={[styles.burnBadge, { backgroundColor: badge.color + "18" }]}>
             {syncing
               ? <ActivityIndicator size="small" color={badge.color} />
-              : <Ionicons name={badge.icon} size={11} color={badge.color} />}
+              : <LucideIcon name={badge.icon} size={11} color={badge.color} />}
             <Text style={[styles.burnBadgeText, { color: badge.color }]}>{badge.text}</Text>
           </View>
 
@@ -265,13 +266,13 @@ function ActiveBurnCard({ value, goal, source, syncing, onQuickAdd, onManualChan
           style={styles.runCtaGradient}
         >
           <View style={styles.runCtaIcon}>
-            <Ionicons name="walk" size={22} color="#FFFFFF" />
+            <LucideIcon name="walk" size={22} color="#FFFFFF" />
           </View>
           <View style={styles.runCtaCopy}>
             <Text style={styles.runCtaTitle}>Start a Run</Text>
             <Text style={styles.runCtaSub}>Track distance, pace & calories</Text>
           </View>
-          <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+          <LucideIcon name="arrow-forward" size={20} color="#FFFFFF" />
         </View>
       </Pressable>
 
@@ -297,7 +298,7 @@ function ActiveBurnCard({ value, goal, source, syncing, onQuickAdd, onManualChan
               {breakdown.activityEntries.slice().reverse().slice(0, 4).map((entry, index) => (
                 <View key={`${entry.loggedAt || index}-${index}`} style={styles.activityHistoryRow}>
                   <View style={styles.activityHistoryIcon}>
-                    <Ionicons name={entry.activityType === "swimming" ? "water-outline" : entry.activityType === "cycling" ? "bicycle-outline" : entry.activityType === "walk" ? "walk-outline" : "body-outline"} size={15} color="#F97316" />
+                    <LucideIcon name={entry.activityType === "swimming" ? "water-outline" : entry.activityType === "cycling" ? "bicycle-outline" : entry.activityType === "walk" ? "walk-outline" : "body-outline"} size={15} color="#F97316" />
                   </View>
                   <View style={styles.activityHistoryCopy}>
                     <Text style={styles.activityHistoryName}>{entry.label}</Text>
@@ -318,7 +319,7 @@ function ActiveBurnCard({ value, goal, source, syncing, onQuickAdd, onManualChan
                 accessibilityRole="button"
                 accessibilityLabel={`Log ${a.label}`}
               >
-                <Ionicons name={a.icon} size={16} color="#F97316" />
+                <LucideIcon name={a.icon} size={16} color="#F97316" />
                 <Text style={styles.quickAddText}>{a.label}</Text>
               </Pressable>
             ))}
@@ -525,45 +526,40 @@ export default function TrackingScreen() {
   // Tier 3: quick-add presets for activities a phone/watch can't see on
   // its own (swimming, most cycling, off-body yoga). Adds on top of
   // whatever's already logged today rather than overwriting it.
-  const handleQuickAdd = async (activity) => {
+  const handleQuickAdd = (activity) => {
     const added = kcalFromMET(activity.met, weightKg, activity.minutes);
-    Alert.alert(
-      `Log ${activity.label}?`,
-      `${activity.minutes} min · estimated ${added} kcal.\n\nThis will be added to today's Active Burn.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: `Log ${activity.label}`,
-          onPress: async () => {
-            const next = Math.round((parseFloat(calories) || 0) + added);
-            setCalories(String(next));
-            setCaloriesSource("estimated");
-            try {
-              const res = await API.post("/track/today", {
-                caloriesBurned: added,
-                source: "manual",
-                activityType: activity.key,
-                activityLabel: activity.label,
-                activityMinutes: activity.minutes,
-                activityMet: activity.met,
-              });
-              setTodayLog(res.data);
-              setCalories(String(res.data.caloriesBurned ?? next));
-              setCalorieBreakdown({
-                steps: Number(res.data.stepsCaloriesBurned || 0),
-                exercise: Number(res.data.exerciseCaloriesBurned || 0),
-                activity: Number(res.data.activityCaloriesBurned || 0),
-                manual: Number(res.data.manualCaloriesBurned || 0),
-                activityEntries: Array.isArray(res.data.activityEntries) ? res.data.activityEntries : [],
-              });
-            } catch (err) {
-              setCalories((parseFloat(calories) || 0).toString());
-              console.log("Quick-add save failed:", err.response?.data?.message || err.message);
-            }
-          },
-        },
-      ]
-    );
+    setQuickAddConfirm({ activity, added });
+  };
+
+  const confirmQuickAdd = async () => {
+    if (!quickAddConfirm) return;
+    const { activity, added } = quickAddConfirm;
+    setQuickAddConfirm(null);
+    const next = Math.round((parseFloat(calories) || 0) + added);
+    setCalories(String(next));
+    setCaloriesSource("estimated");
+    try {
+      const res = await API.post("/track/today", {
+        caloriesBurned: added,
+        source: "manual",
+        activityType: activity.key,
+        activityLabel: activity.label,
+        activityMinutes: activity.minutes,
+        activityMet: activity.met,
+      });
+      setTodayLog(res.data);
+      setCalories(String(res.data.caloriesBurned ?? next));
+      setCalorieBreakdown({
+        steps: Number(res.data.stepsCaloriesBurned || 0),
+        exercise: Number(res.data.exerciseCaloriesBurned || 0),
+        activity: Number(res.data.activityCaloriesBurned || 0),
+        manual: Number(res.data.manualCaloriesBurned || 0),
+        activityEntries: Array.isArray(res.data.activityEntries) ? res.data.activityEntries : [],
+      });
+    } catch (err) {
+      setCalories((parseFloat(calories) || 0).toString());
+      console.log("Quick-add save failed:", err.response?.data?.message || err.message);
+    }
   };
 
   const saveToday = async () => {
@@ -662,11 +658,11 @@ export default function TrackingScreen() {
             <View style={[styles.heroCard, { backgroundColor: COLORS.primaryDark }]}>
               <View style={styles.heroDecor} />
               <View style={styles.heroBadgeRow}>
-                <Ionicons name="calendar-outline" size={12} color="#FACC15" />
+                <LucideIcon name="calendar-outline" size={12} color="#FACC15" />
                 <Text style={styles.heroBadge}>TODAY</Text>
               </View>
               <View style={styles.heroTitleRow}>
-                {totalPct === 100 && <Ionicons name="sparkles" size={16} color="#fff" style={{ marginRight: 6 }} />}
+                {totalPct === 100 && <LucideIcon name="sparkles" size={16} color="#fff" style={{ marginRight: 6 }} />}
                 <Text style={styles.heroTitle}>
                   {totalPct === 100 ? "All goals complete!" : `${totalPct}% of daily goals done`}
                 </Text>
@@ -676,15 +672,15 @@ export default function TrackingScreen() {
               </View>
               <View style={styles.heroStats}>
                 <View style={styles.heroStatItem}>
-                  <Ionicons name="footsteps-outline" size={13} color="#B8AFD6" />
+                  <LucideIcon name="footsteps-outline" size={13} color="#B8AFD6" />
                   <Text style={styles.heroStat}>{steps || "0"} steps</Text>
                 </View>
                 <View style={styles.heroStatItem}>
-                  <Ionicons name="flame-outline" size={13} color="#B8AFD6" />
+                  <LucideIcon name="flame-outline" size={13} color="#B8AFD6" />
                   <Text style={styles.heroStat}>{calories || "0"} kcal</Text>
                 </View>
                 <View style={styles.heroStatItem}>
-                  <Ionicons name="moon-outline" size={13} color="#B8AFD6" />
+                  <LucideIcon name="moon-outline" size={13} color="#B8AFD6" />
                   <Text style={styles.heroStat}>{sleep || "0"}h</Text>
                 </View>
               </View>
@@ -693,7 +689,7 @@ export default function TrackingScreen() {
 
           {errorMsg ? (
             <View style={styles.errorBanner}>
-              <Ionicons name="alert-circle" size={16} color={COLORS.error} />
+              <LucideIcon name="alert-circle" size={16} color={COLORS.error} />
               <Text style={styles.errorText}>{errorMsg}</Text>
             </View>
           ) : null}
@@ -767,7 +763,7 @@ export default function TrackingScreen() {
                     ? <ActivityIndicator color="#fff" size="small" />
                     : (
                       <View style={styles.saveBtnRow}>
-                        <Ionicons name={saved ? "checkmark" : "save-outline"} size={18} color="#fff" />
+                        <LucideIcon name={saved ? "checkmark" : "save-outline"} size={18} color="#fff" />
                         <Text style={styles.saveBtnText}>{saved ? "Saved!" : "Save Today's Data"}</Text>
                       </View>
                     )
@@ -801,6 +797,16 @@ export default function TrackingScreen() {
           <View style={{ height: 32 }} />
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <ConfirmModal
+        visible={!!quickAddConfirm}
+        icon={quickAddConfirm?.activity?.icon || "walk-outline"}
+        title={quickAddConfirm ? `Log ${quickAddConfirm.activity.label}?` : ""}
+        message={quickAddConfirm ? `${quickAddConfirm.activity.minutes} min · estimated ${quickAddConfirm.added} kcal.\n\nThis will be added to today’s Active Burn.` : ""}
+        confirmText={quickAddConfirm ? `Log ${quickAddConfirm.activity.label}` : "Log"}
+        onCancel={() => setQuickAddConfirm(null)}
+        onConfirm={confirmQuickAdd}
+      />
     </SafeAreaView>
   );
 }

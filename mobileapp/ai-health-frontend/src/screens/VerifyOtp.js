@@ -68,9 +68,7 @@ export default function VerifyOtp() {
   return (
     <AuthShell>
       <BackLink onPress={() => router.back()} />
-      <AuthHero
-        icon="mail-open-outline"
-        title="Enter code"
+      <AuthHero title="Enter code"
         subtitle={`We sent a 6-digit code to ${email ?? "your email"}`}
         size="compact"
       />

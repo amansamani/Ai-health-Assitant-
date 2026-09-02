@@ -55,7 +55,7 @@ export default function LoginScreen() {
 
   return (
     <AuthShell>
-      <AuthHero icon="pulse" title="FitLip" subtitle="Your personal fitness companion" />
+      <AuthHero title="FitLip" subtitle="Your personal fitness companion" />
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Welcome back</Text>

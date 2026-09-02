@@ -9,16 +9,16 @@ import {
   TextInput,
   Image,
   ActivityIndicator,
-  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import LucideIcon from "../../components/ui/LucideIcon";
 import RunRouteMap from "../../components/RunRouteMap";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
 
 import { COLORS, SHADOW } from "../../constants/theme";
+import ChoiceModal from "../../components/ui/ChoiceModal";
 import { getDraftRun, clearDraftRun } from "../../services/runSessionStore";
 import { saveRun } from "../../services/runService";
 import {
@@ -56,6 +56,7 @@ export default function RunSummaryScreen() {
   const [visibility, setVisibility] = useState("followers");
   const [photo, setPhoto] = useState(null); // { uri, base64 }
   const [saving, setSaving] = useState(false);
+  const [photoChoiceVisible, setPhotoChoiceVisible] = useState(false);
 
   useEffect(() => {
     const run = getDraftRun();
@@ -91,35 +92,22 @@ export default function RunSummaryScreen() {
     );
   }
 
-  const handleAddPhoto = async () => {
-    Alert.alert("Add a photo", "Attach a photo of your run", [
-      {
-        text: "Camera",
-        onPress: async () => {
-          const perm = await ImagePicker.requestCameraPermissionsAsync();
-          if (!perm.granted) return;
-          const img = await pickAndCompress(() =>
-            ImagePicker.launchCameraAsync({ quality: 0.8 })
-          );
-          if (img) setPhoto(img);
-        },
-      },
-      {
-        text: "Gallery",
-        onPress: async () => {
-          const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-          if (!perm.granted) return;
-          const img = await pickAndCompress(() =>
-            ImagePicker.launchImageLibraryAsync({
-              mediaTypes: ImagePicker.MediaTypeOptions.Images,
-              quality: 0.8,
-            })
-          );
-          if (img) setPhoto(img);
-        },
-      },
-      { text: "Cancel", style: "cancel" },
-    ]);
+  const handleAddPhoto = () => setPhotoChoiceVisible(true);
+
+  const handlePickCamera = async () => {
+    setPhotoChoiceVisible(false);
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) return;
+    const img = await pickAndCompress(() => ImagePicker.launchCameraAsync({ quality: 0.8 }));
+    if (img) setPhoto(img);
+  };
+
+  const handlePickGallery = async () => {
+    setPhotoChoiceVisible(false);
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) return;
+    const img = await pickAndCompress(() => ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.8 }));
+    if (img) setPhoto(img);
   };
 
   const handleDiscard = () => {
@@ -199,7 +187,7 @@ export default function RunSummaryScreen() {
             <Image source={{ uri: photo.uri }} style={styles.photoPreview} />
           ) : (
             <View style={styles.photoPlaceholder}>
-              <Ionicons name="camera-outline" size={28} color={COLORS.textLight} />
+              <LucideIcon name="camera-outline" size={28} color={COLORS.textLight} />
               <Text style={styles.photoPlaceholderText}>Add a photo</Text>
             </View>
           )}
@@ -226,7 +214,7 @@ export default function RunSummaryScreen() {
               ]}
               onPress={() => setVisibility(opt.key)}
             >
-              <Ionicons
+              <LucideIcon
                 name={opt.icon}
                 size={16}
                 color={visibility === opt.key ? COLORS.onPrimary : COLORS.textDark}
@@ -257,6 +245,7 @@ export default function RunSummaryScreen() {
           )}
         </Pressable>
       </View>
+    <ChoiceModal visible={photoChoiceVisible} title="Add a run photo" message="Choose where you want to attach a photo from." onCancel={() => setPhotoChoiceVisible(false)} options={[{ label: "Camera", subtitle: "Take a new photo", icon: "camera-outline", onPress: handlePickCamera }, { label: "Gallery", subtitle: "Choose an existing photo", icon: "images-outline", onPress: handlePickGallery }]} />
     </SafeAreaView>
   );
 }

@@ -1,12 +1,12 @@
 "use strict";
 import React, { useState, useRef, useContext, useCallback, useEffect } from "react";
-import {
+import { Image,
   View, Text, TextInput, StyleSheet, FlatList,
   TouchableOpacity, KeyboardAvoidingView, Platform,
   ActivityIndicator, Animated, Pressable,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import LucideIcon from "../../components/ui/LucideIcon";
 import { AuthContext } from "../../context/AuthContext";
 import API from "../../services/api";
 import { COLORS, RADIUS, SPACING, TYPOGRAPHY, SHADOW } from "../../constants/theme";
@@ -78,7 +78,7 @@ function MessageBubble({ message }) {
     ]}>
       {!isUser && (
         <View style={mb.avatar}>
-          <Ionicons name="sparkles" size={14} color="#6E3482" />
+          <Image source={require("../../../assets/images/chatbot-avatar.png")} style={mb.avatarImage} />
         </View>
       )}
       <View style={[mb.bubble, isUser ? mb.bubbleUser : mb.bubbleAi]}>
@@ -94,6 +94,7 @@ function MessageBubble({ message }) {
 }
 
 const mb = StyleSheet.create({
+  avatarImage: { width: 28, height: 28, borderRadius: 14 },
   row:        { flexDirection: "row", marginBottom: 12, alignItems: "flex-end", gap: 8 },
   rowUser:    { justifyContent: "flex-end" },
   rowAi:      { justifyContent: "flex-start" },
@@ -233,7 +234,7 @@ export default function AiChatScreen({ navigation }) {
         <View style={s.header}>
           <View style={s.headerCenter}>
             <View style={s.headerIconWrap}>
-              <Ionicons name="sparkles" size={18} color="#6E3482" />
+              <LucideIcon name="sparkles" size={18} color="#6E3482" />
             </View>
             <View>
               <Text style={s.headerTitle}>AI Nutrition Coach</Text>
@@ -255,7 +256,7 @@ export default function AiChatScreen({ navigation }) {
             loading ? (
               <View style={s.typingRow}>
                 <View style={mb.avatar}>
-                  <Ionicons name="sparkles" size={14} color="#6E3482" />
+                  <Image source={require("../../../assets/images/chatbot-avatar.png")} style={mb.avatarImage} />
                 </View>
                 <View style={[mb.bubbleAi, { paddingHorizontal: 14 }]}>
                   <TypingDots />
@@ -310,7 +311,7 @@ export default function AiChatScreen({ navigation }) {
           >
             {loading
               ? <ActivityIndicator size="small" color="#fff" />
-              : <Ionicons name="send" size={16} color="#fff" />
+              : <LucideIcon name="send" size={16} color="#fff" />
             }
           </Pressable>
         </View>

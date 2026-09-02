@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import LucideIcon from "../ui/LucideIcon";
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, RADIUS, SPACING, TYPOGRAPHY, SHADOW } from '../../constants/theme';
 import { dismissToast, subscribeFeedback } from '../../services/uiFeedback';
@@ -47,13 +47,13 @@ export default function FeedbackToast() {
     >
       <Pressable onPress={dismissToast} style={({ pressed }) => [styles.card, { backgroundColor: palette.bg, borderColor: palette.border, opacity: pressed ? 0.92 : 1 }]}>
         <View style={[styles.iconWrap, { backgroundColor: `${palette.color}16` }]}>
-          <Ionicons name={palette.icon} size={20} color={palette.color} />
+          <LucideIcon name={palette.icon} size={20} color={palette.color} />
         </View>
         <View style={styles.copy}>
           {!!toast.title && <Text style={styles.title}>{toast.title}</Text>}
           <Text style={styles.message}>{toast.message}</Text>
         </View>
-        <Ionicons name="close" size={17} color={COLORS.textMuted} />
+        <LucideIcon name="close" size={17} color={COLORS.textMuted} />
       </Pressable>
     </Animated.View>
   );

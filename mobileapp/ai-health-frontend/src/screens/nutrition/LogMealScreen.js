@@ -4,7 +4,7 @@ import {
   ScrollView, KeyboardAvoidingView, Platform,
   ActivityIndicator, Modal, StatusBar, Animated,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import LucideIcon from "../../components/ui/LucideIcon";
 import { logMeal, searchFoodsFromMongo, searchFoodsByFilter } from "../../services/nutritionService";
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
@@ -238,14 +238,14 @@ function Toast({ toast, onDismiss }) {
       <View style={[ts.toastTopGlow, { backgroundColor: cfg.glow }]} />
       <View style={[ts.toastStripe, { backgroundColor: cfg.accent }]} />
       <View style={[ts.toastIconWrap, { backgroundColor: cfg.glow, borderColor: cfg.border }]}>
-        <Ionicons name={cfg.icon} size={18} color={cfg.accent} />
+        <LucideIcon name={cfg.icon} size={18} color={cfg.accent} />
       </View>
       <View style={ts.toastBody}>
         <Text style={[ts.toastTitle, { color: cfg.accent }]}>{toast.title}</Text>
         <Text style={ts.toastMsg} numberOfLines={2}>{toast.message}</Text>
       </View>
       <TouchableOpacity onPress={dismiss} style={ts.toastX} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} accessibilityRole="button" accessibilityLabel="Dismiss">
-        <Ionicons name="close" size={14} color="rgba(255,255,255,0.6)" />
+        <LucideIcon name="close" size={14} color="rgba(255,255,255,0.6)" />
       </TouchableOpacity>
       <Animated.View style={[ts.toastBar, { width: barWidth, backgroundColor: cfg.accent }]} />
     </Animated.View>
@@ -622,7 +622,7 @@ export default function LogMealScreen({ route, navigation }) {
 
             <View style={s.topBar}>
               <TouchableOpacity style={s.backBtn} onPress={() => navigation?.goBack?.()} accessibilityRole="button" accessibilityLabel="Go back">
-                <Ionicons name="chevron-back" size={20} color="#fff" />
+                <LucideIcon name="chevron-back" size={20} color="#fff" />
               </TouchableOpacity>
               <View style={s.mealBadge}>
                 <Text style={s.mealBadgeIcon}>{MEAL_ICONS[mealType]}</Text>
@@ -634,7 +634,7 @@ export default function LogMealScreen({ route, navigation }) {
             <Text style={s.heroSub}>Indian DB · USDA · Full nutrition data</Text>
 
             <View style={s.searchBox}>
-              <Ionicons name="search" size={16} color="#9A94AE" style={{ marginRight: 4 }} />
+              <LucideIcon name="search" size={16} color="#9A94AE" style={{ marginRight: 4 }} />
               <TextInput
                 style={s.searchInput}
                 placeholder='Search "paneer", "roti", "egg"…'
@@ -652,7 +652,7 @@ export default function LogMealScreen({ route, navigation }) {
                 accessibilityRole="button"
                 accessibilityLabel="Filters"
               >
-                <Ionicons name="options-outline" size={16} color={hasActiveFilters ? "#CC5800" : "#6E3482"} />
+                <LucideIcon name="options-outline" size={16} color={hasActiveFilters ? "#CC5800" : "#6E3482"} />
                 {hasActiveFilters && <View style={s.filterDot} />}
               </TouchableOpacity>
               <TouchableOpacity
@@ -706,7 +706,7 @@ export default function LogMealScreen({ route, navigation }) {
                 </View>
               ))}
               <TouchableOpacity onPress={clearFilters} style={s.clearChip} accessibilityRole="button" accessibilityLabel="Clear filters">
-                <Ionicons name="close" size={11} color="#E53935" />
+                <LucideIcon name="close" size={11} color="#E53935" />
                 <Text style={s.clearChipTxt}> Clear</Text>
               </TouchableOpacity>
             </View>
@@ -793,7 +793,7 @@ export default function LogMealScreen({ route, navigation }) {
                   accessibilityRole="button"
                   accessibilityLabel="Clear selected food"
                 >
-                  <Ionicons name="close" size={14} color="rgba(255,255,255,0.6)" />
+                  <LucideIcon name="close" size={14} color="rgba(255,255,255,0.6)" />
                 </TouchableOpacity>
               </View>
 
@@ -887,7 +887,7 @@ export default function LogMealScreen({ route, navigation }) {
                     accessibilityRole="button"
                     accessibilityLabel="Close filters"
                   >
-                    <Ionicons name="close" size={14} color="#999" />
+                    <LucideIcon name="close" size={14} color="#999" />
                   </TouchableOpacity>
                 </View>
 

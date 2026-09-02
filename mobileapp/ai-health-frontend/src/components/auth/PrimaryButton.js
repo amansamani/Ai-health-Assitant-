@@ -1,6 +1,6 @@
 import { Text, Pressable, Animated, ActivityIndicator, StyleSheet } from "react-native";
 import { useRef } from "react";
-import { Ionicons } from "@expo/vector-icons";
+import LucideIcon from "../ui/LucideIcon";
 import { COLORS } from "../../constants/theme";
 
 export default function PrimaryButton({ title, onPress, loading, disabled, icon = "arrow-forward", variant = "primary" }) {
@@ -27,7 +27,7 @@ export default function PrimaryButton({ title, onPress, loading, disabled, icon 
           ) : (
             <>
               <Text style={styles.text}>{title}</Text>
-              {icon ? <Ionicons name={icon} size={18} color={COLORS.onPrimary} style={{ marginLeft: 8 }} /> : null}
+              {icon ? <LucideIcon name={icon} size={18} color={COLORS.onPrimary} style={{ marginLeft: 8 }} /> : null}
             </>
           )}
         </Animated.View>

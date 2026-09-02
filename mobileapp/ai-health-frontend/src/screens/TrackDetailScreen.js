@@ -5,7 +5,7 @@ import {
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import LucideIcon from "../components/ui/LucideIcon";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import API from "../services/api";
@@ -85,7 +85,7 @@ function BarItem({ log, type, config, index, maxVal }) {
       <Text style={styles.barDate}>
         {new Date(log.date).toLocaleDateString("en", { weekday: "short" })}
       </Text>
-      {goalPct >= 1 && <Ionicons name="checkmark-circle" size={13} color="#22C55E" style={{ marginTop: 2 }} />}
+      {goalPct >= 1 && <LucideIcon name="checkmark-circle" size={13} color="#22C55E" style={{ marginTop: 2 }} />}
     </View>
   );
 }
@@ -108,7 +108,7 @@ function LogCard({ log, type, config, index }) {
             <Text style={styles.logDate}>{dateStr}</Text>
             {pct >= 100 && (
               <View style={[styles.goalBadge, { backgroundColor: config.color + "20", borderColor: config.color + "40" }]}>
-                <Ionicons name="checkmark-circle" size={12} color={config.color} />
+                <LucideIcon name="checkmark-circle" size={12} color={config.color} />
                 <Text style={[styles.goalBadgeText, { color: config.color }]}>Goal met</Text>
               </View>
             )}
@@ -214,10 +214,10 @@ export default function TrackDetailScreen() {
                 accessibilityLabel="Go back"
                 hitSlop={8}
               >
-                <Ionicons name="chevron-back" size={20} color="#fff" />
+                <LucideIcon name="chevron-back" size={20} color="#fff" />
               </Pressable>
               <View style={styles.typeBadge}>
-                <Ionicons name={config.icon} size={13} color="#fff" />
+                <LucideIcon name={config.icon} size={13} color="#fff" />
                 <Text style={styles.typeBadgeText}>{config.label}</Text>
               </View>
             </View>
@@ -233,14 +233,14 @@ export default function TrackDetailScreen() {
               <View style={[styles.heroBarFill, { width: `${todayPct}%` }]} />
             </View>
             <View style={styles.heroBarLabelRow}>
-              {todayPct >= 100 && <Ionicons name="sparkles" size={12} color="rgba(255,255,255,0.8)" style={{ marginRight: 4 }} />}
+              {todayPct >= 100 && <LucideIcon name="sparkles" size={12} color="rgba(255,255,255,0.8)" style={{ marginRight: 4 }} />}
               <Text style={styles.heroBarLabel}>
                 {todayPct >= 100 ? "Goal complete!" : `${todayPct}% of daily goal`}
               </Text>
             </View>
 
             <View style={styles.tipWrap}>
-              <Ionicons name="bulb-outline" size={14} color="rgba(255,255,255,0.75)" style={{ marginRight: 8 }} />
+              <LucideIcon name="bulb-outline" size={14} color="rgba(255,255,255,0.75)" style={{ marginRight: 8 }} />
               <Text style={styles.tipText}>{config.tip}</Text>
             </View>
           </LinearGradient>
@@ -274,7 +274,7 @@ export default function TrackDetailScreen() {
         {logs.length === 0 && (
           <FadeSlideIn delay={200}>
             <View style={styles.emptyCard}>
-              <Ionicons name={config.icon} size={36} color={config.color} style={{ marginBottom: 12 }} />
+              <LucideIcon name={config.icon} size={36} color={config.color} style={{ marginBottom: 12 }} />
               <Text style={styles.emptyText}>No past logs yet.</Text>
               <Text style={styles.emptySub}>Keep tracking — data will appear here!</Text>
             </View>

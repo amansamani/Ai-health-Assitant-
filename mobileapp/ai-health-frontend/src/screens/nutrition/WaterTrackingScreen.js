@@ -11,7 +11,7 @@ import {
   TextInput, ActivityIndicator, Animated, Modal,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
-import { Ionicons } from "@expo/vector-icons";
+import LucideIcon from "../../components/ui/LucideIcon";
 import { SafeAreaView } from "react-native-safe-area-context";
 import API from "../../services/api";
 import { COLORS } from "../../constants/theme";
@@ -89,7 +89,7 @@ function WaterGauge({ pct, totalMl, goalMl }) {
         <Text style={g.goalTxt}>of {goalMl} ml</Text>
         {pct >= 100 && (
           <View style={g.doneRow}>
-            <Ionicons name="checkmark-circle" size={13} color="#16A34A" />
+            <LucideIcon name="checkmark-circle" size={13} color="#16A34A" />
             <Text style={g.done}>Goal reached!</Text>
           </View>
         )}
@@ -97,7 +97,7 @@ function WaterGauge({ pct, totalMl, goalMl }) {
 
       <View style={g.markers}>
         {markers.map((m) => (
-          <Ionicons
+          <LucideIcon
             key={m.pct}
             name={m.icon}
             size={16}
@@ -227,7 +227,7 @@ export default function WaterTrackingScreen() {
         {/* Header */}
         <View style={s.header}>
           <View style={s.titleRow}>
-            <Ionicons name="water" size={20} color="#1E3A5F" style={{ marginRight: 6 }} />
+            <LucideIcon name="water" size={20} color="#1E3A5F" style={{ marginRight: 6 }} />
             <Text style={s.title}>Water Intake</Text>
           </View>
           <TouchableOpacity
@@ -276,7 +276,7 @@ export default function WaterTrackingScreen() {
               accessibilityRole="button"
               accessibilityLabel={`Add ${opt.label}, ${opt.amount} milliliters`}
             >
-              <Ionicons name={opt.icon} size={24} color="#3B82F6" style={{ marginBottom: 4 }} />
+              <LucideIcon name={opt.icon} size={24} color="#3B82F6" style={{ marginBottom: 4 }} />
               <Text style={s.quickAmt}>{opt.amount} ml</Text>
               <Text style={s.quickLbl}>{opt.label}</Text>
             </TouchableOpacity>
@@ -316,7 +316,7 @@ export default function WaterTrackingScreen() {
             accessibilityLabel={`Undo last entry, ${logs[0]?.amount} milliliters`}
           >
             <View style={s.undoRow}>
-              {!undoing && <Ionicons name="arrow-undo-outline" size={14} color="#713F12" style={{ marginRight: 6 }} />}
+              {!undoing && <LucideIcon name="arrow-undo-outline" size={14} color="#713F12" style={{ marginRight: 6 }} />}
               <Text style={s.undoBtnTxt}>
                 {undoing ? "Undoing…" : `Undo last (${logs[0]?.amount} ml)`}
               </Text>
