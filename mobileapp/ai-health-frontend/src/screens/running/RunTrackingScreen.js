@@ -548,7 +548,7 @@ export default function RunTrackingScreen() {
                 <LucideIcon
                   name={a.icon}
                   size={16}
-                  color={activityType === a.key ? COLORS.onPrimary : COLORS.textDark}
+                  color={activityType === a.key ? COLORS.onPrimary : "rgba(255,255,255,0.82)"}
                 />
                 <Text
                   style={[
@@ -700,8 +700,8 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   activityChipActive: { backgroundColor: "#6D4ED6" },
-  activityChipText: { color: COLORS.textDark, fontWeight: "600", fontSize: 13 },
-  activityChipTextActive: { color: "#FFFFFF" },
+  activityChipText: { color: "rgba(255,255,255,0.82)", fontWeight: "700", fontSize: 13 },
+  activityChipTextActive: { color: "#FFFFFF", fontWeight: "800" },
   recordingBadge: {
     position: "absolute",
     top: 16,

@@ -545,9 +545,22 @@ export default function HomeScreen() {
                       style={({ pressed }) => [styles.feedMainRow, { opacity: pressed ? 0.92 : 1 }]}
                       onPress={() => profileIdentifier && router.push({ pathname: "/(app)/social/profile", params: { identifier: profileIdentifier } })}
                     >
-                    <View style={styles.feedAvatar}>
-                      <Text style={styles.feedAvatarText}>{String(run.user?.name || "U").trim().charAt(0).toUpperCase()}</Text>
-                    </View>
+                    {run.user?.hasProfilePhoto || run.user?.profileImageUpdatedAt || run.user?.profileImageUrl || run.user?.picture ? (
+                      <Image
+                        source={{
+                          uri: run.user?.hasProfilePhoto || run.user?.profileImageUpdatedAt
+                            ? `${API_BASE_URL}/user/profile/photo/${run.user._id}?v=${encodeURIComponent(run.user.profileImageUpdatedAt || "1")}`
+                            : run.user.profileImageUrl || run.user.picture,
+                          ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
+                        }}
+                        style={styles.feedAvatar}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <View style={styles.feedAvatar}>
+                        <Text style={styles.feedAvatarText}>{String(run.user?.name || "U").trim().charAt(0).toUpperCase()}</Text>
+                      </View>
+                    )}
                     <View style={{ flex: 1 }}>
                       <Text style={styles.feedName}>{run.user?.name || "Someone you follow"}</Text>
                       <Text style={styles.feedActivity}>{activityLabel} · {formatDistanceKm(run.distanceMeters)} km · {formatDuration(run.durationSeconds)}</Text>

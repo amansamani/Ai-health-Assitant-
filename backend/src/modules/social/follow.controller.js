@@ -3,7 +3,7 @@ const User = require("../../models/User");
 const Follow = require("./follow.model");
 const { getGamificationSnapshot } = require("./gamification.config");
 
-const PROFILE_FIELDS = "name username picture bio profileVisibility profileImageUpdatedAt totalXp";
+const PROFILE_FIELDS = "name username picture bio profileVisibility profileImageUrl profileImageUpdatedAt totalXp";
 
 function normalizeUsername(value) {
   return String(value || "")
@@ -22,6 +22,7 @@ function publicUser(user) {
     name: user.name,
     username: user.username,
     picture: user.picture || null,
+    profileImageUrl: user.profileImageUrl || null,
     bio: user.bio || "",
     profileVisibility: user.profileVisibility,
     hasProfilePhoto: Boolean(user.profileImageUpdatedAt),
@@ -150,16 +151,41 @@ exports.unfollowUser = async (req, res) => {
   }
 };
 
+function paginationParams(req) {
+  const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
+  const limit = Math.min(50, Math.max(10, Number.parseInt(req.query.limit, 10) || 20));
+  return { page, limit, skip: (page - 1) * limit };
+}
+
+async function paginatedConnections(filter, populatePath, req) {
+  const { page, limit, skip } = paginationParams(req);
+  const [total, rows] = await Promise.all([
+    Follow.countDocuments(filter),
+    Follow.find(filter)
+      .populate(populatePath, PROFILE_FIELDS)
+      .sort({ createdAt: -1, _id: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+  ]);
+
+  const items = rows
+    .filter((row) => row[populatePath])
+    .map((row) => ({ ...publicUser(row[populatePath]), since: row.createdAt }));
+
+  return {
+    items,
+    total,
+    page,
+    limit,
+    hasMore: skip + items.length < total,
+  };
+}
+
 exports.listFollowers = async (req, res) => {
   try {
-    const rows = await Follow.find({ follower: req.user.id, status: "accepted" })
-      .populate("following", PROFILE_FIELDS)
-      .sort({ createdAt: -1 })
-      .lean();
-
-    return res.status(200).json(
-      rows.filter((row) => row.following).map((row) => ({ ...publicUser(row.following), since: row.createdAt }))
-    );
+    const data = await paginatedConnections({ follower: req.user.id, status: "accepted" }, "following", req);
+    return res.status(200).json(data);
   } catch (err) {
     logger.error({ err }, "List following error");
     return res.status(500).json({ message: "Failed to load following" });
@@ -168,20 +194,13 @@ exports.listFollowers = async (req, res) => {
 
 exports.listFollowing = async (req, res) => {
   try {
-    const rows = await Follow.find({ following: req.user.id, status: "accepted" })
-      .populate("follower", PROFILE_FIELDS)
-      .sort({ createdAt: -1 })
-      .lean();
-
-    return res.status(200).json(
-      rows.filter((row) => row.follower).map((row) => ({ ...publicUser(row.follower), since: row.createdAt }))
-    );
+    const data = await paginatedConnections({ following: req.user.id, status: "accepted" }, "follower", req);
+    return res.status(200).json(data);
   } catch (err) {
     logger.error({ err }, "List followers error");
     return res.status(500).json({ message: "Failed to load followers" });
   }
 };
-
 
 async function canViewConnections(targetUserId, viewerId) {
   if (String(targetUserId) === String(viewerId)) return true;
@@ -205,14 +224,8 @@ exports.listUserFollowers = async (req, res) => {
     if (canView === null) return res.status(404).json({ message: "User not found" });
     if (!canView) return res.status(403).json({ message: "Followers are private" });
 
-    const rows = await Follow.find({ following: req.params.userId, status: "accepted" })
-      .populate("follower", PROFILE_FIELDS)
-      .sort({ createdAt: -1 })
-      .lean();
-
-    return res.status(200).json(
-      rows.filter((row) => row.follower).map((row) => ({ ...publicUser(row.follower), since: row.createdAt }))
-    );
+    const data = await paginatedConnections({ following: req.params.userId, status: "accepted" }, "follower", req);
+    return res.status(200).json(data);
   } catch (err) {
     logger.error({ err }, "List user followers error");
     return res.status(500).json({ message: "Failed to load followers" });
@@ -225,14 +238,8 @@ exports.listUserFollowing = async (req, res) => {
     if (canView === null) return res.status(404).json({ message: "User not found" });
     if (!canView) return res.status(403).json({ message: "Following is private" });
 
-    const rows = await Follow.find({ follower: req.params.userId, status: "accepted" })
-      .populate("following", PROFILE_FIELDS)
-      .sort({ createdAt: -1 })
-      .lean();
-
-    return res.status(200).json(
-      rows.filter((row) => row.following).map((row) => ({ ...publicUser(row.following), since: row.createdAt }))
-    );
+    const data = await paginatedConnections({ follower: req.params.userId, status: "accepted" }, "following", req);
+    return res.status(200).json(data);
   } catch (err) {
     logger.error({ err }, "List user following error");
     return res.status(500).json({ message: "Failed to load following" });

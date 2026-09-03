@@ -133,24 +133,29 @@ export default function PublicProfileScreen() {
         <FadeSlideIn delay={90}>
           <View style={styles.statsCard}>
             <Pressable
-              style={styles.statTap}
+              style={({ pressed }) => [styles.statTap, pressed && styles.statTapPressed]}
               onPress={() => router.push({ pathname: "/(app)/social/connections", params: { identifier: profile.username || profile._id, type: "followers" } })}
               accessibilityRole="button"
               accessibilityLabel={`Open ${profile.followerCount ?? 0} followers`}
             >
-              <Stat value={profile.followerCount ?? 0} label="Followers" />
+              <Text style={styles.statValue}>{profile.followerCount ?? 0}</Text>
+              <Text style={styles.statLabel}>Followers</Text>
             </Pressable>
             <View style={styles.divider} />
             <Pressable
-              style={styles.statTap}
+              style={({ pressed }) => [styles.statTap, pressed && styles.statTapPressed]}
               onPress={() => router.push({ pathname: "/(app)/social/connections", params: { identifier: profile.username || profile._id, type: "following" } })}
               accessibilityRole="button"
               accessibilityLabel={`Open ${profile.followingCount ?? 0} following`}
             >
-              <Stat value={profile.followingCount ?? 0} label="Following" />
+              <Text style={styles.statValue}>{profile.followingCount ?? 0}</Text>
+              <Text style={styles.statLabel}>Following</Text>
             </Pressable>
             <View style={styles.divider} />
-            <Stat value={profile.profileVisibility === "public" ? "Public" : "Private"} label="Visibility" />
+            <View style={styles.statTap}>
+              <Text style={[styles.statValue, styles.visibilityValue]} numberOfLines={1}>{profile.profileVisibility === "public" ? "Public" : "Private"}</Text>
+              <Text style={styles.statLabel}>Visibility</Text>
+            </View>
           </View>
         </FadeSlideIn>
         <FadeSlideIn delay={105}>
@@ -230,12 +235,13 @@ const styles = StyleSheet.create({
   rankStripMeta: { marginTop: 2, fontSize: 11, color: COLORS.textMuted, fontWeight: "700" },
   rankPill: { paddingHorizontal: 9, paddingVertical: 6, borderRadius: 10, backgroundColor: COLORS.surfaceMuted },
   rankPillText: { color: COLORS.primary, fontSize: 10.5, fontWeight: "800" },
-  statsCard: { marginTop: 12, flexDirection: "row", alignItems: "center", backgroundColor: COLORS.surface, borderRadius: 16, borderWidth: 1, borderColor: COLORS.border, paddingVertical: 14 },
-  statTap: { flex: 1, alignItems: "center" },
-  stat: { alignItems: "center" },
-  statValue: { fontSize: 17, fontWeight: "800", color: COLORS.textDark },
-  statLabel: { marginTop: 2, fontSize: 10.5, color: COLORS.textMuted, fontWeight: "700" },
-  divider: { width: 1, height: 28, backgroundColor: COLORS.border },
+  statsCard: { marginTop: 12, flexDirection: "row", alignItems: "stretch", backgroundColor: COLORS.surface, borderRadius: 18, borderWidth: 1, borderColor: COLORS.border, paddingVertical: 8, minHeight: 76 },
+  statTap: { flex: 1, minWidth: 0, alignItems: "center", justifyContent: "center", paddingHorizontal: 6, borderRadius: 12 },
+  statTapPressed: { backgroundColor: COLORS.surfaceMuted },
+  statValue: { fontSize: 17, fontWeight: "850", color: COLORS.textDark, maxWidth: "100%" },
+  visibilityValue: { fontSize: 14.5 },
+  statLabel: { marginTop: 4, fontSize: 10.5, color: COLORS.textMuted, fontWeight: "750", letterSpacing: 0.1 },
+  divider: { width: 1, alignSelf: "center", height: 34, backgroundColor: COLORS.border },
   infoCard: { marginTop: 12, backgroundColor: COLORS.surface, borderRadius: 20, borderWidth: 1, borderColor: COLORS.border, padding: 18, flexDirection: "row" },
   infoTitle: { fontSize: 15, fontWeight: "850", color: COLORS.textDark },
   infoText: { marginTop: 5, color: COLORS.textMuted, fontSize: 12.5, lineHeight: 18, fontWeight: "600" },

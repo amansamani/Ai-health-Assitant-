@@ -27,7 +27,7 @@ const {
 // client, not a real-world limit.
 const MAX_ROUTE_POINTS = 20000;
 
-const PUBLIC_USER_FIELDS = "name username picture profileImageUrl";
+const PUBLIC_USER_FIELDS = "name username picture profileImageUrl profileImageUpdatedAt";
 
 function computePaceSecPerKm(distanceMeters, durationSeconds) {
   if (!distanceMeters || distanceMeters <= 0) return 0;
