@@ -495,7 +495,7 @@ export default function RunTrackingScreen() {
               </View>
 
               <Text style={styles.mapFallbackTitle}>
-                {permissionDenied ? "Location access needed" : phase === "idle" ? "Ready for your run?" : "Preparing your route"}
+                {permissionDenied ? "Location access needed" : phase === "idle" ? `Ready for your ${activityType === "cycle" ? "ride" : activityType === "walk" ? "walk" : "run"}?` : "Preparing your route"}
               </Text>
               <Text style={styles.mapFallbackText}>
                 {permissionDenied
@@ -514,8 +514,8 @@ export default function RunTrackingScreen() {
                     <LucideIcon name="play" size={19} color={COLORS.onPrimary} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.heroStartTitle}>Start Run</Text>
-                    <Text style={styles.heroStartSub}>Begin live tracking</Text>
+                    <Text style={styles.heroStartTitle}>{activityType === "cycle" ? "Start Cycling" : activityType === "walk" ? "Start Walk" : "Start Run"}</Text>
+                    <Text style={styles.heroStartSub}>{activityType === "cycle" ? "Begin live cycling" : activityType === "walk" ? "Begin live walking" : "Begin live tracking"}</Text>
                   </View>
                   <LucideIcon name="chevron-forward" size={20} color={COLORS.onPrimary} />
                 </Pressable>
@@ -653,12 +653,12 @@ const styles = StyleSheet.create({
   runHeroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(5, 12, 16, 0.48)" },
   runHeroContent: { width: "89%", maxWidth: 370, alignItems: "stretch", padding: 22, borderRadius: 30, backgroundColor: "rgba(6, 16, 20, 0.66)", borderWidth: 1, borderColor: "rgba(255,255,255,0.17)", overflow: "hidden" },
   runHeroTopLine: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 18 },
-  activityHeroBadge: { flexDirection: "row", alignItems: "center", gap: 7, paddingHorizontal: 10, paddingVertical: 7, borderRadius: 999, backgroundColor: "rgba(152,230,37,0.12)", borderWidth: 1, borderColor: "rgba(152,230,37,0.24)" },
-  activityHeroBadgeText: { color: COLORS.primary, fontSize: 10, fontWeight: "900", letterSpacing: 1.1 },
+  activityHeroBadge: { flexDirection: "row", alignItems: "center", gap: 7, paddingHorizontal: 10, paddingVertical: 7, borderRadius: 999, backgroundColor: "rgba(112,84,220,0.18)", borderWidth: 1, borderColor: "rgba(160,136,255,0.34)" },
+  activityHeroBadgeText: { color: "#C8B8FF", fontSize: 10, fontWeight: "900", letterSpacing: 1.1 },
   liveTag: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 9, paddingVertical: 6, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.08)" },
   liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: "#A3E635" },
   liveTagText: { color: "rgba(255,255,255,0.7)", fontSize: 9, fontWeight: "900", letterSpacing: 1 },
-  mapFallbackIcon: { width: 52, height: 52, borderRadius: 18, backgroundColor: "rgba(152, 230, 37, 0.16)", borderWidth: 1, borderColor: "rgba(152,230,37,0.24)", alignItems: "center", justifyContent: "center", marginBottom: 12 },
+  mapFallbackIcon: { width: 52, height: 52, borderRadius: 18, backgroundColor: "rgba(112, 84, 220, 0.18)", borderWidth: 1, borderColor: "rgba(160,136,255,0.34)", alignItems: "center", justifyContent: "center", marginBottom: 12 },
   mapFallbackTitle: { color: "#fff", textAlign: "left", fontSize: 28, lineHeight: 32, fontWeight: "900", letterSpacing: -0.8 },
   mapFallbackText: { marginTop: 9, color: "rgba(255,255,255,0.76)", textAlign: "left", fontSize: 13, lineHeight: 19, maxWidth: 330 },
   heroStartBtn: { marginTop: 20, minHeight: 66, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 10, flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: COLORS.primary, shadowColor: "#000", shadowOpacity: 0.22, shadowRadius: 14, shadowOffset: { width: 0, height: 7 }, elevation: 5 },
@@ -684,9 +684,11 @@ const styles = StyleSheet.create({
     bottom: 16,
     alignSelf: "center",
     flexDirection: "row",
-    backgroundColor: COLORS.card,
+    backgroundColor: "rgba(27, 18, 58, 0.96)",
     borderRadius: 20,
     padding: 4,
+    borderWidth: 1,
+    borderColor: "rgba(160,136,255,0.18)",
     ...SHADOW,
   },
   activityChip: {
@@ -697,9 +699,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 20,
   },
-  activityChipActive: { backgroundColor: COLORS.primary },
+  activityChipActive: { backgroundColor: "#6D4ED6" },
   activityChipText: { color: COLORS.textDark, fontWeight: "600", fontSize: 13 },
-  activityChipTextActive: { color: COLORS.onPrimary },
+  activityChipTextActive: { color: "#FFFFFF" },
   recordingBadge: {
     position: "absolute",
     top: 16,

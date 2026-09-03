@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
@@ -19,6 +19,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import LucideIcon from "../../components/ui/LucideIcon";
 import RunRouteArt from "../../components/RunRouteArt";
 import { COLORS, SHADOW } from "../../constants/theme";
+import { AuthContext } from "../../context/AuthContext";
 import { getRunById } from "../../services/runService";
 import { formatDistanceKm, formatDuration, formatPace, paceSecPerKm } from "../../utils/runMath";
 
@@ -62,6 +63,7 @@ function StatChip({ icon, label, value }) {
 export default function ShareActivityScreen() {
   const router = useRouter();
   const { runId } = useLocalSearchParams();
+  const { user: viewer } = useContext(AuthContext);
   const shareRef = useRef(null);
   const [run, setRun] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -108,6 +110,9 @@ export default function ShareActivityScreen() {
   const activityLabel = activityType === "cycle" ? "Cycling" : activityType === "walk" ? "Walk" : "Running";
   const activityIcon = activityType === "cycle" ? "bicycle-outline" : "footsteps-outline";
   const person = run?.user?.name || "FitLip athlete";
+  const viewerName = viewer?.name || "You";
+  const isOwner = Boolean(run?.isOwner) || Boolean(viewer?._id && run?.user?._id && String(viewer._id) === String(run.user._id));
+  const sharedByOther = !isOwner;
   const avatarUri = run?.user?.picture || run?.user?.profileImageUrl || null;
   const heroSource = run?.photoUrl ? { uri: run.photoUrl } : heroImage;
   const dateLabel = run?.startedAt
@@ -174,9 +179,11 @@ export default function ShareActivityScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.pageTitle}>Make it yours.</Text>
+        <Text style={styles.pageTitle}>{sharedByOther ? "Share their achievement." : "Make it yours."}</Text>
         <Text style={styles.pageSubtitle}>
-          A share-ready card for Instagram, Snapchat, WhatsApp — or anywhere else that takes an image.
+          {sharedByOther
+            ? `Share ${person}\'s activity with your friends, or post it to Instagram, Snapchat, WhatsApp, and more.`
+            : "A share-ready card for Instagram, Snapchat, WhatsApp — or anywhere else that takes an image."}
         </Text>
 
         <View style={styles.formatSwitch}>
@@ -208,7 +215,15 @@ export default function ShareActivityScreen() {
                 </LinearGradient>
                 <Text style={styles.brandWordmark}>FITLIP</Text>
               </View>
-              <Text style={styles.cardDate}>{dateLabel}</Text>
+              <View style={styles.cardDateBlock}>
+                {sharedByOther && (
+                  <View style={styles.sharedBadge}>
+                    <LucideIcon name="share-outline" size={9} color={CARD.ink} />
+                    <Text style={styles.sharedBadgeText}>SHARED BY {viewerName.toUpperCase()}</Text>
+                  </View>
+                )}
+                <Text style={styles.cardDate}>{dateLabel}</Text>
+              </View>
             </View>
 
             <View style={[styles.heroBlock, !isStory && styles.heroBlockCentered]}>
@@ -250,10 +265,15 @@ export default function ShareActivityScreen() {
                 )}
                 <View>
                   <Text style={styles.athleteName} numberOfLines={1}>{person}</Text>
-                  <Text style={styles.athleteSub}>Shared from FitLip</Text>
+                  <Text style={styles.athleteSub}>{sharedByOther ? "Original athlete" : "Your activity"}</Text>
                 </View>
               </View>
-              <Text style={styles.hashtag}>#MoveWithFitLip</Text>
+              <View style={styles.footerRight}>
+                {sharedByOther && (
+                  <Text style={styles.sharedByLine}>Shared by {viewerName}</Text>
+                )}
+                <Text style={styles.hashtag}>#MoveWithFitLip</Text>
+              </View>
             </View>
           </View>
         </Animated.View>
@@ -328,11 +348,14 @@ const styles = StyleSheet.create({
   cardStory: { aspectRatio: 9 / 16 },
   cardPost: { aspectRatio: 1 },
 
-  cardTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  cardTopRow: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" },
   brandMark: { flexDirection: "row", alignItems: "center", gap: 7 },
   brandGlyph: { width: 22, height: 22, borderRadius: 11, alignItems: "center", justifyContent: "center" },
   brandWordmark: { color: "#fff", fontSize: 11, fontWeight: "900", letterSpacing: 1.6 },
+  cardDateBlock: { alignItems: "flex-end", gap: 4 },
   cardDate: { color: CARD.inkFaint, fontSize: 10.5, fontWeight: "700" },
+  sharedBadge: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "rgba(255,255,255,0.10)", borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", borderRadius: 999, paddingHorizontal: 7, paddingVertical: 4 },
+  sharedBadgeText: { color: CARD.inkDim, fontSize: 7.5, fontWeight: "900", letterSpacing: 0.6 },
 
   heroBlock: { marginTop: 16 },
   heroBlockCentered: { alignItems: "center", marginTop: 10 },
@@ -363,6 +386,8 @@ const styles = StyleSheet.create({
   avatarText: { color: "#fff", fontSize: 10, fontWeight: "900" },
   athleteName: { color: "#fff", fontSize: 10.5, fontWeight: "800", maxWidth: 140 },
   athleteSub: { color: "rgba(255,255,255,0.52)", fontSize: 8.5, marginTop: 1, fontWeight: "600" },
+  footerRight: { alignItems: "flex-end", gap: 3 },
+  sharedByLine: { color: CARD.inkFaint, fontSize: 8.2, fontWeight: "700" },
   hashtag: { color: CARD.glow, fontSize: 8.5, fontWeight: "900" },
 
   sharePanel: { marginTop: 18, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, borderRadius: 22, padding: 16 },
