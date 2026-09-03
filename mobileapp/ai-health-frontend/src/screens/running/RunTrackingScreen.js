@@ -481,24 +481,48 @@ export default function RunTrackingScreen() {
           >
             <View style={styles.runHeroOverlay} />
             <View style={styles.runHeroContent}>
-              <View style={styles.mapFallbackIcon}>
-                <LucideIcon name={permissionDenied ? "location-outline" : "walk-outline"} size={24} color={COLORS.primary} />
+              <View style={styles.runHeroTopLine}>
+                <View style={styles.activityHeroBadge}>
+                  <LucideIcon name={activityType === "cycle" ? "bicycle" : activityType === "walk" ? "walk" : "footsteps"} size={15} color={COLORS.primary} />
+                  <Text style={styles.activityHeroBadgeText}>
+                    {activityType === "cycle" ? "CYCLING" : activityType === "walk" ? "WALK" : "RUN"}
+                  </Text>
+                </View>
+                <View style={styles.liveTag}>
+                  <View style={styles.liveDot} />
+                  <Text style={styles.liveTagText}>READY</Text>
+                </View>
               </View>
+
               <Text style={styles.mapFallbackTitle}>
-                {permissionDenied ? "Location access needed" : phase === "idle" ? "Ready to start" : "Preparing your route"}
+                {permissionDenied ? "Location access needed" : phase === "idle" ? "Ready for your run?" : "Preparing your route"}
               </Text>
               <Text style={styles.mapFallbackText}>
                 {permissionDenied
-                  ? "Enable precise location access in Settings to track your route."
+                  ? "Enable precise location to track distance, pace and your route."
                   : phase === "idle"
-                  ? "Choose an activity and tap Start to begin tracking."
-                  : "Your route map is loading. Your distance and time are still being recorded."}
+                  ? "Track your route, pace and progress in real time."
+                  : "Your route is loading. Distance and time are still being recorded."}
               </Text>
-              {currentRegion && !mapReady ? (
+
+              {phase === "idle" && !permissionDenied ? (
                 <Pressable
-                  style={styles.mapRetryBtn}
-                  onPress={() => setMapReady(true)}
+                  style={({ pressed }) => [styles.heroStartBtn, { transform: [{ scale: pressed ? 0.98 : 1 }] }]}
+                  onPress={handleStart}
                 >
+                  <View style={styles.heroStartIcon}>
+                    <LucideIcon name="play" size={19} color={COLORS.onPrimary} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.heroStartTitle}>Start Run</Text>
+                    <Text style={styles.heroStartSub}>Begin live tracking</Text>
+                  </View>
+                  <LucideIcon name="chevron-forward" size={20} color={COLORS.onPrimary} />
+                </Pressable>
+              ) : null}
+
+              {currentRegion && !mapReady ? (
+                <Pressable style={styles.mapRetryBtn} onPress={() => setMapReady(true)}>
                   <Text style={styles.mapRetryText}>Show route</Text>
                 </Pressable>
               ) : null}
@@ -573,13 +597,6 @@ export default function RunTrackingScreen() {
         </View>
 
         <View style={styles.controls}>
-          {phase === "idle" && (
-            <Pressable style={[styles.controlBtn, styles.startBtn]} onPress={handleStart}>
-              <LucideIcon name="play" size={26} color={COLORS.onPrimary} />
-              <Text style={styles.controlBtnText}>Start</Text>
-            </Pressable>
-          )}
-
           {phase === "running" && (
             <>
               <Pressable style={[styles.controlBtn, styles.pauseBtn]} onPress={handlePause}>
@@ -634,11 +651,21 @@ const styles = StyleSheet.create({
   mapFallback: { alignItems: "center", justifyContent: "center", overflow: "hidden" },
   runHeroImage: { transform: [{ scale: 1.06 }] },
   runHeroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(5, 12, 16, 0.48)" },
-  runHeroContent: { width: "88%", maxWidth: 360, alignItems: "center", padding: 24, borderRadius: 28, backgroundColor: "rgba(8, 18, 24, 0.58)", borderWidth: 1, borderColor: "rgba(255,255,255,0.16)", overflow: "hidden" },
+  runHeroContent: { width: "89%", maxWidth: 370, alignItems: "stretch", padding: 22, borderRadius: 30, backgroundColor: "rgba(6, 16, 20, 0.66)", borderWidth: 1, borderColor: "rgba(255,255,255,0.17)", overflow: "hidden" },
+  runHeroTopLine: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 18 },
+  activityHeroBadge: { flexDirection: "row", alignItems: "center", gap: 7, paddingHorizontal: 10, paddingVertical: 7, borderRadius: 999, backgroundColor: "rgba(152,230,37,0.12)", borderWidth: 1, borderColor: "rgba(152,230,37,0.24)" },
+  activityHeroBadgeText: { color: COLORS.primary, fontSize: 10, fontWeight: "900", letterSpacing: 1.1 },
+  liveTag: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 9, paddingVertical: 6, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.08)" },
+  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: "#A3E635" },
+  liveTagText: { color: "rgba(255,255,255,0.7)", fontSize: 9, fontWeight: "900", letterSpacing: 1 },
   mapFallbackIcon: { width: 52, height: 52, borderRadius: 18, backgroundColor: "rgba(152, 230, 37, 0.16)", borderWidth: 1, borderColor: "rgba(152,230,37,0.24)", alignItems: "center", justifyContent: "center", marginBottom: 12 },
-  mapFallbackTitle: { color: "#fff", textAlign: "center", fontSize: 24, fontWeight: "850" },
-  mapFallbackText: { marginTop: 8, color: "rgba(255,255,255,0.82)", textAlign: "center", fontSize: 13, lineHeight: 19, maxWidth: 310 },
-  mapRetryBtn: { marginTop: 14, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, backgroundColor: COLORS.primaryDark },
+  mapFallbackTitle: { color: "#fff", textAlign: "left", fontSize: 28, lineHeight: 32, fontWeight: "900", letterSpacing: -0.8 },
+  mapFallbackText: { marginTop: 9, color: "rgba(255,255,255,0.76)", textAlign: "left", fontSize: 13, lineHeight: 19, maxWidth: 330 },
+  heroStartBtn: { marginTop: 20, minHeight: 66, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 10, flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: COLORS.primary, shadowColor: "#000", shadowOpacity: 0.22, shadowRadius: 14, shadowOffset: { width: 0, height: 7 }, elevation: 5 },
+  heroStartIcon: { width: 42, height: 42, borderRadius: 14, backgroundColor: "rgba(0,0,0,0.16)", alignItems: "center", justifyContent: "center" },
+  heroStartTitle: { color: COLORS.onPrimary, fontSize: 16, fontWeight: "900", letterSpacing: -0.2 },
+  heroStartSub: { marginTop: 2, color: "rgba(255,255,255,0.78)", fontSize: 10.5, fontWeight: "700" },
+  mapRetryBtn: { marginTop: 14, alignSelf: "center", paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.1)" },
   mapRetryText: { color: COLORS.onPrimary, fontSize: 12, fontWeight: "800" },
   closeBtn: {
     position: "absolute",
@@ -715,5 +742,5 @@ const styles = StyleSheet.create({
   startBtn: { backgroundColor: COLORS.primary },
   finishBtn: { backgroundColor: COLORS.error },
   pauseBtn: { backgroundColor: COLORS.surfaceMuted, paddingHorizontal: 20 },
-  controlBtnText: { color: COLORS.onPrimary, fontWeight: "700", fontSize: 16 },
+  controlBtnText: { color: COLORS.onPrimary, fontWeight: "800", fontSize: 15 },
 });

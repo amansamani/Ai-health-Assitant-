@@ -65,6 +65,7 @@ export default function AppLayout() {
       <Stack.Screen name="nutrition/progress" options={{ title: "Progress" }} />
       <Stack.Screen name="social/index" options={{ animation: "slide_from_right", animationDuration: 180 }} />
       <Stack.Screen name="social/profile" options={{ animation: "slide_from_right", animationDuration: 180 }} />
+      <Stack.Screen name="social/connections" options={{ animation: "slide_from_right", animationDuration: 180 }} />
       <Stack.Screen name="social/friends" options={{ animation: "slide_from_right", animationDuration: 180 }} />
       <Stack.Screen name="social/duels" options={{ animation: "slide_from_right", animationDuration: 180 }} />
       <Stack.Screen name="social/create-duel" options={{ animation: "slide_from_bottom", animationDuration: 200 }} />

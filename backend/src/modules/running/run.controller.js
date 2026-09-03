@@ -180,7 +180,16 @@ exports.getMyRuns = async (req, res) => {
       RunLog.countDocuments({ user: req.user.id }),
     ]);
 
-    return res.status(200).json({ runs, total, page, limit });
+    return res.status(200).json({
+      runs: runs.map((run) => ({
+        ...run,
+        likesCount: Array.isArray(run.likes) ? run.likes.length : 0,
+        likedByMe: (run.likes || []).some((id) => String(id) === String(req.user.id)),
+      })),
+      total,
+      page,
+      limit,
+    });
   } catch (error) {
     logger.error({ err: error }, "Get my runs error");
     return res.status(500).json({ message: "Failed to fetch runs" });
@@ -232,6 +241,7 @@ exports.getUserRuns = async (req, res) => {
     return res.status(200).json({
       runs: runs.map((run) => ({
         ...run,
+        likesCount: Array.isArray(run.likes) ? run.likes.length : 0,
         likedByMe: (run.likes || []).some((id) => String(id) === viewerId),
       })),
       total,
@@ -276,6 +286,7 @@ exports.getRunById = async (req, res) => {
 
     return res.status(200).json({
       ...run,
+      likesCount: Array.isArray(run.likes) ? run.likes.length : 0,
       isOwner,
       likedByMe: (run.likes || []).some(
         (id) => String(id) === String(req.user.id)
@@ -333,6 +344,10 @@ exports.getFeed = async (req, res) => {
 
     const runsWithLikeState = runs.map((run) => ({
       ...run,
+      // Do not rely on a Mongoose virtual after a lean query. Persisted likes
+      // are the source of truth and this explicit count guarantees that the
+      // count survives app restarts/background reloads.
+      likesCount: Array.isArray(run.likes) ? run.likes.length : 0,
       likedByMe: (run.likes || []).some(
         (id) => String(id) === String(req.user.id)
       ),

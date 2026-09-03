@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   Platform,
+  AppState,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -21,7 +22,7 @@ import RunRouteArt from "../../components/RunRouteArt";
 
 import { COLORS, SHADOW } from "../../constants/theme";
 import Avatar from "../../components/Avatar";
-import { getRunFeed, toggleRunLike } from "../../services/runService";
+import { getRunFeed, toggleRunLike, syncPendingRunLikes } from "../../services/runService";
 import { formatDuration, formatDistanceKm, formatPace, paceSecPerKm } from "../../utils/runMath";
 
 const ACTIVITY_META = {
@@ -132,11 +133,13 @@ export default function RunFeedScreen() {
   const [runs, setRuns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const likeInFlightRef = useRef(new Set());
 
   const load = useCallback(async () => {
     try {
       const data = await getRunFeed(1, 20);
-      setRuns(data.runs || []);
+      const syncedRuns = await syncPendingRunLikes(data.runs || []);
+      setRuns(syncedRuns);
     } catch {
       // keep whatever's already on screen
     } finally {
@@ -151,23 +154,49 @@ export default function RunFeedScreen() {
     }, [load])
   );
 
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") load();
+    });
+    return () => subscription.remove();
+  }, [load]);
+
   const handleShare = (run) => {
     router.push({ pathname: "/(app)/share-activity", params: { runId: run._id } });
   };
 
   const handleToggleLike = async (run) => {
-    // Optimistic — feed feel should be instant, like every other social app.
+    if (!run?._id || likeInFlightRef.current.has(run._id)) return;
+    likeInFlightRef.current.add(run._id);
+
+    const previousLiked = !!run.likedByMe;
+    const previousCount = Number(run.likesCount || 0);
+
+    // Optimistic UI, then reconcile from the server response so state survives
+    // navigation/backgrounding and cannot drift from the DB.
     setRuns((prev) =>
       prev.map((r) =>
         r._id === run._id
-          ? { ...r, likedByMe: !r.likedByMe, likesCount: (r.likesCount || 0) + (r.likedByMe ? -1 : 1) }
+          ? { ...r, likedByMe: !previousLiked, likesCount: Math.max(0, previousCount + (previousLiked ? -1 : 1)) }
           : r
       )
     );
+
     try {
-      await toggleRunLike(run._id);
+      const result = await toggleRunLike(run._id, !previousLiked);
+      const liked = Boolean(result?.liked);
+      const likesCount = Number(result?.likesCount);
+      setRuns((prev) =>
+        prev.map((r) =>
+          r._id === run._id
+            ? { ...r, likedByMe: liked, likesCount: Number.isFinite(likesCount) ? likesCount : r.likesCount }
+            : r
+        )
+      );
     } catch {
-      load(); // reconcile on failure
+      load();
+    } finally {
+      likeInFlightRef.current.delete(run._id);
     }
   };
 

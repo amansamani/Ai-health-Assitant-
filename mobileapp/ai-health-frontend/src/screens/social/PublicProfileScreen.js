@@ -132,9 +132,23 @@ export default function PublicProfileScreen() {
 
         <FadeSlideIn delay={90}>
           <View style={styles.statsCard}>
-            <Stat value={profile.followerCount ?? 0} label="Followers" />
+            <Pressable
+              style={styles.statTap}
+              onPress={() => router.push({ pathname: "/(app)/social/connections", params: { identifier: profile.username || profile._id, type: "followers" } })}
+              accessibilityRole="button"
+              accessibilityLabel={`Open ${profile.followerCount ?? 0} followers`}
+            >
+              <Stat value={profile.followerCount ?? 0} label="Followers" />
+            </Pressable>
             <View style={styles.divider} />
-            <Stat value={profile.followingCount ?? 0} label="Following" />
+            <Pressable
+              style={styles.statTap}
+              onPress={() => router.push({ pathname: "/(app)/social/connections", params: { identifier: profile.username || profile._id, type: "following" } })}
+              accessibilityRole="button"
+              accessibilityLabel={`Open ${profile.followingCount ?? 0} following`}
+            >
+              <Stat value={profile.followingCount ?? 0} label="Following" />
+            </Pressable>
             <View style={styles.divider} />
             <Stat value={profile.profileVisibility === "public" ? "Public" : "Private"} label="Visibility" />
           </View>
@@ -217,7 +231,8 @@ const styles = StyleSheet.create({
   rankPill: { paddingHorizontal: 9, paddingVertical: 6, borderRadius: 10, backgroundColor: COLORS.surfaceMuted },
   rankPillText: { color: COLORS.primary, fontSize: 10.5, fontWeight: "800" },
   statsCard: { marginTop: 12, flexDirection: "row", alignItems: "center", backgroundColor: COLORS.surface, borderRadius: 16, borderWidth: 1, borderColor: COLORS.border, paddingVertical: 14 },
-  stat: { flex: 1, alignItems: "center" },
+  statTap: { flex: 1, alignItems: "center" },
+  stat: { alignItems: "center" },
   statValue: { fontSize: 17, fontWeight: "800", color: COLORS.textDark },
   statLabel: { marginTop: 2, fontSize: 10.5, color: COLORS.textMuted, fontWeight: "700" },
   divider: { width: 1, height: 28, backgroundColor: COLORS.border },

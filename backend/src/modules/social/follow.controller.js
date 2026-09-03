@@ -182,6 +182,63 @@ exports.listFollowing = async (req, res) => {
   }
 };
 
+
+async function canViewConnections(targetUserId, viewerId) {
+  if (String(targetUserId) === String(viewerId)) return true;
+
+  const target = await User.findById(targetUserId).select("profileVisibility").lean();
+  if (!target) return null;
+  if (target.profileVisibility === "public") return true;
+
+  return Boolean(
+    await Follow.exists({
+      follower: viewerId,
+      following: targetUserId,
+      status: "accepted",
+    })
+  );
+}
+
+exports.listUserFollowers = async (req, res) => {
+  try {
+    const canView = await canViewConnections(req.params.userId, req.user.id);
+    if (canView === null) return res.status(404).json({ message: "User not found" });
+    if (!canView) return res.status(403).json({ message: "Followers are private" });
+
+    const rows = await Follow.find({ following: req.params.userId, status: "accepted" })
+      .populate("follower", PROFILE_FIELDS)
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return res.status(200).json(
+      rows.filter((row) => row.follower).map((row) => ({ ...publicUser(row.follower), since: row.createdAt }))
+    );
+  } catch (err) {
+    logger.error({ err }, "List user followers error");
+    return res.status(500).json({ message: "Failed to load followers" });
+  }
+};
+
+exports.listUserFollowing = async (req, res) => {
+  try {
+    const canView = await canViewConnections(req.params.userId, req.user.id);
+    if (canView === null) return res.status(404).json({ message: "User not found" });
+    if (!canView) return res.status(403).json({ message: "Following is private" });
+
+    const rows = await Follow.find({ follower: req.params.userId, status: "accepted" })
+      .populate("following", PROFILE_FIELDS)
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return res.status(200).json(
+      rows.filter((row) => row.following).map((row) => ({ ...publicUser(row.following), since: row.createdAt }))
+    );
+  } catch (err) {
+    logger.error({ err }, "List user following error");
+    return res.status(500).json({ message: "Failed to load following" });
+  }
+};
+
 exports.listFollowRequests = async (req, res) => {
   try {
     const rows = await Follow.find({ following: req.user.id, status: "pending" })

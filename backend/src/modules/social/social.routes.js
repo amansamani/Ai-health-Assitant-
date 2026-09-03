@@ -14,6 +14,8 @@ const gamification = require("./gamification.controller");
 // ── Social profiles / follow ────────────────────────────────────────────────
 router.get("/discover", auth, follow.discoverProfiles);
 router.get("/profile/:identifier", auth, follow.getPublicProfile);
+router.get("/profile/:userId/followers", auth, follow.listUserFollowers);
+router.get("/profile/:userId/following", auth, follow.listUserFollowing);
 router.post("/follow/:userId", auth, follow.followUser);
 router.delete("/follow/:userId", auth, follow.unfollowUser);
 router.get("/following", auth, follow.listFollowers);

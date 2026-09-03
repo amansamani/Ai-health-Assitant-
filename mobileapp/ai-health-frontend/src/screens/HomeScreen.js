@@ -8,6 +8,7 @@ import {
   Dimensions,
   Image,
   ActivityIndicator,
+  AppState,
 } from "react-native";
 import { useState, useCallback, useContext, useRef, useEffect, useMemo } from "react";
 import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
@@ -23,7 +24,7 @@ import { StepsIcon, SleepIcon, ManualLogIcon, MotivationSkyIllustration, getMoti
 import { useReplayOnFocus } from "../hooks/useReplayOnFocus";
 import { useActiveCalorieGoal } from "../hooks/useActiveCalorieGoal";
 import AiCoachFab from "../components/AiCoachFab";
-import { getRunFeed, toggleRunLike } from "../services/runService";
+import { getRunFeed, toggleRunLike, syncPendingRunLikes } from "../services/runService";
 import { formatDistanceKm, formatDuration, formatPace, paceSecPerKm } from "../utils/runMath";
 import MealCompletionCard from "../components/MealCompletionCard";
 
@@ -262,7 +263,9 @@ export default function HomeScreen() {
     try {
       setActivityFeedLoading(true);
       const res = await getRunFeed(1, 4);
-      setActivityFeed(Array.isArray(res.runs) ? res.runs.slice(0, 4) : []);
+      const feedRuns = Array.isArray(res.runs) ? res.runs.slice(0, 4) : [];
+      const syncedRuns = await syncPendingRunLikes(feedRuns);
+      setActivityFeed(syncedRuns);
     } catch {
       setActivityFeed([]);
     } finally {
@@ -270,15 +273,32 @@ export default function HomeScreen() {
     }
   }, []);
 
+  const likeInFlightRef = useRef(new Set());
+
   const handleFeedLike = useCallback(async (run) => {
+    if (!run?._id || likeInFlightRef.current.has(run._id)) return;
+    likeInFlightRef.current.add(run._id);
+
+    const previousLiked = Boolean(run.likedByMe);
+    const previousCount = Number(run.likesCount || 0);
+
     setActivityFeed((prev) => prev.map((item) => item._id === run._id
-      ? { ...item, likedByMe: !item.likedByMe, likesCount: Math.max(0, (item.likesCount || 0) + (item.likedByMe ? -1 : 1)) }
+      ? { ...item, likedByMe: !previousLiked, likesCount: Math.max(0, previousCount + (previousLiked ? -1 : 1)) }
       : item
     ));
+
     try {
-      await toggleRunLike(run._id);
+      const result = await toggleRunLike(run._id, !previousLiked);
+      const liked = Boolean(result?.liked);
+      const likesCount = Number(result?.likesCount);
+      setActivityFeed((prev) => prev.map((item) => item._id === run._id
+        ? { ...item, likedByMe: liked, likesCount: Number.isFinite(likesCount) ? likesCount : item.likesCount }
+        : item
+      ));
     } catch {
       fetchActivityFeed();
+    } finally {
+      likeInFlightRef.current.delete(run._id);
     }
   }, [fetchActivityFeed]);
 
@@ -307,6 +327,17 @@ export default function HomeScreen() {
       fetchDietPlan();
     }, [updatedTodayParam, token, fetchToday, fetchActivityFeed, fetchDietPlan])
   );
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active" && token) {
+        fetchToday();
+        fetchActivityFeed();
+        fetchDietPlan();
+      }
+    });
+    return () => subscription.remove();
+  }, [token, fetchToday, fetchActivityFeed, fetchDietPlan]);
 
   const steps    = today?.steps ?? 0;
   const calories = today?.caloriesBurned ?? 0;
@@ -368,7 +399,7 @@ export default function HomeScreen() {
 
         {/* ── TODAY'S FOOD ── */}
         <FadeSlideIn delay={110}>
-          <MealCompletionCard plan={dietPlan} />
+          <MealCompletionCard plan={dietPlan} readOnly />
         </FadeSlideIn>
 
         {/* ── TODAY'S STATS ── */}
@@ -414,19 +445,45 @@ export default function HomeScreen() {
         <FadeSlideIn delay={160}>
           <Pressable
             onPress={() => router.push("/(app)/social")}
-            style={({ pressed }) => [styles.competeCard, { opacity: pressed ? 0.93 : 1 }]}
+            style={({ pressed }) => [styles.competeCard, pressed && { transform: [{ scale: 0.99 }], opacity: 0.96 }]}
             accessibilityRole="button"
-            accessibilityLabel="Compete with friends"
+            accessibilityLabel="Open Compete with Friends"
           >
-            <View style={styles.competeAccent} />
-            <View style={styles.competeIconWrap}>
-              <LucideIcon name="flash" size={20} color="#F97316" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.competeTitle}>Compete with Friends</Text>
-              <Text style={styles.competeSub}>Duels, streak battles & achievements</Text>
-            </View>
-            <LucideIcon name="chevron-forward" size={18} color={COLORS.textMuted} />
+            <LinearGradient
+              colors={[COLORS.primaryDark, COLORS.primary, "#7C3AED"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.competeInner}
+            >
+              <View pointerEvents="none" style={styles.competeGlowOne} />
+              <View pointerEvents="none" style={styles.competeGlowTwo} />
+
+              <View style={styles.competeTopRow}>
+                <View style={styles.competeBadge}>
+                  <LucideIcon name="users-outline" size={17} color="#fff" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.competeEyebrow}>YOUR FITNESS CIRCLE</Text>
+                  <Text style={styles.competeTitle}>Compete with Friends</Text>
+                </View>
+                <View style={styles.competeArrow}>
+                  <LucideIcon name="chevron-forward" size={18} color="#fff" />
+                </View>
+              </View>
+
+              <Text style={styles.competeSub}>Turn consistency into friendly competition.</Text>
+
+              <View style={styles.competePills}>
+                <View style={styles.competePill}><LucideIcon name="flash-outline" size={13} color="#fff" /><Text style={styles.competePillText}>Duels</Text></View>
+                <View style={styles.competePill}><LucideIcon name="flame-outline" size={13} color="#fff" /><Text style={styles.competePillText}>Streaks</Text></View>
+                <View style={styles.competePill}><LucideIcon name="trophy-outline" size={13} color="#fff" /><Text style={styles.competePillText}>XP & ranks</Text></View>
+              </View>
+
+              <View style={styles.competeCtaRow}>
+                <Text style={styles.competeCta}>See your circle</Text>
+                <LucideIcon name="arrow-forward" size={15} color="#fff" />
+              </View>
+            </LinearGradient>
           </Pressable>
         </FadeSlideIn>
 
@@ -636,23 +693,43 @@ const styles = StyleSheet.create({
   logFoodSub:   { fontSize: 12, color: COLORS.textMuted, marginTop: 2, fontWeight: "500" },
 
   competeCard: {
-    flexDirection: "row", alignItems: "center", gap: 12,
-    backgroundColor: COLORS.surface, borderRadius: 16,
-    padding: 16, marginBottom: 14,
-    overflow: "hidden",
-    boxShadow: "0px 2px 10px rgba(23, 15, 54, 0.06)",
+    borderRadius: 20, marginBottom: 14, overflow: "hidden",
+    boxShadow: "0px 8px 22px rgba(48, 26, 92, 0.18)",
   },
-  competeAccent: {
-    position: "absolute", left: 0, top: 0, bottom: 0, width: 4,
-    backgroundColor: "#F97316",
+  competeInner: { position: "relative", padding: 17, minHeight: 168 },
+  competeGlowOne: {
+    position: "absolute", width: 150, height: 150, borderRadius: 75,
+    backgroundColor: "rgba(255,255,255,0.07)", right: -54, top: -70,
   },
-  competeIconWrap: {
-    width: 42, height: 42, borderRadius: 12,
-    backgroundColor: "#F9731618",
-    justifyContent: "center", alignItems: "center",
+  competeGlowTwo: {
+    position: "absolute", width: 100, height: 100, borderRadius: 50,
+    backgroundColor: "rgba(236,72,153,0.12)", right: 30, bottom: -58,
   },
-  competeTitle: { fontSize: 15, fontWeight: "800", color: COLORS.textDark },
-  competeSub:   { fontSize: 12, color: COLORS.textMuted, marginTop: 2, fontWeight: "500" },
+  competeTopRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  competeBadge: {
+    width: 40, height: 40, borderRadius: 14,
+    backgroundColor: "rgba(255,255,255,0.14)",
+    alignItems: "center", justifyContent: "center",
+    borderWidth: 1, borderColor: "rgba(255,255,255,0.16)",
+  },
+  competeArrow: {
+    width: 30, height: 30, borderRadius: 15,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    alignItems: "center", justifyContent: "center",
+  },
+  competeEyebrow: { color: "rgba(255,255,255,0.68)", fontSize: 9.5, fontWeight: "800", letterSpacing: 1 },
+  competeTitle: { fontSize: 17, fontWeight: "800", color: "#fff", marginTop: 2 },
+  competeSub: { fontSize: 12, color: "rgba(255,255,255,0.78)", marginTop: 12, fontWeight: "600", lineHeight: 17 },
+  competePills: { flexDirection: "row", gap: 7, marginTop: 12, flexWrap: "wrap" },
+  competePill: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    paddingHorizontal: 9, paddingVertical: 6, borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.11)",
+    borderWidth: 1, borderColor: "rgba(255,255,255,0.10)",
+  },
+  competePillText: { color: "#fff", fontSize: 10.5, fontWeight: "800" },
+  competeCtaRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 13 },
+  competeCta: { color: "#fff", fontSize: 11.5, fontWeight: "800" },
 
   motivationCard: {
     minHeight: 172,

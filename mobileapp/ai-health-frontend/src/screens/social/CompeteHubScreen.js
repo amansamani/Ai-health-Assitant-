@@ -99,7 +99,29 @@ export default function CompeteHubScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <ScreenHeader title="Compete" subtitle="Find friends and challenges" />
+        <ScreenHeader title="Compete" subtitle="Challenge your circle. Stay consistent." />
+
+        <FadeSlideIn delay={20}>
+          <LinearGradient
+            colors={[COLORS.primaryDark, COLORS.primary, "#7C3AED"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.hero}
+          >
+            <View pointerEvents="none" style={styles.heroOrbOne} />
+            <View pointerEvents="none" style={styles.heroOrbTwo} />
+            <View style={styles.heroBadge}><LucideIcon name="users-outline" size={18} color="#fff" /></View>
+            <Text style={styles.heroTitle}>Compete. Connect. Keep going.</Text>
+            <Text style={styles.heroSub}>Challenge friends, build streaks, earn XP and turn consistency into momentum.</Text>
+            <View style={styles.heroStats}>
+              <View style={styles.heroStat}><Text style={styles.heroStatValue}>{counts.friends}</Text><Text style={styles.heroStatLabel}>Friends</Text></View>
+              <View style={styles.heroDivider} />
+              <View style={styles.heroStat}><Text style={styles.heroStatValue}>{counts.activeDuels}</Text><Text style={styles.heroStatLabel}>Active duels</Text></View>
+              <View style={styles.heroDivider} />
+              <View style={styles.heroStat}><Text style={styles.heroStatValue}>{counts.achievements}</Text><Text style={styles.heroStatLabel}>Achievements</Text></View>
+            </View>
+          </LinearGradient>
+        </FadeSlideIn>
 
         <Text style={styles.sectionLabel}>FIND PEOPLE</Text>
         <FadeSlideIn delay={50}>
@@ -152,6 +174,17 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   scroll: { paddingHorizontal: 16, paddingBottom: 40 },
   sectionLabel: { fontSize: 10.5, fontWeight: "800", letterSpacing: 0.8, color: COLORS.textMuted, marginBottom: 9 },
+  hero: { borderRadius: 24, padding: 18, minHeight: 178, overflow: "hidden", marginBottom: 20, boxShadow: "0px 10px 28px rgba(67, 30, 110, 0.18)" },
+  heroOrbOne: { position: "absolute", width: 180, height: 180, borderRadius: 90, backgroundColor: "rgba(255,255,255,0.07)", right: -55, top: -82 },
+  heroOrbTwo: { position: "absolute", width: 120, height: 120, borderRadius: 60, backgroundColor: "rgba(236,72,153,0.13)", right: 42, bottom: -70 },
+  heroBadge: { width: 42, height: 42, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.14)", borderWidth: 1, borderColor: "rgba(255,255,255,0.14)" },
+  heroTitle: { color: "#fff", fontSize: 24, fontWeight: "800", lineHeight: 29, marginTop: 12, maxWidth: "90%" },
+  heroSub: { color: "rgba(255,255,255,0.78)", fontSize: 12, lineHeight: 17, fontWeight: "600", marginTop: 7, maxWidth: "94%" },
+  heroStats: { flexDirection: "row", alignItems: "center", marginTop: 15, backgroundColor: "rgba(255,255,255,0.10)", borderRadius: 14, paddingVertical: 10, paddingHorizontal: 8 },
+  heroStat: { flex: 1, alignItems: "center" },
+  heroStatValue: { color: "#fff", fontSize: 18, fontWeight: "800" },
+  heroStatLabel: { color: "rgba(255,255,255,0.68)", fontSize: 9.5, marginTop: 2, fontWeight: "700" },
+  heroDivider: { width: 1, height: 24, backgroundColor: "rgba(255,255,255,0.16)" },
   searchWrap: { height: 50, flexDirection: "row", alignItems: "center", backgroundColor: COLORS.surface, borderRadius: 15, borderWidth: 1, borderColor: COLORS.border, paddingHorizontal: 14 },
   searchInput: { flex: 1, marginLeft: 9, fontSize: 14, fontWeight: "600", color: COLORS.textDark },
   resultsCard: { marginTop: 9, backgroundColor: COLORS.surface, borderRadius: 16, borderWidth: 1, borderColor: COLORS.border, paddingHorizontal: 12 },
