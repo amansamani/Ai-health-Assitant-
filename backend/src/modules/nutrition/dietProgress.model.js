@@ -155,6 +155,33 @@ const dietProgressSchema =
         }),
       },
 
+      /*
+       * Calories credited by the one-tap diet-plan shortcut.
+       * These are only used when the user completed a planned meal
+       * without logging actual food for that meal yet.
+       *
+       * If a real MealLog exists for a meal type, the nutrition
+       * controller removes that meal's shortcut credit so calories
+       * are never double-counted.
+       */
+      quickMealCalories: {
+        type: new mongoose.Schema(
+          {
+            breakfast: { type: Number, default: 0, min: 0 },
+            lunch: { type: Number, default: 0, min: 0 },
+            dinner: { type: Number, default: 0, min: 0 },
+            snack: { type: Number, default: 0, min: 0 },
+          },
+          { _id: false, strict: true }
+        ),
+        default: () => ({
+          breakfast: 0,
+          lunch: 0,
+          dinner: 0,
+          snack: 0,
+        }),
+      },
+
       caloriesConsumed: {
         type: Number,
 

@@ -15,7 +15,7 @@
  *   - Shows a running "eaten today" total vs target
  */
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View, Text, StyleSheet, TouchableOpacity,
   Animated, ActivityIndicator,
@@ -113,10 +113,8 @@ function MealRow({ mealType, combo, completed, onToggle, saving }) {
 export default function MealCompletionCard({ plan }) {
   const [completed, setCompleted]   = useState({});
   const [savingMeal, setSavingMeal] = useState(null);
-  const [eatenCals, setEatenCals]   = useState(0);
   const [loaded, setLoaded]         = useState(false);
 
-  const targetCals = plan?.summary?.targetCalories ?? 0;
 
   // Fetch today's log on mount
   useEffect(() => {
@@ -125,7 +123,6 @@ export default function MealCompletionCard({ plan }) {
         const res = await API.get("/nutrition/log");
         const mc  = res.data?.log?.mealsCompleted ?? {};
         setCompleted(mc);
-        setEatenCals(res.data?.log?.caloriesConsumed ?? 0);
       } catch {
         // Start fresh
       } finally {
@@ -147,8 +144,6 @@ export default function MealCompletionCard({ plan }) {
         mealsCompleted: next,
         // No caloriesConsumed — let backend compute from plan
       });
-      // Update eaten total from response
-      setEatenCals(res.data?.caloriesConsumed ?? 0);
     } catch {
       // Rollback on error
       setCompleted(prev);
@@ -166,26 +161,18 @@ export default function MealCompletionCard({ plan }) {
   }
 
   const completedCount = Object.values(completed).filter(Boolean).length;
-  const pct = targetCals > 0 ? Math.min(Math.round((eatenCals / targetCals) * 100), 100) : 0;
 
   return (
     <View style={s.card}>
       <View style={s.headerRow}>
-        <Text style={s.heading}>✅ MEAL COMPLETION</Text>
-        <Text style={s.countBadge}>{completedCount}/4 done</Text>
-      </View>
-
-      {/* Progress bar */}
-      <View style={s.barWrap}>
-        <View style={s.barTrack}>
-          <View style={[s.barFill, {
-            width: `${pct}%`,
-            backgroundColor: pct >= 100 ? "#22C55E" : pct >= 60 ? "#4CAF50" : "#FF8F00",
-          }]} />
+        <View>
+          <Text style={s.heading}>TODAY&apos;S FOOD</Text>
+          <Text style={s.subHeading}>Quickly track meals from your plan</Text>
         </View>
-        <Text style={s.barLabel}>
-          {eatenCals} / {targetCals} kcal eaten ({pct}%)
-        </Text>
+        <View style={s.countBadge}>
+          <Text style={s.countBig}>{completedCount}</Text>
+          <Text style={s.countSmall}>/ 4 meals</Text>
+        </View>
       </View>
 
       {/* Meal rows */}
@@ -239,13 +226,12 @@ const s = StyleSheet.create({
     shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.07, shadowRadius: 6, elevation: 3,
   },
-  headerRow:   { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
-  heading:     { fontSize: 11, fontWeight: "800", color: "#aaa", letterSpacing: 1 },
-  countBadge:  { backgroundColor: "#F0FDF4", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
-  barWrap:     { marginBottom: 12 },
-  barTrack:    { height: 8, backgroundColor: "#F0F0F0", borderRadius: 4, overflow: "hidden", marginBottom: 5 },
-  barFill:     { height: "100%", borderRadius: 4 },
-  barLabel:    { fontSize: 11, color: "#94A3B8", fontWeight: "600" },
+  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 },
+  heading: { fontSize: 11, fontWeight: "900", color: "#8B91A0", letterSpacing: 1.1 },
+  subHeading: { marginTop: 3, fontSize: 10, color: "#A7ACB8", fontWeight: "600" },
+  countBadge: { minWidth: 78, backgroundColor: "#F0FDF4", borderRadius: 14, paddingHorizontal: 10, paddingVertical: 7, alignItems: "center", justifyContent: "center", flexDirection: "row", borderWidth: 1, borderColor: "#DCFCE7" },
+  countBig: { fontSize: 18, lineHeight: 20, fontWeight: "900", color: "#15803D" },
+  countSmall: { fontSize: 10, fontWeight: "800", color: "#4B7F5A", marginLeft: 2 },
   allDone:     { backgroundColor: "#F0FDF4", borderRadius: 12, padding: 12, marginTop: 8, alignItems: "center" },
   allDoneTxt:  { fontSize: 13, fontWeight: "700", color: "#15803D" },
 });

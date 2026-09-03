@@ -1,5 +1,6 @@
 "use strict";
 import React, { useEffect, useState, useCallback, useContext, useRef } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import { showToast } from "../../services/uiFeedback";
 import {
   View, Text, ActivityIndicator, ScrollView, StyleSheet,
@@ -381,6 +382,12 @@ export default function NutritionDashboardScreen({ navigation }) {
   }, []);
 
   useEffect(() => { fetchPlan(); }, [fetchPlan]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchPlan();
+    }, [fetchPlan])
+  );
 
   const prevGoalRef = useRef(null);
   useEffect(() => {

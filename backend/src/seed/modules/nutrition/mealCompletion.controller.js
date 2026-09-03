@@ -2,6 +2,7 @@
 
 const DietProgress = require("../nutrition/dietProgress.model");
 const DietPlan = require("../nutrition/dietPlan.model");
+const MealLog = require("../nutrition/mealLog.model");
 const { awardXp } = require("../social/gamification.service");
 
 const MEAL_TYPES = [
@@ -381,6 +382,31 @@ function calculateCompletedPlanCalories(
   );
 }
 
+async function getUtcDayRangeForRequest(dateKey, timezone) {
+  const targetDate = new Date(`${dateKey}T00:00:00Z`);
+  let candidate = targetDate;
+  for (let i = 0; i < 3; i += 1) {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: timezone,
+      year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", second: "2-digit",
+      hourCycle: "h23",
+    }).formatToParts(candidate);
+    const map = {};
+    for (const part of parts) map[part.type] = part.value;
+    const actualLocal = Date.UTC(
+      Number(map.year), Number(map.month) - 1, Number(map.day),
+      Number(map.hour), Number(map.minute), Number(map.second)
+    );
+    const desiredLocal = Date.UTC(
+      Number(dateKey.slice(0, 4)), Number(dateKey.slice(5, 7)) - 1,
+      Number(dateKey.slice(8, 10)), 0, 0, 0
+    );
+    candidate = new Date(candidate.getTime() + (desiredLocal - actualLocal));
+  }
+  return { start: candidate, end: new Date(candidate.getTime() + 24 * 60 * 60 * 1000) };
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /nutrition/log
 // ─────────────────────────────────────────────────────────────────────────────
@@ -490,78 +516,58 @@ const logDailyDiet = async (
     // CALORIES
     // ────────────────────────────────────────────────────────────────────────
 
-    let resolvedCalories =
-      null;
-
-    let caloriesSource =
-      "none";
+    let resolvedCalories = null;
+    let caloriesSource = "none";
+    let quickMealCalories = null;
 
     /*
-     * If the client explicitly supplied calories, validate them
-     * and respect the manual value.
-     *
-     * This is useful when the user ate something different from
-     * the planned meal.
+     * Keep ONE user-facing calorie total while supporting quick plan tracking.
+     * A completed plan meal contributes its planned calories only until an
+     * actual MealLog exists for that meal type. At that point the real log
+     * replaces the quick credit automatically, preventing double counting.
      */
-    if (
-      caloriesConsumed !==
-        undefined &&
-      caloriesConsumed !==
-        null
-    ) {
-      const manualCalories =
-        toNonNegativeNumber(
-          caloriesConsumed
-        );
+    if (normalizedMeals) {
+      quickMealCalories = { breakfast: 0, lunch: 0, dinner: 0, snack: 0 };
 
-      if (
-        manualCalories ===
-        null
-      ) {
-        return res
-          .status(400)
-          .json({
-            message:
-              "caloriesConsumed must be a valid non-negative number.",
-          });
+      const { start, end } = await getUtcDayRangeForRequest(logDate, timezone);
+      const mealLogs = await MealLog.find({
+        user: userId,
+        loggedAt: { $gte: start, $lt: end },
+      }).select("mealType food.calories").lean();
+
+      const actualByMeal = { breakfast: 0, lunch: 0, dinner: 0, snack: 0 };
+      for (const mealLog of mealLogs) {
+        const mealType = normalizeMealType(mealLog.mealType);
+        if (!MEAL_TYPES.includes(mealType)) continue;
+        const calories = Number(mealLog.food?.calories) || 0;
+        actualByMeal[mealType] += Math.max(0, calories);
       }
 
-      if (
-        manualCalories >
-        20000
-      ) {
-        return res
-          .status(400)
-          .json({
-            message:
-              "caloriesConsumed is unrealistically high.",
-          });
+      if (activePlan) {
+        for (const mealType of MEAL_TYPES) {
+          if (!normalizedMeals[mealType] || actualByMeal[mealType] > 0) continue;
+          const mealArr = Array.isArray(activePlan.meals?.[mealType]) ? activePlan.meals[mealType] : [];
+          quickMealCalories[mealType] = mealArr.reduce((sum, combo) => {
+            const calories = Number(combo?.calories);
+            return sum + (Number.isFinite(calories) && calories > 0 ? calories : 0);
+          }, 0);
+        }
       }
 
-      resolvedCalories =
-        Math.round(
-          manualCalories
-        );
-
-      caloriesSource =
-        "manual";
-    } else if (
-      normalizedMeals
-    ) {
-      /*
-       * No manual calorie override:
-       * calculate from the active plan.
-       */
-      resolvedCalories =
-        calculateCompletedPlanCalories(
-          activePlan,
-          normalizedMeals
-        );
-
-      caloriesSource =
-        activePlan
-          ? "plan"
-          : "none";
+      const actualCalories = Object.values(actualByMeal).reduce((sum, value) => sum + value, 0);
+      const quickCalories = Object.values(quickMealCalories).reduce((sum, value) => sum + value, 0);
+      resolvedCalories = Math.round(actualCalories + quickCalories);
+      caloriesSource = actualCalories > 0 && quickCalories > 0 ? "mixed" : actualCalories > 0 ? "logged" : activePlan ? "plan" : "none";
+    } else if (caloriesConsumed !== undefined && caloriesConsumed !== null) {
+      const manualCalories = toNonNegativeNumber(caloriesConsumed);
+      if (manualCalories === null) {
+        return res.status(400).json({ message: "caloriesConsumed must be a valid non-negative number." });
+      }
+      if (manualCalories > 20000) {
+        return res.status(400).json({ message: "caloriesConsumed is unrealistically high." });
+      }
+      resolvedCalories = Math.round(manualCalories);
+      caloriesSource = "manual";
     }
 
     // ────────────────────────────────────────────────────────────────────────

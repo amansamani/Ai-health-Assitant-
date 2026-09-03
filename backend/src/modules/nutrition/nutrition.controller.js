@@ -1217,6 +1217,88 @@ const getFoods = async (
   }
 };
 
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SYNC DAILY CALORIE TOTAL
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function syncDailyCalories({ userId, dateKey, timezone }) {
+  const { start, end } = getUtcDayRange(dateKey, timezone);
+
+  const [progress, plan, logs] = await Promise.all([
+    DietProgress.findOne({ user: userId, date: dateKey }).lean(),
+    DietPlan.findOne({ user: userId, isActive: true })
+      .select("meals")
+      .lean(),
+    MealLog.find({
+      user: userId,
+      loggedAt: { $gte: start, $lt: end },
+    })
+      .select("mealType food.calories")
+      .lean(),
+  ]);
+
+  if (!progress && logs.length === 0) {
+    return 0;
+  }
+
+  const actualByMeal = {
+    breakfast: 0,
+    lunch: 0,
+    dinner: 0,
+    snack: 0,
+  };
+
+  for (const log of logs) {
+    const mealType = normalizeMealType(log.mealType);
+    if (!MEAL_TYPES.includes(mealType)) continue;
+    actualByMeal[mealType] += nonNegativeNumber(log.food?.calories);
+  }
+
+  const quickMealCalories = {
+    breakfast: 0,
+    lunch: 0,
+    dinner: 0,
+    snack: 0,
+  };
+
+  // Prefer existing quick credits. They are only retained for meal types
+  // where no actual food has been logged today.
+  for (const mealType of MEAL_TYPES) {
+    if (actualByMeal[mealType] > 0) continue;
+    const storedQuick = Number(progress?.quickMealCalories?.[mealType]);
+    if (Number.isFinite(storedQuick) && storedQuick > 0) {
+      quickMealCalories[mealType] = storedQuick;
+      continue;
+    }
+
+    // Backward compatibility: older records only had mealsCompleted.
+    if (progress?.mealsCompleted?.[mealType] && plan?.meals?.[mealType]) {
+      quickMealCalories[mealType] = plan.meals[mealType].reduce((sum, combo) => {
+        const calories = Number(combo?.calories);
+        return sum + (Number.isFinite(calories) && calories > 0 ? calories : 0);
+      }, 0);
+    }
+  }
+
+  const actualCalories = Object.values(actualByMeal).reduce((sum, value) => sum + value, 0);
+  const quickCalories = Object.values(quickMealCalories).reduce((sum, value) => sum + value, 0);
+  const total = Math.round(actualCalories + quickCalories);
+
+  await DietProgress.findOneAndUpdate(
+    { user: userId, date: dateKey },
+    {
+      $set: {
+        caloriesConsumed: total,
+        quickMealCalories,
+      },
+    },
+    { upsert: true, setDefaultsOnInsert: true }
+  );
+
+  return total;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // MANUAL MEAL LOGGING
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1360,6 +1442,14 @@ const logMeal = async (
         },
       });
 
+    const timezone = getRequestTimezone(req);
+    const dateKey = getTodayDateKey(timezone);
+    const caloriesConsumed = await syncDailyCalories({
+      userId: req.user.id,
+      dateKey,
+      timezone,
+    });
+
     res
       .status(201)
       .json({
@@ -1368,6 +1458,8 @@ const logMeal = async (
 
         data:
           log,
+
+        caloriesConsumed,
       });
   } catch (err) {
     next(err);
@@ -1710,12 +1802,22 @@ const deleteMeal =
           });
       }
 
+      const timezone = getRequestTimezone(req);
+      const dateKey = getTodayDateKey(timezone);
+      const caloriesConsumed = await syncDailyCalories({
+        userId: req.user.id,
+        dateKey,
+        timezone,
+      });
+
       res.json({
         message:
           "Meal deleted",
 
         data:
           log,
+
+        caloriesConsumed,
       });
     } catch (err) {
       next(err);

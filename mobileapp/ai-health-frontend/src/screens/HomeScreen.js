@@ -25,6 +25,7 @@ import { useActiveCalorieGoal } from "../hooks/useActiveCalorieGoal";
 import AiCoachFab from "../components/AiCoachFab";
 import { getRunFeed, toggleRunLike } from "../services/runService";
 import { formatDistanceKm, formatDuration, formatPace, paceSecPerKm } from "../utils/runMath";
+import MealCompletionCard from "../components/MealCompletionCard";
 
 const { width } = Dimensions.get("window");
 
@@ -221,6 +222,7 @@ export default function HomeScreen() {
   const [greeting, setGreeting] = useState("Good Morning");
   const [activityFeed, setActivityFeed] = useState([]);
   const [activityFeedLoading, setActivityFeedLoading] = useState(true);
+  const [dietPlan, setDietPlan] = useState(null);
 
   const STEP_GOAL  = 10000;
   const SLEEP_GOAL = 8;
@@ -244,6 +246,15 @@ export default function HomeScreen() {
       setToday(null);
     } finally {
       setLoading(false);
+    }
+  }, []);
+
+  const fetchDietPlan = useCallback(async () => {
+    try {
+      const res = await API.get("/nutrition/current");
+      setDietPlan(res.data || null);
+    } catch {
+      setDietPlan(null);
     }
   }, []);
 
@@ -293,7 +304,8 @@ export default function HomeScreen() {
         fetchToday();
       }
       fetchActivityFeed();
-    }, [updatedTodayParam, token, fetchToday, fetchActivityFeed])
+      fetchDietPlan();
+    }, [updatedTodayParam, token, fetchToday, fetchActivityFeed, fetchDietPlan])
   );
 
   const steps    = today?.steps ?? 0;
@@ -354,34 +366,9 @@ export default function HomeScreen() {
           <MotivationCard iconTrigger={iconTrigger} />
         </FadeSlideIn>
 
-        {/* ── HERO CARD ── */}
+        {/* ── TODAY'S FOOD ── */}
         <FadeSlideIn delay={110}>
-          <View style={[styles.heroCard, { backgroundColor: COLORS.primaryDark }]}>
-            <View style={styles.heroDecorRing} />
-            <View style={styles.heroLeft}>
-              <View style={styles.heroBadgeWrap}>
-                <LucideIcon name="flame" size={11} color="#FACC15" />
-                <Text style={styles.heroBadge}>TODAY&apos;S GOAL</Text>
-              </View>
-              <Text style={styles.heroTitle}>Step Count</Text>
-              <Text style={styles.heroBig}>
-                {loading ? "—" : steps.toLocaleString()}
-              </Text>
-              <Text style={styles.heroUnit}>of {STEP_GOAL.toLocaleString()} steps</Text>
-              <View style={styles.heroBarBg}>
-                <View style={[styles.heroBarFill, { width: `${stepPct}%` }]} />
-              </View>
-              <Text style={styles.heroBarLabel}>
-                {steps >= STEP_GOAL ? "Goal completed!" : `${stepPct}% complete — keep going!`}
-              </Text>
-            </View>
-            <View style={styles.heroRight}>
-              <View style={styles.heroPctCircle}>
-                <Text style={styles.heroPctNum}>{stepPct}%</Text>
-                <Text style={styles.heroPctLabel}>Done</Text>
-              </View>
-            </View>
-          </View>
+          <MealCompletionCard plan={dietPlan} />
         </FadeSlideIn>
 
         {/* ── TODAY'S STATS ── */}
