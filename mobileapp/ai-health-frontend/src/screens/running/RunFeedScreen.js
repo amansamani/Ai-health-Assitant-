@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -6,21 +6,29 @@ import {
   Pressable,
   StyleSheet,
   Image,
+  Animated,
   ActivityIndicator,
   RefreshControl,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
+import { LinearGradient } from "expo-linear-gradient";
+import * as Haptics from "expo-haptics";
 import LucideIcon from "../../components/ui/LucideIcon";
-import RunRouteMap from "../../components/RunRouteMap";
+import RunRouteArt from "../../components/RunRouteArt";
 
 import { COLORS, SHADOW } from "../../constants/theme";
 import Avatar from "../../components/Avatar";
 import { getRunFeed, toggleRunLike } from "../../services/runService";
 import { formatDuration, formatDistanceKm, formatPace, paceSecPerKm } from "../../utils/runMath";
 
-const ACTIVITY_ICON = { run: "walk", walk: "footsteps-outline", cycle: "bicycle" };
+const ACTIVITY_META = {
+  run: { label: "Running", icon: "footsteps-outline" },
+  walk: { label: "Walk", icon: "footsteps-outline" },
+  cycle: { label: "Cycling", icon: "bicycle-outline" },
+};
 
 function timeAgo(iso) {
   const diffMs = Date.now() - new Date(iso).getTime();
@@ -33,67 +41,75 @@ function timeAgo(iso) {
 }
 
 function RunCard({ run, onToggleLike, onShare }) {
-  const region =
-    run.route?.length > 1
-      ? (() => {
-          const lats = run.route.map((p) => p.lat);
-          const lngs = run.route.map((p) => p.lng);
-          const minLat = Math.min(...lats), maxLat = Math.max(...lats);
-          const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
-          return {
-            latitude: (minLat + maxLat) / 2,
-            longitude: (minLng + maxLng) / 2,
-            latitudeDelta: Math.max(0.003, (maxLat - minLat) * 1.4),
-            longitudeDelta: Math.max(0.003, (maxLng - minLng) * 1.4),
-          };
-        })()
-      : null;
+  const meta = ACTIVITY_META[run.activityType] || ACTIVITY_META.run;
+  const likeScale = useRef(new Animated.Value(1)).current;
+
+  const handleLike = () => {
+    if (!run.likedByMe && Platform.OS === "ios") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    Animated.sequence([
+      Animated.spring(likeScale, { toValue: 1.3, useNativeDriver: true, speed: 40, bounciness: 14 }),
+      Animated.spring(likeScale, { toValue: 1, useNativeDriver: true, speed: 24, bounciness: 8 }),
+    ]).start();
+    onToggleLike(run);
+  };
 
   return (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
-        <Avatar name={run.user?.name} uri={run.user?.profileImageUrl || run.user?.picture} size={38} />
-        <View style={{ marginLeft: 10, flex: 1 }}>
-          <Text style={styles.userName}>{run.user?.name || "Someone"}</Text>
+        <Avatar name={run.user?.name} uri={run.user?.profileImageUrl || run.user?.picture} size={40} />
+        <View style={styles.headerText}>
+          <Text style={styles.userName} numberOfLines={1}>{run.user?.name || "Someone"}</Text>
           <Text style={styles.timeAgo}>{timeAgo(run.startedAt)}</Text>
         </View>
-        <LucideIcon name={ACTIVITY_ICON[run.activityType] || "walk"} size={20} color={COLORS.primary} />
+        <View style={styles.activityPill}>
+          <LucideIcon name={meta.icon} size={12} color={COLORS.primary} />
+          <Text style={styles.activityPillText}>{meta.label}</Text>
+        </View>
       </View>
 
       {!!run.caption && <Text style={styles.caption}>{run.caption}</Text>}
 
       {run.photoUrl ? (
         <Image source={{ uri: run.photoUrl }} style={styles.photo} />
-      ) : region ? (
-        <View style={styles.routeThumb}>
-          <RunRouteMap
-            style={{ flex: 1 }}
-            route={run.route}
-            initialRegion={region}
-            showStartMarker={false}
-            showEndMarker={false}
-          />
-        </View>
-      ) : null}
+      ) : (
+        <RunRouteArt route={run.route} style={styles.routeThumb} />
+      )}
 
       <View style={styles.statsRow}>
-        <Stat value={`${formatDistanceKm(run.distanceMeters)} km`} label="distance" />
-        <Stat value={formatDuration(run.durationSeconds)} label="time" />
-        <Stat value={`${formatPace(paceSecPerKm(run.distanceMeters, run.durationSeconds))}`} label="pace /km" />
-        <Stat value={`${run.caloriesBurned}`} label="kcal" />
+        <Stat icon="footsteps-outline" value={`${formatDistanceKm(run.distanceMeters)} km`} label="DISTANCE" />
+        <View style={styles.statDivider} />
+        <Stat icon="time-outline" value={formatDuration(run.durationSeconds)} label="TIME" />
+        <View style={styles.statDivider} />
+        <Stat icon="flash-outline" value={formatPace(paceSecPerKm(run.distanceMeters, run.durationSeconds))} label="PACE /KM" />
+        <View style={styles.statDivider} />
+        <Stat icon="flame-outline" value={`${run.caloriesBurned}`} label="KCAL" />
       </View>
 
       <View style={styles.actionsRow}>
-        <Pressable style={styles.actionBtn} onPress={() => onToggleLike(run)} accessibilityRole="button" accessibilityLabel={run.likedByMe ? "Unlike activity" : "Like activity"}>
-          <LucideIcon
-            name={run.likedByMe ? "heart" : "heart-outline"}
-            size={20}
-            color={run.likedByMe ? COLORS.error : COLORS.textLight}
-          />
-          <Text style={styles.likeCount}>{run.likesCount || 0}</Text>
+        <Pressable
+          style={({ pressed }) => [styles.actionBtn, pressed && styles.actionBtnPressed]}
+          onPress={handleLike}
+          accessibilityRole="button"
+          accessibilityLabel={run.likedByMe ? "Unlike activity" : "Like activity"}
+        >
+          <Animated.View style={{ transform: [{ scale: likeScale }] }}>
+            <LucideIcon
+              name={run.likedByMe ? "heart" : "heart-outline"}
+              size={20}
+              color={run.likedByMe ? COLORS.error : COLORS.textLight}
+            />
+          </Animated.View>
+          <Text style={[styles.likeCount, run.likedByMe && { color: COLORS.error }]}>{run.likesCount || 0}</Text>
         </Pressable>
-        <Pressable style={styles.actionBtn} onPress={() => onShare(run)} accessibilityRole="button" accessibilityLabel="Share activity">
-          <LucideIcon name="share" size={19} color={COLORS.textLight} />
+        <Pressable
+          style={({ pressed }) => [styles.actionBtn, pressed && styles.actionBtnPressed]}
+          onPress={() => onShare(run)}
+          accessibilityRole="button"
+          accessibilityLabel="Share activity"
+        >
+          <LucideIcon name="share-outline" size={19} color={COLORS.textLight} />
           <Text style={styles.actionText}>Share</Text>
         </Pressable>
       </View>
@@ -101,10 +117,11 @@ function RunCard({ run, onToggleLike, onShare }) {
   );
 }
 
-function Stat({ value, label }) {
+function Stat({ icon, value, label }) {
   return (
     <View style={styles.statItem}>
-      <Text style={styles.statValue}>{value}</Text>
+      <LucideIcon name={icon} size={13} color={COLORS.textLight} />
+      <Text style={styles.statValue} numberOfLines={1}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
     </View>
   );
@@ -159,7 +176,8 @@ export default function RunFeedScreen() {
       <View style={styles.headerRow}>
         <Text style={styles.headerTitle}>Activity</Text>
         <Pressable style={styles.startFab} onPress={() => router.push("/run-tracking")}>
-          <LucideIcon name="add" size={20} color={COLORS.onPrimary} />
+          <LinearGradient colors={[COLORS.secondary, COLORS.primary]} style={StyleSheet.absoluteFillObject} />
+          <LucideIcon name="add" size={18} color={COLORS.onPrimary} />
           <Text style={styles.startFabText}>Track</Text>
         </Pressable>
       </View>
@@ -179,13 +197,17 @@ export default function RunFeedScreen() {
                 setRefreshing(true);
                 load();
               }}
+              tintColor={COLORS.primary}
             />
           }
           ListEmptyComponent={
             <View style={styles.empty}>
-              <LucideIcon name="walk-outline" size={40} color={COLORS.textLight} />
+              <View style={styles.emptyIconWrap}>
+                <LucideIcon name="walk-outline" size={32} color={COLORS.primary} />
+              </View>
+              <Text style={styles.emptyTitle}>No activity yet</Text>
               <Text style={styles.emptyText}>
-                No runs yet. Track one, or follow people to see theirs here.
+                Track a run, walk, or ride — or follow people to see theirs here.
               </Text>
             </View>
           }
@@ -209,34 +231,64 @@ const styles = StyleSheet.create({
   startFab: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    backgroundColor: COLORS.primary,
+    gap: 5,
+    overflow: "hidden",
     borderRadius: 20,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
+    paddingVertical: 9,
+    paddingHorizontal: 15,
   },
-  startFabText: { color: COLORS.onPrimary, fontWeight: "700", fontSize: 13 },
+  startFabText: { color: COLORS.onPrimary, fontWeight: "800", fontSize: 13 },
   card: {
     backgroundColor: COLORS.card,
-    borderRadius: 20,
+    borderRadius: 22,
     padding: 14,
-    marginBottom: 14,
+    marginBottom: 16,
     ...SHADOW,
   },
-  cardHeader: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
-  userName: { fontWeight: "700", color: COLORS.textDark, fontSize: 14 },
+  cardHeader: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
+  headerText: { marginLeft: 10, flex: 1 },
+  userName: { fontWeight: "800", color: COLORS.textDark, fontSize: 14 },
   timeAgo: { fontSize: 11, color: COLORS.textLight, marginTop: 1 },
-  caption: { fontSize: 13, color: COLORS.textDark, marginBottom: 10 },
-  photo: { width: "100%", height: 180, borderRadius: 12, marginBottom: 10 },
-  routeThumb: { width: "100%", height: 140, borderRadius: 12, overflow: "hidden", marginBottom: 10 },
-  statsRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 8 },
-  statItem: { alignItems: "center", flex: 1 },
-  statValue: { fontWeight: "700", color: COLORS.textDark, fontSize: 14 },
-  statLabel: { fontSize: 10, color: COLORS.textLight, marginTop: 2 },
-  actionsRow: { flexDirection: "row", alignItems: "center", gap: 18, paddingTop: 5 },
-  actionBtn: { flexDirection: "row", alignItems: "center", gap: 6, minHeight: 36 },
-  likeCount: { color: COLORS.textLight, fontSize: 13, fontWeight: "600" },
-  actionText: { color: COLORS.textLight, fontSize: 13, fontWeight: "600" },
-  empty: { alignItems: "center", marginTop: 60, gap: 10, paddingHorizontal: 40 },
-  emptyText: { color: COLORS.textLight, textAlign: "center", fontSize: 13 },
+  activityPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: COLORS.primaryLight + "33",
+    borderRadius: 999,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+  },
+  activityPillText: { fontSize: 10.5, fontWeight: "800", color: COLORS.primaryDark },
+  caption: { fontSize: 13, color: COLORS.textDark, marginBottom: 10, lineHeight: 18 },
+  photo: { width: "100%", height: 190, borderRadius: 16, marginBottom: 12 },
+  routeThumb: { width: "100%", height: 150, borderRadius: 16, marginBottom: 12 },
+  statsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: COLORS.surfaceMuted,
+    borderRadius: 16,
+    paddingVertical: 10,
+    marginBottom: 6,
+  },
+  statItem: { flex: 1, alignItems: "center", gap: 3 },
+  statDivider: { width: 1, height: "60%", backgroundColor: COLORS.border },
+  statValue: { fontWeight: "800", color: COLORS.textDark, fontSize: 13 },
+  statLabel: { fontSize: 8.5, letterSpacing: 0.6, fontWeight: "800", color: COLORS.textLight },
+  actionsRow: { flexDirection: "row", alignItems: "center", gap: 6, paddingTop: 6 },
+  actionBtn: { flexDirection: "row", alignItems: "center", gap: 6, minHeight: 40, paddingHorizontal: 8, borderRadius: 12 },
+  actionBtnPressed: { backgroundColor: COLORS.surfaceMuted },
+  likeCount: { color: COLORS.textLight, fontSize: 13, fontWeight: "700" },
+  actionText: { color: COLORS.textLight, fontSize: 13, fontWeight: "700" },
+  empty: { alignItems: "center", marginTop: 60, gap: 8, paddingHorizontal: 40 },
+  emptyIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: COLORS.primaryLight + "2A",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+  },
+  emptyTitle: { color: COLORS.textDark, fontWeight: "800", fontSize: 15 },
+  emptyText: { color: COLORS.textLight, textAlign: "center", fontSize: 13, lineHeight: 18 },
 });
