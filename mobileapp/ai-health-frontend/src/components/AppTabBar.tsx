@@ -1,6 +1,5 @@
 import { useEffect } from "react";
 import { View, Pressable, StyleSheet, Platform } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import LucideIcon from "./ui/LucideIcon";
 import * as Haptics from "expo-haptics";
 import Animated, {
@@ -142,10 +141,8 @@ function CameraTabButton({
 }
 
 export default function AppTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
-  const insets = useSafeAreaInsets();
-
   return (
-    <View style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+    <View style={styles.wrap}>
       <View style={styles.bar}>
         {state.routes.map((route, index) => {
           const { options } = descriptors[route.key];
@@ -243,7 +240,7 @@ const styles = StyleSheet.create({
     marginTop: -22,
     borderWidth: 4,
     borderColor: COLORS.background,
-    overflow: "hidden",
+    overflow: "visible",
     boxShadow: "0px 5px 14px rgba(73, 34, 91, 0.22)",
   },
   cameraGradient: {

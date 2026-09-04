@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -16,6 +16,7 @@ export default function FollowRequestsScreen() {
   const router = useRouter();
   const [items, setItems] = useState([]);
   const [token, setToken] = useState(null);
+  const tokenRef = useRef(null);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [total, setTotal] = useState(0);
@@ -23,6 +24,7 @@ export default function FollowRequestsScreen() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [busyId, setBusyId] = useState(null);
+  const loadingRequestRef = useRef(false);
 
   const buildAvatar = useCallback((user) => {
     if (token && user?.hasProfilePhoto && user?._id) {
@@ -32,9 +34,11 @@ export default function FollowRequestsScreen() {
       };
     }
     return user?.picture || undefined;
-  }, [token]);
+  }, []);
 
   const load = useCallback(async (targetPage = 1, replace = true) => {
+    if (loadingRequestRef.current) return;
+    loadingRequestRef.current = true;
     if (targetPage === 1) {
       setLoading(true);
       setRefreshing(false);
@@ -42,11 +46,12 @@ export default function FollowRequestsScreen() {
       setLoadingMore(true);
     }
     try {
-      const [res, currentToken] = await Promise.all([
-        API.get("/social/follow-requests", { params: { page: targetPage, limit: PAGE_SIZE } }),
-        targetPage === 1 ? getToken() : Promise.resolve(token),
-      ]);
-      if (targetPage === 1 && currentToken) setToken(currentToken);
+      const currentToken = targetPage === 1 ? await getToken() : tokenRef.current;
+      if (targetPage === 1 && currentToken) {
+        tokenRef.current = currentToken;
+        setToken(currentToken);
+      }
+      const res = await API.get("/social/follow-requests", { params: { page: targetPage, limit: PAGE_SIZE } });
       const data = res.data || {};
       const next = Array.isArray(data.items) ? data.items : [];
       setItems((prev) => replace ? next : [...prev, ...next]);
@@ -56,12 +61,15 @@ export default function FollowRequestsScreen() {
     } catch (err) {
       if (targetPage === 1) showToast(err.response?.data?.message || "Couldn't load follow requests.", { title: "Follow requests", type: "error" });
     } finally {
+      loadingRequestRef.current = false;
       if (targetPage === 1) setLoading(false);
       else setLoadingMore(false);
     }
-  }, [token]);
+  }, []);
 
-  useFocusEffect(useCallback(() => { load(1, true); }, [load]));
+  useFocusEffect(useCallback(() => {
+    load(1, true);
+  }, [load]));
 
   const respond = async (requestId, action) => {
     if (!requestId || busyId) return;
