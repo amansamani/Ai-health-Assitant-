@@ -4,7 +4,7 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 const redis = require("../../config/redis");
 const logger = require("../../config/logger");
 const { buildAiContext, contextToPrompt } = require("../../services/aiContext.service");
-const { detectIntent, buildDeterministicReply } = require("../../services/aiIntent.service");
+const { detectIntent, buildDeterministicReply, classifyScope, buildScopeGuardReply } = require("../../services/aiIntent.service");
 
 let genAI;
 let model;
@@ -226,6 +226,16 @@ const aiChat = async (req, res, next) => {
       return res.status(400).json({
         message: `message cannot exceed ${MAX_MESSAGE_LENGTH} characters`,
       });
+    }
+
+    const scope = classifyScope(message);
+    if (scope !== "allowed") {
+      const reply = buildScopeGuardReply(scope);
+      const history = await getHistory(userId);
+      history.push({ role: "user", parts: [{ text: message }], ts: Date.now() });
+      history.push({ role: "model", parts: [{ text: reply }], ts: Date.now() });
+      await saveHistory(userId, history);
+      return res.json({ reply, cards: [], intent: "OUT_OF_SCOPE", source: "fitlip" });
     }
 
     // Rebuild context on every turn so the assistant sees newly logged meals,

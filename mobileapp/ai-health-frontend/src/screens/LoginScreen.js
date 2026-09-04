@@ -8,6 +8,7 @@ import AuthShell from "../components/auth/AuthShell";
 import AuthHero from "../components/auth/AuthHero";
 import FormField from "../components/auth/FormField";
 import PrimaryButton from "../components/auth/PrimaryButton";
+import GoogleSignInButton from "../components/GoogleSignInButton";
 import { Divider, Banner, FooterLink } from "../components/auth/AuthBits";
 
 export default function LoginScreen() {
@@ -89,6 +90,25 @@ export default function LoginScreen() {
       </View>
 
       <Divider />
+
+      <GoogleSignInButton
+        onSuccess={(data) => {
+          if (data.hasHealthProfile) {
+            login(data.token);
+          } else {
+            router.push({
+              pathname: "/(auth)/health-profile",
+              params: {
+                name: data.user?.name ?? "",
+                email: data.user?.email ?? "",
+                token: data.token,
+              },
+            });
+          }
+        }}
+      />
+
+      <View style={{ height: 16 }} />
 
       <Pressable
         onPress={() => router.push("/(auth)/register")}

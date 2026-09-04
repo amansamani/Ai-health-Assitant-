@@ -52,6 +52,17 @@ export function getNotificationRoute(data: Record<string, unknown>): Href | null
     case "streakAtRisk":
       return "/(app)/social/streaks" as Href;
 
+    case "followRequest":
+      return "/(app)/social/follow-requests" as Href;
+
+    case "newFollower":
+    case "followAccepted":
+      if (typeof data.userId === "string" && data.userId) {
+        return { pathname: "/(app)/social/profile", params: { identifier: data.userId } } as Href;
+      }
+      return "/(app)/social" as Href;
+
+
     case "comeback":
       return "/(app)/(tabs)/home" as Href;
 

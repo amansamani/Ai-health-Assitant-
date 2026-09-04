@@ -61,6 +61,35 @@ function detectIntent(message) {
   return "UNKNOWN";
 }
 
+
+const FITLIP_SCOPE_PATTERNS = [
+  /\b(fitness|fit|workout|workouts|exercise|exercises|training|gym|strength|cardio|running|run|walk|walking|cycling|cycle|ride|steps?|activity|calories?|kcal|nutrition|nutrients?|meal|meals|food|diet|protein|carbs?|carbohydrates?|fats?|fiber|hydration|water|sleep|recovery|stamina|endurance|mobility|flexibility|weight|body|wellness|health|healthy|habit|habits|goal|progress|pace|distance|heart rate|hr|burned|macros?|macro|vitamins?|minerals?|mindfulness|stress|anxiety|mental health|vo2|max heart rate|resting heart rate|body composition)\b/i,
+  /\b(fitlip|my profile|my account|my plan|my data|my stats|my progress|today|today's|daily summary|weekly summary)\b/i,
+];
+
+const OUT_OF_SCOPE_PATTERNS = [
+  /\b(coding|programming|java|javascript|typescript|python|c\+\+|c#|react|react native|node\.?js|html|css|sql|php|ruby|kotlin|swift|algorithm|leetcode|github|git|debug|debugging|software|api development|write code|code this)\b/i,
+  /\b(stock|stocks|trading|crypto|bitcoin|forex|investment|investing|loan|mortgage|taxes?|legal advice|lawyer|politics|political|election|religion|essay|homework|assignment|physics|chemistry|calculus)\b/i,
+];
+
+function classifyScope(message) {
+  const q = text(message);
+  if (!q) return "unknown";
+  if (/^(hi|hello|hey|hii|good morning|good afternoon|good evening|good night|thanks|thank you|who are you|what can you do)\b/i.test(q)) {
+    return "allowed";
+  }
+  if (OUT_OF_SCOPE_PATTERNS.some((pattern) => pattern.test(q))) return "out_of_scope";
+  if (FITLIP_SCOPE_PATTERNS.some((pattern) => pattern.test(q))) return "allowed";
+  return "unknown";
+}
+
+function buildScopeGuardReply(scope) {
+  if (scope === "out_of_scope") {
+    return "I'm FitLip AI Coach, so I can help with fitness, nutrition, meals, health, activity, recovery, sleep, and your FitLip progress. I can't help with coding, programming, finance, politics, or other unrelated topics.";
+  }
+  return "I'm here specifically for your fitness, nutrition, health, activity, recovery, and FitLip progress. Ask me something about your meals, workouts, runs, sleep, hydration, goals, or health and I'll help.";
+}
+
 function n(value, fallback = 0) {
   const v = Number(value);
   return Number.isFinite(v) ? v : fallback;
@@ -277,5 +306,7 @@ module.exports = {
   detectIntent,
   buildDeterministicReply,
   buildIntentCards,
+  classifyScope,
+  buildScopeGuardReply,
   text,
 };

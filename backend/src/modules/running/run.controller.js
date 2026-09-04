@@ -35,6 +35,35 @@ function computePaceSecPerKm(distanceMeters, durationSeconds) {
   return Math.round(durationSeconds / km);
 }
 
+function haversineMeters(a, b) {
+  const lat1 = Number(a?.lat);
+  const lng1 = Number(a?.lng);
+  const lat2 = Number(b?.lat);
+  const lng2 = Number(b?.lng);
+  if (![lat1, lng1, lat2, lng2].every(Number.isFinite)) return 0;
+  const toRad = (deg) => (deg * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const sinLat = Math.sin(dLat / 2);
+  const sinLng = Math.sin(dLng / 2);
+  const h = sinLat * sinLat + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * sinLng * sinLng;
+  return 2 * 6371000 * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+function routeDistanceMeters(route) {
+  if (!Array.isArray(route) || route.length < 2) return 0;
+  let total = 0;
+  for (let i = 1; i < route.length; i += 1) total += haversineMeters(route[i - 1], route[i]);
+  return total;
+}
+
+function plausibleActivitySpeed(activityType, distanceMeters, durationSeconds) {
+  if (!durationSeconds) return distanceMeters <= 1000;
+  const speed = distanceMeters / durationSeconds;
+  const maxMetersPerSecond = activityType === "walk" ? 6 : activityType === "run" ? 12 : 40;
+  return speed <= maxMetersPerSecond;
+}
+
 async function uploadRunPhotoIfPresent(userId, photoBase64) {
   if (!photoBase64) return { photoUrl: null, photoPublicId: null };
 
@@ -44,7 +73,13 @@ async function uploadRunPhotoIfPresent(userId, photoBase64) {
   }
 
   const cleaned = String(photoBase64).replace(/^data:[^;]+;base64,/, "");
+  if (cleaned.length > 2_500_000) {
+    throw new Error("Run photo is too large");
+  }
   const buffer = Buffer.from(cleaned, "base64");
+  if (!buffer.length || buffer.length > 1_500_000) {
+    throw new Error("Run photo is too large");
+  }
 
   const result = await uploadImageBuffer(buffer, {
     folder: "fitlip/runs",
@@ -104,6 +139,29 @@ exports.createRun = async (req, res) => {
       safeRoute = route.filter((_, i) => i % step === 0);
     }
 
+    const normalizedDistanceMeters = Math.max(0, Number(distanceMeters));
+    const normalizedDurationSeconds = Math.max(0, Number(durationSeconds));
+    const routeDistance = routeDistanceMeters(safeRoute);
+
+    // Prevent easy client-side gamification cheating. A run may legitimately
+    // have a sparse/incomplete GPS trace, so we only reject obviously
+    // inconsistent claims rather than requiring an exact route match.
+    if (routeDistance > 500) {
+      const allowedMax = routeDistance * 1.75 + 2500;
+      const allowedMin = Math.max(0, routeDistance * 0.35 - 2500);
+      if (normalizedDistanceMeters > allowedMax || normalizedDistanceMeters < allowedMin) {
+        return res.status(400).json({ message: "Activity distance does not match the GPS route" });
+      }
+    }
+
+    if (!plausibleActivitySpeed(activityType, normalizedDistanceMeters, normalizedDurationSeconds)) {
+      return res.status(400).json({ message: "Activity speed is not plausible for the selected activity" });
+    }
+
+    if (photoBase64 && String(photoBase64).length > 2_500_000) {
+      return res.status(400).json({ message: "Run photo is too large" });
+    }
+
     const { photoUrl, photoPublicId } = await uploadRunPhotoIfPresent(
       req.user.id,
       photoBase64
@@ -113,8 +171,8 @@ exports.createRun = async (req, res) => {
       user: req.user.id,
       activityType,
       route: safeRoute,
-      distanceMeters: Math.max(0, Number(distanceMeters)),
-      durationSeconds: Math.max(0, Number(durationSeconds)),
+      distanceMeters: normalizedDistanceMeters,
+      durationSeconds: normalizedDurationSeconds,
       avgPaceSecPerKm: computePaceSecPerKm(
         Number(distanceMeters),
         Number(durationSeconds)

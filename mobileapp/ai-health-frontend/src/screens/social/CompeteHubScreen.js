@@ -45,7 +45,7 @@ function ProfileResult({ user, token, onPress }) {
 
 export default function CompeteHubScreen() {
   const router = useRouter();
-  const [counts, setCounts] = useState({ friends: 0, activeDuels: 0, needsResponse: 0, achievements: 0 });
+  const [counts, setCounts] = useState({ friends: 0, activeDuels: 0, needsResponse: 0, achievements: 0, followRequests: 0 });
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [searching, setSearching] = useState(false);
@@ -53,19 +53,22 @@ export default function CompeteHubScreen() {
 
   const fetchCounts = useCallback(async () => {
     try {
-      const [friendsRes, duelsRes, achievementsRes, profileRes, tokenRes] = await Promise.all([
+      const [friendsRes, duelsRes, achievementsRes, followReqRes, profileRes, tokenRes] = await Promise.all([
         API.get("/social/friends"),
         API.get("/social/duels"),
         API.get("/social/achievements"),
+        API.get("/social/follow-requests", { params: { page: 1, limit: 1 } }),
         API.get("/user/profile"),
         getToken(),
       ]);
       const duels = duelsRes.data;
+      const followRequestTotal = Number(followReqRes.data?.total || 0);
       setCounts({
         friends: friendsRes.data.length,
         activeDuels: duels.filter((d) => d.status === "active").length,
         needsResponse: duels.filter((d) => d.status === "pending").length,
         achievements: achievementsRes.data.length,
+        followRequests: followRequestTotal,
       });
       setToken(tokenRes);
     } catch (err) {
@@ -152,6 +155,7 @@ export default function CompeteHubScreen() {
         <Text style={[styles.sectionLabel, { marginTop: 18 }]}>YOUR FITNESS CIRCLE</Text>
         <View style={styles.grid}>
           <HubTile icon="people-outline" color={COLORS.primary} title="Friends" subtitle={`${counts.friends} connected`} onPress={() => router.push("/(app)/social/friends")} delay={80} />
+          <HubTile icon="person-add-outline" color="#8E24AA" title="Follow Requests" subtitle={`${counts.followRequests} pending`} badge={counts.followRequests} onPress={() => router.push("/(app)/social/follow-requests")} delay={100} />
           <HubTile icon="flash-outline" color="#F97316" title="Duels" subtitle={`${counts.activeDuels} active`} badge={counts.needsResponse} onPress={() => router.push("/(app)/social/duels")} delay={120} />
           <HubTile icon="podium-outline" color="#22C55E" title="Streak Battles" subtitle="See who's ahead" onPress={() => router.push("/(app)/social/streaks")} delay={160} />
           <HubTile icon="ribbon-outline" color="#8E24AA" title="Achievements" subtitle={`${counts.achievements} earned`} onPress={() => router.push("/(app)/social/achievements")} delay={200} />

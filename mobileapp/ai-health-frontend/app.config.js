@@ -11,6 +11,11 @@ export default ({ config }) => {
   return {
     ...config,
 
+    extra: {
+      ...config.extra,
+      googleWebClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || config.extra?.googleWebClientId || null,
+    },
+
     android: {
       ...config.android,
 

@@ -73,6 +73,17 @@ const NOTIFICATION_COPY = {
     { title: "FitLip misses you", body: "Steps miss you. Even the water tracker misses you. 💧" },
   ],
 
+  followRequest: [
+    { title: "New follow request", body: "{name} wants to follow you on FitLip." },
+    { title: "Someone wants to follow you", body: "{name} sent you a follow request. Tap to review it." },
+  ],
+  newFollower: [
+    { title: "New follower", body: "{name} just followed you on FitLip." },
+    { title: "Your circle is growing", body: "{name} started following you." },
+  ],
+  followAccepted: [
+    { title: "Follow request accepted", body: "{name} accepted your follow request." },
+  ],
   // ── Event-triggered (not scheduled — fired the moment something happens) ──
   duelChallenged: [
     { title: "{name} just challenged you! ⚡", body: "Duel incoming — accept and show them who's boss." },

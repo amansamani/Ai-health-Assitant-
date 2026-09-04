@@ -3,6 +3,7 @@ const DailyLog = require("../models/DailyLog");
 const WorkoutLog = require("../models/WorkoutLog");
 const MealLog = require("../modules/nutrition/mealLog.model");
 const NotificationLog = require("../models/NotificationLog");
+const FollowNotificationThrottle = require("../modules/social/followNotificationThrottle.model");
 const { sendPushNotification } = require("../utils/pushNotification");
 const { computeWorkoutStreak, STEP_GOAL } = require("../modules/social/achievement.service");
 const { pick } = require("./copy");
@@ -199,4 +200,48 @@ async function runMomentForAllUsers(moment) {
   return { processed: users.length, sent };
 }
 
-module.exports = { runMomentForAllUsers, sendEventNotification, MOMENT_CHECKS };
+
+
+const FOLLOW_NOTIFICATION_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+
+async function sendFollowNotification(recipientId, actorId, type, vars = {}, route = "/(app)/social/follow-requests") {
+  try {
+    const [recipient, actor] = await Promise.all([
+      User.findById(recipientId).select("pushToken").lean(),
+      User.findById(actorId).select("name username").lean(),
+    ]);
+    if (!recipient?.pushToken || !actor) return { sent: false, reason: "notification recipient unavailable" };
+
+    const cutoff = new Date(Date.now() - FOLLOW_NOTIFICATION_COOLDOWN_MS);
+    const existing = await FollowNotificationThrottle.findOne({ recipient: recipientId, actor: actorId, type }).lean();
+    if (existing?.lastSentAt && existing.lastSentAt > cutoff) {
+      return { sent: false, reason: "follow notification cooldown" };
+    }
+
+    const content = pick(type, { ...vars, name: actor.name || actor.username || "Someone" });
+    if (!content) return { sent: false, reason: "no copy for follow notification" };
+
+    const result = await sendPushNotification(recipient.pushToken, content.title, content.body, {
+      type,
+      route,
+      userId: String(actorId),
+    });
+    if (!result.sent) return result;
+
+    try {
+      await FollowNotificationThrottle.findOneAndUpdate(
+        { recipient: recipientId, actor: actorId, type },
+        { $set: { lastSentAt: new Date() } },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+    } catch (err) {
+      if (err?.code !== 11000) throw err;
+    }
+    return result;
+  } catch (err) {
+    logger.warn({ err, recipientId, actorId, type }, "Follow notification failed");
+    return { sent: false, reason: err.message };
+  }
+}
+
+module.exports = { runMomentForAllUsers, sendEventNotification, MOMENT_CHECKS, sendFollowNotification };

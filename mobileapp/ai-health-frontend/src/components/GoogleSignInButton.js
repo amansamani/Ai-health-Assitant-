@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import LucideIcon from "./ui/LucideIcon";
 import {
   GoogleSignin,
@@ -8,10 +8,11 @@ import {
 } from '@react-native-google-signin/google-signin';
 import API from '../services/api';
 import { COLORS } from '../constants/theme';
+import Constants from 'expo-constants';
 
 // Must be the WEB-type client ID from Google Cloud Console (not Android/iOS) —
 // this is what makes Google actually return an idToken your backend can verify.
-const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || Constants.expoConfig?.extra?.googleWebClientId || "";
 
 if (!GOOGLE_WEB_CLIENT_ID && __DEV__) {
   console.warn(
@@ -20,10 +21,6 @@ if (!GOOGLE_WEB_CLIENT_ID && __DEV__) {
   );
 }
 
-GoogleSignin.configure({
-  webClientId: GOOGLE_WEB_CLIENT_ID,
-  offlineAccess: false,
-});
 
 export default function GoogleSignInButton({ onSuccess }) {
   const [loading, setLoading] = useState(false);
@@ -31,6 +28,13 @@ export default function GoogleSignInButton({ onSuccess }) {
   const handlePress = async () => {
     try {
       setLoading(true);
+      if (!GOOGLE_WEB_CLIENT_ID || !/\.apps\.googleusercontent\.com$/.test(GOOGLE_WEB_CLIENT_ID)) {
+        throw new Error("Google sign-in is not configured for this build. Add EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID to the EAS preview environment and rebuild.");
+      }
+      GoogleSignin.configure({
+        webClientId: GOOGLE_WEB_CLIENT_ID,
+        offlineAccess: false,
+      });
       await GoogleSignin.hasPlayServices();
       const response = await GoogleSignin.signIn();
 
@@ -54,6 +58,7 @@ export default function GoogleSignInButton({ onSuccess }) {
         }
       } else {
         console.error('Google sign-in error:', err.message);
+        Alert.alert('Google sign-in', err.message || 'Unable to continue with Google.');
       }
     } finally {
       setLoading(false);

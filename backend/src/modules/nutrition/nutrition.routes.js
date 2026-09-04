@@ -1,4 +1,5 @@
 const express    = require("express");
+const rateLimit  = require("express-rate-limit");
 const router     = express.Router();
 const auth       = require("../../middleware/authMiddleware");
 const validate   = require("../../middleware/validate");
@@ -7,6 +8,23 @@ const controller = require("./nutrition.controller");
 const { aiChat, clearChatSession, getChatHistoryCtrl } = require("./ai.chat.controller");
 const { getWaterLog, addWater, undoLastWater, setWaterGoal } = require("./waterLog.controller");
 const { logDailyDiet, getDailyDietLog } = require("./mealCompletion.controller");
+const aiChatLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.user?.id?.toString() || req.ip,
+  message: { message: "Too many AI requests. Please try again later." },
+});
+
+const mealPhotoLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 12,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.user?.id?.toString() || req.ip,
+  message: { message: "Too many meal-photo analyses. Please try again later." },
+});
 
 // ── Diet Plan ─────────────────────────────────────────────────────────────────
 router.post("/generate",       auth, controller.generatePlan);
@@ -33,7 +51,7 @@ router.get("/history",        auth, controller.getMealHistory);
 router.get("/foods", auth, controller.getFoods);
 
 // ── Meal Photo Analysis ──────────────────────────────────────────────────────
-router.post("/analyze-meal-photo", auth, validate(mealPhotoSchema), controller.analyzeMealPhotoCtrl);
+router.post("/analyze-meal-photo", auth, mealPhotoLimiter, validate(mealPhotoSchema), controller.analyzeMealPhotoCtrl);
 
 // ── Water Tracking ────────────────────────────────────────────────────────────
 router.get("/water",         auth, getWaterLog);
@@ -43,7 +61,7 @@ router.put("/water/goal",    auth, setWaterGoal);
 
 // ── AI Chat ───────────────────────────────────────────────────────────────────
 router.get("/ai-chat",  auth, getChatHistoryCtrl);
-router.post("/ai-chat",  auth, aiChat);
+router.post("/ai-chat",  auth, aiChatLimiter, aiChat);
 router.delete("/ai-chat", auth, clearChatSession);
 
 module.exports = router;

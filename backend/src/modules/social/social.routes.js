@@ -1,4 +1,5 @@
 const express = require("express");
+const rateLimit = require("express-rate-limit");
 const router = express.Router();
 const auth = require("../../middleware/authMiddleware");
 const validate = require("../../middleware/validate");
@@ -10,18 +11,35 @@ const achievement = require("./achievement.controller");
 const streak = require("./streak.controller");
 const follow = require("./follow.controller");
 const gamification = require("./gamification.controller");
+const followActionLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.user?.id?.toString() || req.ip,
+  message: { message: "Too many follow actions. Please try again later." },
+});
+
+const followRequestResponseLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.user?.id?.toString() || req.ip,
+  message: { message: "Too many follow-request actions. Please try again later." },
+});
 
 // ── Social profiles / follow ────────────────────────────────────────────────
 router.get("/discover", auth, follow.discoverProfiles);
 router.get("/profile/:identifier", auth, follow.getPublicProfile);
 router.get("/profile/:userId/followers", auth, follow.listUserFollowers);
 router.get("/profile/:userId/following", auth, follow.listUserFollowing);
-router.post("/follow/:userId", auth, follow.followUser);
-router.delete("/follow/:userId", auth, follow.unfollowUser);
+router.post("/follow/:userId", auth, followActionLimiter, follow.followUser);
+router.delete("/follow/:userId", auth, followActionLimiter, follow.unfollowUser);
 router.get("/following", auth, follow.listFollowers);
 router.get("/followers", auth, follow.listFollowing);
 router.get("/follow-requests", auth, follow.listFollowRequests);
-router.post("/follow-requests/:requestId/respond", auth, follow.respondFollowRequest);
+router.post("/follow-requests/:requestId/respond", auth, followRequestResponseLimiter, follow.respondFollowRequest);
 
 // ── Friends ──────────────────────────────────────────────────────────────────
 router.get("/friends/code", auth, friendship.getMyCode);

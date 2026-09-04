@@ -1,4 +1,6 @@
 const logger = require("../../config/logger");
+const mongoose = require("mongoose");
+const { sendFollowNotification } = require("../../notifications/engagement.service");
 const User = require("../../models/User");
 const Follow = require("./follow.model");
 const { getGamificationSnapshot } = require("./gamification.config");
@@ -109,29 +111,83 @@ exports.discoverProfiles = async (req, res) => {
 
 exports.followUser = async (req, res) => {
   try {
-    const target = await User.findById(req.params.userId).select(
-      "name username picture profileVisibility"
+    const targetId = String(req.params.userId || "").trim();
+    if (!mongoose.isValidObjectId(targetId)) {
+      return res.status(400).json({ message: "Invalid user id" });
+    }
+
+    const target = await User.findById(targetId).select(
+      "name username picture profileVisibility profileImageUrl profileImageUpdatedAt totalXp"
     );
     if (!target) return res.status(404).json({ message: "User not found" });
     if (target._id.toString() === req.user.id.toString()) {
       return res.status(400).json({ message: "You cannot follow yourself" });
     }
 
+    const existing = await Follow.findOne({
+      follower: req.user.id,
+      following: target._id,
+    }).lean();
+
+    if (existing?.status === "accepted") {
+      return res.status(200).json({
+        message: "Already following",
+        status: "accepted",
+        alreadyFollowing: true,
+        user: publicUser(target),
+        follow: existing,
+      });
+    }
+
+    if (existing?.status === "pending") {
+      return res.status(200).json({
+        message: "Follow request already pending",
+        status: "pending",
+        alreadyRequested: true,
+        user: publicUser(target),
+        follow: existing,
+      });
+    }
+
     const status = target.profileVisibility === "public" ? "accepted" : "pending";
+    const relation = await Follow.create({
+      follower: req.user.id,
+      following: target._id,
+      status,
+    });
 
-    const relation = await Follow.findOneAndUpdate(
-      { follower: req.user.id, following: target._id },
-      { follower: req.user.id, following: target._id, status },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
-    ).lean();
-
-    return res.status(200).json({
+    const result = {
       message: status === "accepted" ? "Following" : "Follow request sent",
       status,
+      alreadyFollowing: false,
+      alreadyRequested: false,
       user: publicUser(target),
       follow: relation,
-    });
+    };
+
+    if (status === "accepted") {
+      sendFollowNotification(
+        target._id,
+        req.user.id,
+        "newFollower",
+        {},
+        `/(app)/social/profile?identifier=${encodeURIComponent(req.user.username || req.user.id.toString())}`
+      ).catch(() => {});
+    } else {
+      sendFollowNotification(
+        target._id,
+        req.user.id,
+        "followRequest",
+        {},
+        "/(app)/social/follow-requests"
+      ).catch(() => {});
+    }
+
+    return res.status(201).json(result);
   } catch (err) {
+    if (err?.code === 11000) {
+      return res.status(200).json({ message: "Follow request already exists", status: "pending" });
+    }
     logger.error({ err }, "Follow user error");
     return res.status(500).json({ message: "Failed to follow user" });
   }
@@ -139,9 +195,13 @@ exports.followUser = async (req, res) => {
 
 exports.unfollowUser = async (req, res) => {
   try {
+    const targetId = String(req.params.userId || "").trim();
+    if (!mongoose.isValidObjectId(targetId)) {
+      return res.status(400).json({ message: "Invalid user id" });
+    }
     const deleted = await Follow.findOneAndDelete({
       follower: req.user.id,
-      following: req.params.userId,
+      following: targetId,
     });
     if (!deleted) return res.status(404).json({ message: "Follow relationship not found" });
     return res.status(200).json({ message: "Unfollowed" });
@@ -248,14 +308,28 @@ exports.listUserFollowing = async (req, res) => {
 
 exports.listFollowRequests = async (req, res) => {
   try {
-    const rows = await Follow.find({ following: req.user.id, status: "pending" })
-      .populate("follower", PROFILE_FIELDS)
-      .sort({ createdAt: -1 })
-      .lean();
+    const { page, limit, skip } = paginationParams(req);
+    const [total, rows] = await Promise.all([
+      Follow.countDocuments({ following: req.user.id, status: "pending" }),
+      Follow.find({ following: req.user.id, status: "pending" })
+        .populate("follower", PROFILE_FIELDS)
+        .sort({ createdAt: -1, _id: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+    ]);
 
-    return res.status(200).json(
-      rows.filter((row) => row.follower).map((row) => ({ ...publicUser(row.follower), requestId: row._id, requestedAt: row.createdAt }))
-    );
+    const items = rows
+      .filter((row) => row.follower)
+      .map((row) => ({ ...publicUser(row.follower), requestId: row._id, requestedAt: row.createdAt }));
+
+    return res.status(200).json({
+      items,
+      total,
+      page,
+      limit,
+      hasMore: skip + items.length < total,
+    });
   } catch (err) {
     logger.error({ err }, "List follow requests error");
     return res.status(500).json({ message: "Failed to load follow requests" });
@@ -264,13 +338,18 @@ exports.listFollowRequests = async (req, res) => {
 
 exports.respondFollowRequest = async (req, res) => {
   try {
+    const requestId = String(req.params.requestId || "").trim();
+    if (!mongoose.isValidObjectId(requestId)) {
+      return res.status(400).json({ message: "Invalid follow request id" });
+    }
+
     const { action } = req.body;
     if (!["accept", "reject"].includes(action)) {
       return res.status(400).json({ message: "Action must be accept or reject" });
     }
 
     const relation = await Follow.findOne({
-      _id: req.params.requestId,
+      _id: requestId,
       following: req.user.id,
       status: "pending",
     });
@@ -280,11 +359,20 @@ exports.respondFollowRequest = async (req, res) => {
     if (action === "accept") {
       relation.status = "accepted";
       await relation.save();
-      return res.status(200).json({ message: "Follow request accepted" });
+
+      sendFollowNotification(
+        relation.follower,
+        req.user.id,
+        "followAccepted",
+        {},
+        `/(app)/social/profile?identifier=${encodeURIComponent(req.user.username || req.user.id.toString())}`
+      ).catch(() => {});
+
+      return res.status(200).json({ message: "Follow request accepted", status: "accepted" });
     }
 
     await relation.deleteOne();
-    return res.status(200).json({ message: "Follow request declined" });
+    return res.status(200).json({ message: "Follow request declined", status: "rejected" });
   } catch (err) {
     logger.error({ err }, "Respond follow request error");
     return res.status(500).json({ message: "Failed to respond to follow request" });
