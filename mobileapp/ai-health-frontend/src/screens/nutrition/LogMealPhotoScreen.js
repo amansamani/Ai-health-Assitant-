@@ -207,6 +207,7 @@ export default function LogMealPhotoScreen({ navigation, route }) {
       for (const item of itemsToLog) {
         await logMeal({
           mealType,
+          source: "photo",
           food: {
             name:     item.name,
             brand:    "",

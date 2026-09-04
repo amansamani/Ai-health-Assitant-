@@ -337,6 +337,62 @@ const mealLogSchema =
         trim: true,
       },
 
+      /*
+       * How the user created this calorie entry.
+       *
+       * manual:
+       *   Selected from food search / manual logging.
+       *
+       * photo:
+       *   AI/Gemini meal-photo logging.
+       *
+       * diet_plan:
+       *   One-tap completion of a planned meal.
+       *
+       * legacy:
+       *   Older records created before source tracking existed.
+       */
+      source: {
+        type: String,
+
+        enum: {
+          values: [
+            "manual",
+            "photo",
+            "diet_plan",
+            "legacy",
+          ],
+
+          message:
+            "Invalid meal source.",
+        },
+
+        default: "manual",
+
+        index: true,
+
+        trim: true,
+      },
+
+      /*
+       * Stable identifier for system-generated diet-plan entries.
+       *
+       * Example:
+       *   <dietPlanId>:breakfast
+       *
+       * This lets the server replace the plan placeholder with a
+       * real manual/photo meal without creating duplicate calories.
+       */
+      sourceKey: {
+        type: String,
+
+        default: "",
+
+        trim: true,
+
+        maxlength: 200,
+      },
+
       food: {
         type: foodItemSchema,
 
@@ -404,6 +460,21 @@ mealLogSchema.index(
   {
     name:
       "meal_logs_user_type_logged_at",
+  }
+);
+
+/*
+ * Used to locate one quick-completed Diet Plan meal for a user/day.
+ */
+mealLogSchema.index(
+  {
+    user: 1,
+    source: 1,
+    sourceKey: 1,
+  },
+  {
+    name:
+      "meal_logs_user_source_key",
   }
 );
 

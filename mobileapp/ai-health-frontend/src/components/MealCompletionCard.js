@@ -172,12 +172,16 @@ export default function MealCompletionCard({ plan, readOnly = false }) {
             : 0;
         }
 
-        const quick = sumMealMacros(plan, progressLog?.mealsCompleted || {}, loggedByMeal);
+        /*
+         * MealLog is now the single source of truth for calories/macros.
+         * Diet-plan quick completions are real `diet_plan` MealLog rows,
+         * so do not add another plan-calorie calculation on top of totals.
+         */
         setMacroLog({
-          calories: (Number(totals.calories) || 0) + quick.calories,
-          protein: (Number(totals.protein) || 0) + quick.protein,
-          carbs: (Number(totals.carbs) || 0) + quick.carbs,
-          fats: (Number(totals.fats) || 0) + quick.fats,
+          calories: Number(totals.calories) || 0,
+          protein: Number(totals.protein) || 0,
+          carbs: Number(totals.carbs) || 0,
+          fats: Number(totals.fats) || 0,
         });
       } catch {
         // Start fresh rather than breaking the Home screen.
@@ -217,16 +221,15 @@ export default function MealCompletionCard({ plan, readOnly = false }) {
           ? logs.reduce((sum, item) => sum + (Number(item?.food?.calories) || 0), 0)
           : 0;
       }
-      const quick = sumMealMacros(plan, progressLog?.mealsCompleted || {}, loggedByMeal);
       setDailyLog({
         caloriesConsumed: Number(progressLog?.caloriesConsumed) || 0,
         targetCalories: Number(progressRes.data?.plan?.targetCalories) || Number(plan?.summary?.targetCalories) || 0,
       });
       setMacroLog({
-        calories: (Number(totals.calories) || 0) + quick.calories,
-        protein: (Number(totals.protein) || 0) + quick.protein,
-        carbs: (Number(totals.carbs) || 0) + quick.carbs,
-        fats: (Number(totals.fats) || 0) + quick.fats,
+        calories: Number(totals.calories) || 0,
+        protein: Number(totals.protein) || 0,
+        carbs: Number(totals.carbs) || 0,
+        fats: Number(totals.fats) || 0,
       });
     } catch {
       setCompleted(prev);

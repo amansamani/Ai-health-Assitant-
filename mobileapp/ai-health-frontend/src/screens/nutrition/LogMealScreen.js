@@ -558,6 +558,7 @@ export default function LogMealScreen({ route, navigation }) {
 
       await logMeal({
         mealType,
+        source: "manual",
         food: {
           name:     selectedFood.name,
           brand:    selectedFood.brand || "",
