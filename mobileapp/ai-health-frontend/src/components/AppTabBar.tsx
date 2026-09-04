@@ -248,5 +248,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: COLORS.primary,
+    // The outer cameraButton keeps the border/halo visible. Give the actual
+    // purple fill its own inner radius so it cannot render with square corners.
+    borderRadius: 12,
   },
 });
