@@ -1,5 +1,8 @@
 import { useState, useCallback } from "react";
 import { View, Text, Pressable, StyleSheet, ActivityIndicator, ScrollView, Share, Modal } from "react-native";
+import { captureRef } from "react-native-view-shot";
+import * as Sharing from "expo-sharing";
+import { useRef } from "react";
 import { useFocusEffect } from "@react-navigation/native";
 import LucideIcon from "../../components/ui/LucideIcon";
 import { LinearGradient } from "expo-linear-gradient";
@@ -41,6 +44,8 @@ export default function AchievementsScreen() {
   const [achievements, setAchievements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
+  const shareRef = useRef(null);
+  const [sharing, setSharing] = useState(false);
 
   const fetchAchievements = useCallback(async () => {
     try {
@@ -55,10 +60,22 @@ export default function AchievementsScreen() {
 
   useFocusEffect(useCallback(() => { fetchAchievements(); }, [fetchAchievements]));
 
-  const handleShare = (achievement) => {
-    Share.share({
-      message: `🔥 ${achievement.title} on FitLip — ${achievement.description}`,
-    });
+  const handleShare = async (achievement) => {
+    if (!achievement || sharing) return;
+    try {
+      setSharing(true);
+      const canShareImage = await Sharing.isAvailableAsync();
+      if (canShareImage && shareRef.current) {
+        const uri = await captureRef(shareRef, { format: "png", quality: 1, result: "tmpfile", width: 1080, height: 1350 });
+        await Sharing.shareAsync(uri, { mimeType: "image/png", dialogTitle: `Share ${achievement.title}` });
+      } else {
+        await Share.share({ message: `🏅 ${achievement.title} on FitLip — ${achievement.description}` });
+      }
+    } catch (err) {
+      console.warn("Achievement share failed", err?.message);
+    } finally {
+      setSharing(false);
+    }
   };
 
   return (
@@ -96,14 +113,18 @@ export default function AchievementsScreen() {
       <Modal visible={!!selected} transparent animationType="fade" onRequestClose={() => setSelected(null)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            {selected && <AchievementCard achievement={selected} />}
+            {selected && (
+              <View ref={shareRef} collapsable={false} style={styles.shareCapture}>
+                <AchievementCard achievement={selected} />
+              </View>
+            )}
             <View style={styles.modalActions}>
               <Pressable onPress={() => setSelected(null)} style={[styles.modalBtn, styles.modalCloseBtn]}>
                 <Text style={styles.modalCloseBtnText}>Close</Text>
               </Pressable>
-              <Pressable onPress={() => selected && handleShare(selected)} style={[styles.modalBtn, styles.modalShareBtn]}>
-                <LucideIcon name="share-outline" size={16} color="#fff" />
-                <Text style={styles.modalShareBtnText}>Share</Text>
+              <Pressable onPress={() => selected && handleShare(selected)} disabled={sharing} style={[styles.modalBtn, styles.modalShareBtn, sharing && { opacity: 0.6 }]}>
+                {sharing ? <ActivityIndicator color="#fff" size="small" /> : <LucideIcon name="share-outline" size={16} color="#fff" />}
+                <Text style={styles.modalShareBtnText}>{sharing ? "Preparing…" : "Share"}</Text>
               </Pressable>
             </View>
           </View>
@@ -133,6 +154,7 @@ const styles = StyleSheet.create({
 
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.55)", alignItems: "center", justifyContent: "center", padding: 30 },
   modalContent: { width: "100%", maxWidth: 340 },
+  shareCapture: { width: "100%", borderRadius: 24, overflow: "hidden" },
   modalActions: { flexDirection: "row", gap: 10, marginTop: 16 },
   modalBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderRadius: 12, paddingVertical: 13 },
   modalCloseBtn: { backgroundColor: "rgba(255,255,255,0.15)" },
@@ -142,13 +164,13 @@ const styles = StyleSheet.create({
 });
 
 const cardStyles = StyleSheet.create({
-  card: { borderRadius: 20, padding: 26, alignItems: "center" },
+  card: { borderRadius: 24, padding: 28, minHeight: 360, alignItems: "center", justifyContent: "center", shadowColor: "#160B26", shadowOpacity: 0.24, shadowRadius: 22, shadowOffset: { width: 0, height: 12 }, elevation: 8 },
   iconWrap: {
     width: 68, height: 68, borderRadius: 34, backgroundColor: "rgba(255,255,255,0.18)",
     alignItems: "center", justifyContent: "center", marginBottom: 16,
   },
-  title: { fontSize: 20, fontWeight: "800", color: "#fff", textAlign: "center" },
-  description: { fontSize: 13.5, color: "rgba(255,255,255,0.85)", textAlign: "center", marginTop: 8, lineHeight: 19 },
+  title: { fontSize: 24, fontWeight: "900", color: "#fff", textAlign: "center", letterSpacing: -0.4 },
+  description: { fontSize: 14, color: "rgba(255,255,255,0.86)", textAlign: "center", marginTop: 9, lineHeight: 20, maxWidth: 280 },
   brandRow: { flexDirection: "row", justifyContent: "space-between", width: "100%", marginTop: 22, paddingTop: 16, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.2)" },
   brand: { color: "#fff", fontWeight: "800", fontSize: 13, letterSpacing: 0.5 },
   date: { color: "rgba(255,255,255,0.7)", fontSize: 11.5, fontWeight: "600" },

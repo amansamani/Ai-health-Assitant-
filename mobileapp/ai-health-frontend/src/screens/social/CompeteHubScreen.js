@@ -88,8 +88,8 @@ export default function CompeteHubScreen() {
     const timer = setTimeout(async () => {
       try {
         setSearching(true);
-        const { data } = await API.get("/social/discover", { params: { q: value } });
-        setResults(data || []);
+        const { data } = await API.get("/social/discover", { params: { q: value, page: 1, limit: 12 } });
+        setResults(data?.items || []);
       } catch (err) {
         setResults([]);
       } finally {
@@ -114,10 +114,10 @@ export default function CompeteHubScreen() {
             <View pointerEvents="none" style={styles.heroOrbOne} />
             <View pointerEvents="none" style={styles.heroOrbTwo} />
             <View style={styles.heroBadge}><LucideIcon name="users-outline" size={18} color="#fff" /></View>
-            <Text style={styles.heroTitle}>Compete. Connect. Keep going.</Text>
-            <Text style={styles.heroSub}>Challenge friends, build streaks, earn XP and turn consistency into momentum.</Text>
+            <Text style={styles.heroTitle}>Challenge your circle.</Text>
+            <Text style={styles.heroSub}>Duel friends, battle streaks and climb the XP leaderboard.</Text>
             <View style={styles.heroStats}>
-              <View style={styles.heroStat}><Text style={styles.heroStatValue}>{counts.friends}</Text><Text style={styles.heroStatLabel}>Friends</Text></View>
+              <View style={styles.heroStat}><Text style={styles.heroStatValue}>{counts.friends}</Text><Text style={styles.heroStatLabel}>Connections</Text></View>
               <View style={styles.heroDivider} />
               <View style={styles.heroStat}><Text style={styles.heroStatValue}>{counts.activeDuels}</Text><Text style={styles.heroStatLabel}>Active duels</Text></View>
               <View style={styles.heroDivider} />
@@ -126,7 +126,7 @@ export default function CompeteHubScreen() {
           </LinearGradient>
         </FadeSlideIn>
 
-        <Text style={styles.sectionLabel}>FIND PEOPLE</Text>
+        <Text style={styles.sectionLabel}>SEARCH TO CONNECT</Text>
         <FadeSlideIn delay={50}>
           <View style={styles.searchWrap}>
             <LucideIcon name="search-outline" size={19} color={COLORS.textMuted} />
@@ -149,20 +149,19 @@ export default function CompeteHubScreen() {
           </View>
         )}
         {query.trim().length >= 2 && !searching && results.length === 0 && (
-          <Text style={styles.noResults}>No public profiles found for “{query.trim()}”.</Text>
+          <Text style={styles.noResults}>No profiles found for “{query.trim()}”.</Text>
         )}
 
-        <Text style={[styles.sectionLabel, { marginTop: 18 }]}>YOUR FITNESS CIRCLE</Text>
+        <Text style={[styles.sectionLabel, { marginTop: 18 }]}>COMPETE</Text>
         <View style={styles.grid}>
-          <HubTile icon="people-outline" color={COLORS.primary} title="Friends" subtitle={`${counts.friends} connected`} onPress={() => router.push("/(app)/social/friends")} delay={80} />
-          <HubTile icon="person-add-outline" color="#8E24AA" title="Follow Requests" subtitle={`${counts.followRequests} pending`} badge={counts.followRequests} onPress={() => router.push("/(app)/social/follow-requests")} delay={100} />
-          <HubTile icon="flash-outline" color="#F97316" title="Duels" subtitle={`${counts.activeDuels} active`} badge={counts.needsResponse} onPress={() => router.push("/(app)/social/duels")} delay={120} />
-          <HubTile icon="podium-outline" color="#22C55E" title="Streak Battles" subtitle="See who's ahead" onPress={() => router.push("/(app)/social/streaks")} delay={160} />
-          <HubTile icon="ribbon-outline" color="#8E24AA" title="Achievements" subtitle={`${counts.achievements} earned`} onPress={() => router.push("/(app)/social/achievements")} delay={200} />
+          <HubTile icon="flash-outline" color="#F97316" title="Duels" subtitle="Challenge a friend" badge={counts.needsResponse} onPress={() => router.push("/(app)/social/duels")} delay={80} />
+          <HubTile icon="podium-outline" color="#22C55E" title="Streak Battles" subtitle="See who's ahead" onPress={() => router.push("/(app)/social/streaks")} delay={110} />
+          <HubTile icon="ribbon-outline" color="#8E24AA" title="Achievements" subtitle={`${counts.achievements} earned`} onPress={() => router.push("/(app)/social/achievements")} delay={140} />
+          <HubTile icon="podium-outline" color={COLORS.primary} title="Leaderboard" subtitle="Climb the ranks" onPress={() => router.push("/(app)/social/leaderboard")} delay={170} />
         </View>
 
         <Text style={[styles.sectionLabel, { marginTop: 20 }]}>YOUR GREATNESS</Text>
-        <Pressable style={styles.greatnessCard} onPress={() => router.push("/social/gamification")}>
+        <Pressable style={styles.greatnessCard} onPress={() => router.push("/(app)/social/gamification")}>
           <LinearGradient colors={[COLORS.primaryDark, COLORS.primary, COLORS.primaryLight]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.greatnessInner}>
             <View style={styles.greatnessIcon}><LucideIcon name="barbell-outline" size={22} color="#fff" /></View>
             <View style={{ flex: 1 }}><Text style={styles.greatnessEyebrow}>YOUR GREATNESS</Text><Text style={styles.greatnessTitle}>Build your Dumbbell rank</Text><Text style={styles.greatnessSub}>Earn XP from real fitness actions and climb with friends.</Text></View>

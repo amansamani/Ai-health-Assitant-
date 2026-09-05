@@ -81,6 +81,7 @@ import {
   Wifi,
   Bug,
   FileText,
+  Bell,
 } from 'lucide-react-native';
 
 const __ICON_HOME = Home;
@@ -189,6 +190,9 @@ const ICONS = {
   'location-outline': MapPin,
   'wifi-outline': Wifi,
   'bug-outline': Bug,
+  notifications: Bell,
+  'notifications-outline': Bell,
+  'bell-outline': Bell,
   'document-text-outline': FileText,
   'chatbubble-ellipses-outline': MessageCircle,
   'eye-outline': Eye,

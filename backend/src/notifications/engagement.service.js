@@ -8,6 +8,7 @@ const { sendPushNotification } = require("../utils/pushNotification");
 const { computeWorkoutStreak, STEP_GOAL } = require("../modules/social/achievement.service");
 const { pick } = require("./copy");
 const logger = require("../config/logger");
+const { createSocialNotification, actorName } = require("./socialNotification.service");
 
 // A user with a pushToken has already opted in at the OS level, but we
 // still cap how many *scheduled* nudges (not event-triggered ones — see
@@ -221,7 +222,13 @@ async function sendFollowNotification(recipientId, actorId, type, vars = {}, rou
     const content = pick(type, { ...vars, name: actor.name || actor.username || "Someone" });
     if (!content) return { sent: false, reason: "no copy for follow notification" };
 
-    const result = await sendPushNotification(recipient.pushToken, content.title, content.body, {
+    await createSocialNotification({
+      recipient: recipientId, actor: actorId, type, title: content.title, body: content.body,
+      data: { type, route, userId: String(actorId) },
+      dedupKey: `${type}:${String(actorId)}:${dateKey()}` ,
+    });
+
+    const result = await sendPushNotification(pushToken, content.title, content.body, {
       type,
       route,
       userId: String(actorId),

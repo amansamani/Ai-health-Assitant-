@@ -45,6 +45,7 @@ router.post("/follow-requests/:requestId/respond", auth, followRequestResponseLi
 router.get("/friends/code", auth, friendship.getMyCode);
 router.post("/friends", auth, validate(addFriendSchema), friendship.addFriend);
 router.get("/friends", auth, friendship.listFriends);
+router.get("/friends/search", auth, friendship.searchFriends);
 router.delete("/friends/:friendId", auth, friendship.removeFriend);
 
 // ── Duels ────────────────────────────────────────────────────────────────────

@@ -82,27 +82,43 @@ exports.discoverProfiles = async (req, res) => {
     if (query.length < 2) return res.status(200).json([]);
 
     const regex = new RegExp(escapeRegex(query), "i");
-    const users = await User.find({
+    const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(30, Math.max(5, Number.parseInt(req.query.limit, 10) || 12));
+
+    let baseFilter = {
       _id: { $ne: req.user.id },
-      profileVisibility: "public",
       $or: [{ username: regex }, { name: regex }],
-    })
+    };
+
+    if (String(req.query.friendsOnly || "").toLowerCase() === "true") {
+      const friendships = await require("./friendship.model").find({
+        $or: [{ user1: req.user.id }, { user2: req.user.id }],
+      }).select("user1 user2").lean();
+      const friendIds = friendships.map((f) =>
+        String(f.user1) === String(req.user.id) ? f.user2 : f.user1
+      );
+      baseFilter._id = { $ne: req.user.id, $in: friendIds };
+    }
+
+    const users = await User.find(baseFilter)
       .select(PROFILE_FIELDS)
-      .sort({ username: 1 })
-      .limit(12)
+      .sort({ username: 1, _id: 1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
       .lean();
 
     const withCounts = await Promise.all(
       users.map(async (user) => {
-        const [followers, following] = await Promise.all([
+        const [followers, following, relation] = await Promise.all([
           Follow.countDocuments({ following: user._id, status: "accepted" }),
           Follow.countDocuments({ follower: user._id, status: "accepted" }),
+          Follow.findOne({ follower: req.user.id, following: user._id }).select("status").lean(),
         ]);
-        return { ...publicUser(user), followerCount: followers, followingCount: following };
+        return { ...publicUser(user), followerCount: followers, followingCount: following, followStatus: relation?.status || null };
       })
     );
 
-    return res.status(200).json(withCounts);
+    return res.status(200).json({ items: withCounts, page, limit, hasMore: users.length === limit });
   } catch (err) {
     logger.error({ err }, "Discover profiles error");
     return res.status(500).json({ message: "Failed to discover profiles" });

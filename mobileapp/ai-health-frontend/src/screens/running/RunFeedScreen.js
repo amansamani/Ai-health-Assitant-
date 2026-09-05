@@ -72,20 +72,21 @@ function RunCard({ run, onToggleLike, onShare }) {
 
       {!!run.caption && <Text style={styles.caption}>{run.caption}</Text>}
 
-      {run.photoUrl ? (
-        <Image source={{ uri: run.photoUrl }} style={styles.photo} />
-      ) : (
-        <RunRouteArt route={run.route} style={styles.routeThumb} />
-      )}
-
-      <View style={styles.statsRow}>
-        <Stat icon="footsteps-outline" value={`${formatDistanceKm(run.distanceMeters)} km`} label="DISTANCE" />
-        <View style={styles.statDivider} />
-        <Stat icon="time-outline" value={formatDuration(run.durationSeconds)} label="TIME" />
-        <View style={styles.statDivider} />
-        <Stat icon="flash-outline" value={formatPace(paceSecPerKm(run.distanceMeters, run.durationSeconds))} label="PACE /KM" />
-        <View style={styles.statDivider} />
-        <Stat icon="flame-outline" value={`${run.caloriesBurned}`} label="KCAL" />
+      <View style={styles.mediaWrap}>
+        {run.photoUrl ? (
+          <Image source={{ uri: run.photoUrl }} style={styles.photo} />
+        ) : (
+          <RunRouteArt route={run.route} style={styles.routeThumb} />
+        )}
+        <View style={styles.glassStats}>
+          <Stat icon="footsteps-outline" value={`${formatDistanceKm(run.distanceMeters)} km`} label="DISTANCE" />
+          <View style={styles.statDivider} />
+          <Stat icon="time-outline" value={formatDuration(run.durationSeconds)} label="TIME" />
+          <View style={styles.statDivider} />
+          <Stat icon="flash-outline" value={formatPace(paceSecPerKm(run.distanceMeters, run.durationSeconds))} label="PACE /KM" />
+          <View style={styles.statDivider} />
+          <Stat icon="flame-outline" value={`${run.caloriesBurned}`} label="KCAL" />
+        </View>
       </View>
 
       <View style={styles.actionsRow}>
@@ -289,8 +290,10 @@ const styles = StyleSheet.create({
   },
   activityPillText: { fontSize: 10.5, fontWeight: "800", color: COLORS.primaryDark },
   caption: { fontSize: 13, color: COLORS.textDark, marginBottom: 10, lineHeight: 18 },
-  photo: { width: "100%", height: 190, borderRadius: 16, marginBottom: 12 },
-  routeThumb: { width: "100%", height: 150, borderRadius: 16, marginBottom: 12 },
+  mediaWrap: { position: "relative", marginBottom: 12, borderRadius: 20, overflow: "hidden" },
+  photo: { width: "100%", height: 220 },
+  routeThumb: { width: "100%", height: 220 },
+  glassStats: { position: "absolute", left: 10, right: 10, bottom: 10, flexDirection: "row", alignItems: "center", backgroundColor: "rgba(15,8,22,0.60)", borderWidth: 1, borderColor: "rgba(255,255,255,0.16)", borderRadius: 16, paddingVertical: 9, paddingHorizontal: 5 },
   statsRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -301,8 +304,8 @@ const styles = StyleSheet.create({
   },
   statItem: { flex: 1, alignItems: "center", gap: 3 },
   statDivider: { width: 1, height: "60%", backgroundColor: COLORS.border },
-  statValue: { fontWeight: "800", color: COLORS.textDark, fontSize: 13 },
-  statLabel: { fontSize: 8.5, letterSpacing: 0.6, fontWeight: "800", color: COLORS.textLight },
+  statValue: { fontWeight: "800", color: "#fff", fontSize: 13 },
+  statLabel: { fontSize: 8.5, letterSpacing: 0.6, fontWeight: "800", color: "rgba(255,255,255,0.68)" },
   actionsRow: { flexDirection: "row", alignItems: "center", gap: 6, paddingTop: 6 },
   actionBtn: { flexDirection: "row", alignItems: "center", gap: 6, minHeight: 40, paddingHorizontal: 8, borderRadius: 12 },
   actionBtnPressed: { backgroundColor: COLORS.surfaceMuted },

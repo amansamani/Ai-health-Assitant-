@@ -134,6 +134,7 @@ export default function PublicProfileScreen() {
           <View style={styles.statsCard}>
             <Pressable
               style={({ pressed }) => [styles.statTap, pressed && styles.statTapPressed]}
+              disabled={profile.profileVisibility === "private" && !profile.canView}
               onPress={() => router.push({ pathname: "/(app)/social/connections", params: { identifier: profile.username || profile._id, type: "followers" } })}
               accessibilityRole="button"
               accessibilityLabel={`Open ${profile.followerCount ?? 0} followers`}
@@ -144,6 +145,7 @@ export default function PublicProfileScreen() {
             <View style={styles.divider} />
             <Pressable
               style={({ pressed }) => [styles.statTap, pressed && styles.statTapPressed]}
+              disabled={profile.profileVisibility === "private" && !profile.canView}
               onPress={() => router.push({ pathname: "/(app)/social/connections", params: { identifier: profile.username || profile._id, type: "following" } })}
               accessibilityRole="button"
               accessibilityLabel={`Open ${profile.followingCount ?? 0} following`}

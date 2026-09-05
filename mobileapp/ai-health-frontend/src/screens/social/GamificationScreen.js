@@ -19,10 +19,10 @@ export default function GamificationScreen() {
     try {
       const [me, board] = await Promise.all([
         API.get("/social/gamification/me"),
-        API.get("/social/gamification/leaderboard"),
+        API.get("/social/gamification/leaderboard", { params: { page: 1, limit: 5 } }),
       ]);
       setData(me.data);
-      setLeaderboard(Array.isArray(board.data) ? board.data : []);
+      setLeaderboard(Array.isArray(board.data?.items) ? board.data.items : []);
     } catch (error) {
       console.warn("Gamification load failed", error?.response?.data || error?.message);
     } finally {
@@ -79,8 +79,8 @@ export default function GamificationScreen() {
           <XpRow label="Win a duel" xp="+100 XP" icon="trophy-outline" last />
         </View>
 
-        <View style={styles.card}>
-          <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Friends leaderboard</Text><LucideIcon name="podium-outline" size={20} color={COLORS.primary} /></View>
+        <Pressable style={styles.card} onPress={() => router.push("/(app)/social/leaderboard")}>
+          <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Friends leaderboard</Text><LucideIcon name="chevron-forward" size={20} color={COLORS.primary} /></View>
           {leaderboard.map((row) => (
             <View key={String(row.user.id)} style={styles.leaderRow}>
               <Text style={[styles.position, row.isMe && styles.positionMe]}>#{row.position}</Text>
@@ -90,7 +90,8 @@ export default function GamificationScreen() {
             </View>
           ))}
           {!leaderboard.length && <Text style={styles.empty}>Add friends to start your private leaderboard.</Text>}
-        </View>
+          {leaderboard.length > 0 && <Text style={styles.seeAll}>View full leaderboard</Text>}
+        </Pressable>
 
         <Pressable onPress={() => router.push("/(app)/social/achievements")} style={styles.achievementsButton}>
           <LucideIcon name="medal-outline" size={20} color="#fff" /><Text style={styles.achievementsButtonText}>View achievements</Text><LucideIcon name="chevron-forward" size={18} color="#fff" />

@@ -119,3 +119,30 @@ exports.removeFriend = async (req, res) => {
     res.status(500).json({ message: "Failed to remove friend" });
   }
 };
+
+exports.searchFriends = async (req, res) => {
+  try {
+    const query = String(req.query.q || "").trim();
+    const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(30, Math.max(5, Number.parseInt(req.query.limit, 10) || 20));
+    if (query.length < 2) return res.status(200).json({ items: [], page, limit, hasMore: false });
+
+    const friendships = await Friendship.find({
+      $or: [{ user1: req.user.id }, { user2: req.user.id }],
+    }).select("user1 user2").lean();
+    const ids = friendships.map((f) => String(f.user1) === String(req.user.id) ? f.user2 : f.user1);
+    if (!ids.length) return res.status(200).json({ items: [], page, limit, hasMore: false });
+
+    const regex = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+    const [users, total] = await Promise.all([
+      User.find({ _id: { $in: ids }, $or: [{ username: regex }, { name: regex }] })
+        .select(PUBLIC_FIELDS).sort({ username: 1, _id: 1 }).skip((page - 1) * limit).limit(limit).lean(),
+      User.countDocuments({ _id: { $in: ids }, $or: [{ username: regex }, { name: regex }] }),
+    ]);
+
+    return res.status(200).json({ items: users, total, page, limit, hasMore: page * limit < total });
+  } catch (err) {
+    logger.error({ err }, "Search friends error");
+    return res.status(500).json({ message: "Failed to search friends" });
+  }
+};

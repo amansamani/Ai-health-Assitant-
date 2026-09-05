@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { showToast } from "../../services/uiFeedback";
-import { View, Text, Pressable, StyleSheet, ActivityIndicator, ScrollView, Alert } from "react-native";
+import { View, Text, Pressable, StyleSheet, ActivityIndicator, ScrollView, Alert, TextInput } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import LucideIcon from "../../components/ui/LucideIcon";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -22,7 +22,8 @@ export default function CreateDuelScreen() {
   const { opponentId: preselectedId, opponentName: preselectedName } = useLocalSearchParams();
 
   const [friends, setFriends] = useState([]);
-  const [loadingFriends, setLoadingFriends] = useState(!preselectedId);
+  const [loadingFriends, setLoadingFriends] = useState(false);
+  const [friendQuery, setFriendQuery] = useState("");
   const [opponentId, setOpponentId] = useState(preselectedId || null);
   const [metric, setMetric] = useState("steps");
   const [durationDays, setDurationDays] = useState(7);
@@ -30,12 +31,17 @@ export default function CreateDuelScreen() {
   const [errorMsg, setErrorMsg] = useState("");
 
   useEffect(() => {
-    if (preselectedId) return; // already know who — skip the friend picker fetch
-    API.get("/social/friends")
-      .then((res) => setFriends(res.data))
-      .catch(() => {})
-      .finally(() => setLoadingFriends(false));
-  }, [preselectedId]);
+    if (preselectedId || friendQuery.trim().length < 2) { setFriends([]); return undefined; }
+    const timer = setTimeout(async () => {
+      setLoadingFriends(true);
+      try {
+        const res = await API.get("/social/friends/search", { params: { q: friendQuery.trim(), page: 1, limit: 20 } });
+        setFriends(res.data?.items || []);
+      } catch { setFriends([]); }
+      finally { setLoadingFriends(false); }
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [preselectedId, friendQuery]);
 
   const handleSend = async () => {
     if (!opponentId) {
@@ -68,15 +74,20 @@ export default function CreateDuelScreen() {
               <Avatar name={preselectedName} size={40} />
               <Text style={styles.selectedOpponentName}>{preselectedName}</Text>
             </View>
-          ) : loadingFriends ? (
-            <ActivityIndicator size="small" color={COLORS.primary} style={{ marginVertical: 16 }} />
-          ) : friends.length === 0 ? (
-            <View style={styles.emptyState}>
-              <LucideIcon name="people-outline" size={28} color={COLORS.textLight} />
-              <Text style={styles.emptyText}>Add a friend first to start a duel</Text>
-            </View>
           ) : (
-            friends.map((f) => (
+            <>
+              <View style={styles.searchWrap}>
+                <LucideIcon name="search-outline" size={18} color={COLORS.textMuted} />
+                <TextInput value={friendQuery} onChangeText={setFriendQuery} placeholder="Search your friends" placeholderTextColor={COLORS.textMuted} style={styles.searchInput} />
+              </View>
+              {loadingFriends ? (
+                <ActivityIndicator size="small" color={COLORS.primary} style={{ marginVertical: 16 }} />
+              ) : friends.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <LucideIcon name="people-outline" size={28} color={COLORS.textLight} />
+                  <Text style={styles.emptyText}>{friendQuery.trim().length < 2 ? "Search by name or username" : "No friends found"}</Text>
+                </View>
+              ) : friends.map((f) => (
               <Pressable
                 key={f._id}
                 onPress={() => setOpponentId(f._id)}
@@ -186,6 +197,9 @@ const styles = StyleSheet.create({
   },
   durationChipSelected: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
   durationChipText: { fontSize: 13.5, fontWeight: "700", color: COLORS.textMuted },
+
+  searchWrap: { flexDirection: "row", alignItems: "center", backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, borderRadius: 14, paddingHorizontal: 12, height: 48, marginBottom: 10 },
+  searchInput: { flex: 1, marginLeft: 8, color: COLORS.textDark, fontSize: 13.5, fontWeight: "600" },
 
   errorText: { color: COLORS.error, fontSize: 12.5, fontWeight: "600", marginTop: 4, marginBottom: 8 },
 

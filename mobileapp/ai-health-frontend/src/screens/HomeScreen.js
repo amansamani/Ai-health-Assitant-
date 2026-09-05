@@ -223,6 +223,7 @@ export default function HomeScreen() {
   const [greeting, setGreeting] = useState("Good Morning");
   const [activityFeed, setActivityFeed] = useState([]);
   const [activityFeedLoading, setActivityFeedLoading] = useState(true);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [dietPlan, setDietPlan] = useState(null);
 
   const STEP_GOAL  = 10000;
@@ -257,6 +258,13 @@ export default function HomeScreen() {
     } catch {
       setDietPlan(null);
     }
+  }, []);
+
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const res = await API.get("/notifications", { params: { page: 1, limit: 1, unreadOnly: true } });
+      setUnreadNotifications(Number(res.data?.unreadCount || 0));
+    } catch (_) {}
   }, []);
 
   const fetchActivityFeed = useCallback(async () => {
@@ -325,6 +333,7 @@ export default function HomeScreen() {
       }
       fetchActivityFeed();
       fetchDietPlan();
+      fetchNotifications();
     }, [updatedTodayParam, token, fetchToday, fetchActivityFeed, fetchDietPlan])
   );
 
@@ -337,7 +346,7 @@ export default function HomeScreen() {
       }
     });
     return () => subscription.remove();
-  }, [token, fetchToday, fetchActivityFeed, fetchDietPlan]);
+  }, [token, fetchToday, fetchActivityFeed, fetchDietPlan, fetchNotifications]);
 
   const steps    = today?.steps ?? 0;
   const calories = today?.caloriesBurned ?? 0;
@@ -367,11 +376,16 @@ export default function HomeScreen() {
                 <Text style={styles.subtitle}>Let&apos;s crush today&apos;s goals</Text>
               </View>
             </View>
-            <Pressable
-              onPress={() => router.push("/(app)/profile")}
-              accessibilityRole="button"
-              accessibilityLabel="Open profile"
-            >
+            <View style={styles.headerActions}>
+              <Pressable style={styles.notificationBtn} onPress={() => router.push("/(app)/notifications")} accessibilityRole="button" accessibilityLabel="Open notifications">
+                <LucideIcon name={unreadNotifications > 0 ? "notifications" : "notifications-outline"} size={21} color={COLORS.textDark} />
+                {unreadNotifications > 0 && <View style={styles.notificationDot}><Text style={styles.notificationDotText}>{unreadNotifications > 9 ? "9+" : unreadNotifications}</Text></View>}
+              </Pressable>
+              <Pressable
+                onPress={() => router.push("/(app)/profile")}
+                accessibilityRole="button"
+                accessibilityLabel="Open profile"
+              >
               {getHomeProfileImage(user, token) ? (
                 <Image
                   source={getHomeProfileImage(user, token)}
@@ -389,6 +403,7 @@ export default function HomeScreen() {
                 </View>
               )}
             </Pressable>
+            </View>
           </View>
         </FadeSlideIn>
 
@@ -447,7 +462,7 @@ export default function HomeScreen() {
             onPress={() => router.push("/(app)/social")}
             style={({ pressed }) => [styles.competeCard, pressed && { transform: [{ scale: 0.99 }], opacity: 0.96 }]}
             accessibilityRole="button"
-            accessibilityLabel="Open Compete with Friends"
+            accessibilityLabel="Open Compete"
           >
             <LinearGradient
               colors={[COLORS.primaryDark, COLORS.primary, "#7C3AED"]}
@@ -464,7 +479,7 @@ export default function HomeScreen() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.competeEyebrow}>YOUR FITNESS CIRCLE</Text>
-                  <Text style={styles.competeTitle}>Compete with Friends</Text>
+                  <Text style={styles.competeTitle}>Compete</Text>
                 </View>
                 <View style={styles.competeArrow}>
                   <LucideIcon name="chevron-forward" size={18} color="#fff" />

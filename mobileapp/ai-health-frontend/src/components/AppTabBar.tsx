@@ -202,6 +202,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: COLORS.borderSubtle,
     paddingTop: 6,
+    paddingBottom: Platform.OS === "ios" ? 10 : 8,
   },
   bar: {
     flexDirection: "row",
@@ -211,7 +212,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 48,
+    minHeight: 56,
     gap: 4,
   },
   chip: {
@@ -222,7 +223,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   label: {
-    fontSize: 10.5,
+    fontSize: 11.5,
     fontWeight: "700",
     letterSpacing: 0.1,
   },

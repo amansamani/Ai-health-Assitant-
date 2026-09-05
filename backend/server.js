@@ -170,6 +170,11 @@ app.use(
 );
 
 app.use(
+  "/api/notifications",
+  require("./src/routes/notificationRoutes")
+);
+
+app.use(
   "/api/workouts",
   workoutRoutes
 );
