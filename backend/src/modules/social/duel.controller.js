@@ -4,7 +4,7 @@ const Friendship = require("./friendship.model");
 const { computeDuelProgress, resolveDuelIfExpired } = require("./duel.service");
 const { sendEventNotification } = require("../../notifications/engagement.service");
 
-const PUBLIC_FIELDS = "name picture";
+const PUBLIC_FIELDS = "name username picture hasProfilePhoto profileImageUpdatedAt";
 
 function canonicalPair(idA, idB) {
   const a = idA.toString();

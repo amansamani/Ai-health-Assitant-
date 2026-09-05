@@ -403,7 +403,7 @@ export default function HomeScreen() {
           </View>
         </FadeSlideIn>
 
-        {/* ── TODAY'S MOTIVATION ── */
+        {/* ── TODAY'S MOTIVATION ── */}
         <FadeSlideIn delay={60}>
           <MotivationCard iconTrigger={iconTrigger} />
         </FadeSlideIn>

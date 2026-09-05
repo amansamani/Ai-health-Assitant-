@@ -23,7 +23,7 @@ function canonicalPair(idA, idB) {
   return a < b ? [a, b] : [b, a];
 }
 
-const PUBLIC_FIELDS = "name username picture bio profileVisibility profileImageUpdatedAt";
+const PUBLIC_FIELDS = "name username picture bio profileVisibility profileImageUpdatedAt hasProfilePhoto";
 
 exports.getMyCode = async (req, res) => {
   try {
@@ -83,6 +83,10 @@ exports.addFriend = async (req, res) => {
 
 exports.listFriends = async (req, res) => {
   try {
+    const page = Math.max(1, Number.parseInt(req.query.page || "1", 10) || 1);
+    const limit = Math.min(30, Math.max(1, Number.parseInt(req.query.limit || "20", 10) || 20));
+    const search = String(req.query.search || "").trim();
+
     const friendships = await Friendship.find({
       $or: [{ user1: req.user.id }, { user2: req.user.id }],
     })
@@ -91,12 +95,31 @@ exports.listFriends = async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
 
-    const friends = friendships.map((f) => {
+    const allFriends = friendships.map((f) => {
       const other = f.user1._id.toString() === req.user.id ? f.user2 : f.user1;
       return { friendshipId: f._id, since: f.createdAt, ...other };
     });
 
-    res.status(200).json(friends);
+    const normalizedSearch = search.toLowerCase();
+    const filtered = normalizedSearch
+      ? allFriends.filter((friend) =>
+          [friend.name, friend.username]
+            .filter(Boolean)
+            .some((value) => String(value).toLowerCase().includes(normalizedSearch))
+        )
+      : allFriends;
+
+    const total = filtered.length;
+    const start = (page - 1) * limit;
+    const friends = filtered.slice(start, start + limit);
+
+    res.status(200).json({
+      items: friends,
+      total,
+      page,
+      limit,
+      hasMore: start + friends.length < total,
+    });
   } catch (err) {
     logger.error({ err }, "List friends error");
     res.status(500).json({ message: "Failed to fetch friends" });
@@ -117,32 +140,5 @@ exports.removeFriend = async (req, res) => {
   } catch (err) {
     logger.error({ err }, "Remove friend error");
     res.status(500).json({ message: "Failed to remove friend" });
-  }
-};
-
-exports.searchFriends = async (req, res) => {
-  try {
-    const query = String(req.query.q || "").trim();
-    const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
-    const limit = Math.min(30, Math.max(5, Number.parseInt(req.query.limit, 10) || 20));
-    if (query.length < 2) return res.status(200).json({ items: [], page, limit, hasMore: false });
-
-    const friendships = await Friendship.find({
-      $or: [{ user1: req.user.id }, { user2: req.user.id }],
-    }).select("user1 user2").lean();
-    const ids = friendships.map((f) => String(f.user1) === String(req.user.id) ? f.user2 : f.user1);
-    if (!ids.length) return res.status(200).json({ items: [], page, limit, hasMore: false });
-
-    const regex = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
-    const [users, total] = await Promise.all([
-      User.find({ _id: { $in: ids }, $or: [{ username: regex }, { name: regex }] })
-        .select(PUBLIC_FIELDS).sort({ username: 1, _id: 1 }).skip((page - 1) * limit).limit(limit).lean(),
-      User.countDocuments({ _id: { $in: ids }, $or: [{ username: regex }, { name: regex }] }),
-    ]);
-
-    return res.status(200).json({ items: users, total, page, limit, hasMore: page * limit < total });
-  } catch (err) {
-    logger.error({ err }, "Search friends error");
-    return res.status(500).json({ message: "Failed to search friends" });
   }
 };

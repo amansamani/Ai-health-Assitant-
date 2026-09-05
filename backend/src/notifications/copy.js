@@ -84,6 +84,9 @@ const NOTIFICATION_COPY = {
   followAccepted: [
     { title: "Follow request accepted", body: "{name} accepted your follow request." },
   ],
+  runLiked: [
+    { title: "{name}", body: "liked your activity." },
+  ],
   // ── Event-triggered (not scheduled — fired the moment something happens) ──
   duelChallenged: [
     { title: "{name} just challenged you! ⚡", body: "Duel incoming — accept and show them who's boss." },
@@ -103,9 +106,6 @@ const NOTIFICATION_COPY = {
   ],
   achievementEarned: [
     { title: "🏅 New badge!", body: "{achievementTitle} — you're on fire." },
-  ],
-  runLiked: [
-    { title: "Someone liked your activity", body: "{name} liked your FitLip activity." },
   ],
 };
 

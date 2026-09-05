@@ -1,8 +1,8 @@
 "use strict";
 
 const logger = require("../../config/logger");
-const RunLog = require("./run.model");
 const { sendEventNotification } = require("../../notifications/engagement.service");
+const RunLog = require("./run.model");
 const Follow = require("../social/follow.model");
 
 const {
@@ -446,12 +446,18 @@ exports.toggleLike = async (req, res) => {
       { new: true }
     ).select("likes");
 
-    if (!alreadyLiked && String(run.user) !== String(req.user.id)) {
-      sendEventNotification(run.user, "runLiked", { name: req.user.name || "Someone" }, `${run._id}:${req.user.id}`).catch(() => {});
+    const nowLiked = !alreadyLiked;
+    if (nowLiked && String(run.user) !== String(req.user.id)) {
+      sendEventNotification(
+        run.user,
+        "runLiked",
+        { name: req.user.name || req.user.username || "Someone" },
+        `${run._id}:${req.user.id}`
+      ).catch(() => {});
     }
 
     return res.status(200).json({
-      liked: !alreadyLiked,
+      liked: nowLiked,
       likesCount: updated.likes.length,
     });
   } catch (error) {

@@ -257,64 +257,120 @@ export default function LogMealPhotoScreen({ navigation, route }) {
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
 
         <View style={s.screenHeader}>
-          <View style={{ flex: 1 }}>
-            <Text style={s.eyebrow}>LOG MEAL</Text>
-            <Text style={s.screenTitle}>Snap Your Meal</Text>
-            <Text style={s.screenSub}>AI reads your plate — you confirm before it's logged.</Text>
+          <View style={s.headerCopy}>
+            <View style={s.eyebrowRow}>
+              <View style={s.liveDot} />
+              <Text style={s.eyebrow}>AI MEAL SCAN</Text>
+            </View>
+            <Text style={s.screenTitle}>What did you eat?</Text>
+            <Text style={s.screenSub}>
+              Take a clear photo and FitLip will estimate the food, portion and nutrition before you log it.
+            </Text>
           </View>
           <View style={s.headerIconWrap}>
-            <LucideIcon name="camera" size={20} color={COLORS.primary} />
+            <LucideIcon name="sparkles" size={21} color={COLORS.primary} />
           </View>
         </View>
 
-        <View style={s.tabRow}>
-          {Object.entries(MEAL_META).map(([key, meta]) => (
-            <Tappable
-              key={key}
-              style={[s.tab, mealType === key && { backgroundColor: meta.color + "18", borderColor: meta.color }]}
-              onPress={() => setMealType(key)}
-              accessibilityRole="button"
-              accessibilityLabel={`${meta.label} meal`}
-            >
-              <meta.Icon trigger={iconTrigger} size={18} color={meta.color} />
-              <Text style={[s.tabTxt, mealType === key && { color: meta.color, fontWeight: "800" }]}>
-                {meta.label}
-              </Text>
-            </Tappable>
-          ))}
+        <View style={s.tabShell}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={s.tabRow}
+            bounces={false}
+          >
+            {Object.entries(MEAL_META).map(([key, meta]) => (
+              <Tappable
+                key={key}
+                style={[
+                  s.tab,
+                  mealType === key && {
+                    backgroundColor: COLORS.primary,
+                    borderColor: COLORS.primary,
+                    shadowColor: COLORS.primary,
+                    shadowOpacity: 0.18,
+                    shadowRadius: 10,
+                    shadowOffset: { width: 0, height: 5 },
+                    elevation: 4,
+                  },
+                ]}
+                onPress={() => setMealType(key)}
+                accessibilityRole="button"
+                accessibilityLabel={`${meta.label} meal`}
+              >
+                <meta.Icon
+                  trigger={iconTrigger}
+                  size={17}
+                  color={mealType === key ? "#FFFFFF" : meta.color}
+                />
+                <Text
+                  style={[
+                    s.tabTxt,
+                    mealType === key && { color: "#FFFFFF", fontWeight: "800" },
+                  ]}
+                >
+                  {meta.label}
+                </Text>
+              </Tappable>
+            ))}
+          </ScrollView>
         </View>
 
         {photos.length === 0 && (
           <View style={s.captureCard}>
             <LinearGradient
-              colors={[BRAND[100], "#FFFFFF"]}
+              colors={[BRAND[50], "#FFFFFF"]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-              style={s.captureIconWrap}
+              style={s.captureHero}
             >
-              <LucideIcon name="camera-outline" size={34} color={COLORS.primary} />
+              <View style={s.scanOrbOuter}>
+                <View style={s.scanOrbInner}>
+                  <LucideIcon name="camera-outline" size={31} color={COLORS.primary} />
+                </View>
+              </View>
+
+              <View style={s.captureBadge}>
+                <LucideIcon name="sparkles" size={13} color={COLORS.primary} />
+                <Text style={s.captureBadgeText}>AI-POWERED</Text>
+              </View>
+
+              <Text style={s.captureTitle}>Snap your plate</Text>
+              <Text style={s.captureSub}>
+                One photo is enough. Add a second angle when you want better portion accuracy.
+              </Text>
+
+              <View style={s.captureActions}>
+                <PrimaryButton
+                  title="Take Photo"
+                  icon="camera"
+                  onPress={pickFromCamera}
+                  accessibilityLabel="Take photo"
+                />
+
+                <Tappable
+                  style={s.secondaryBtn}
+                  onPress={pickFromGallery}
+                  accessibilityRole="button"
+                  accessibilityLabel="Choose from gallery"
+                >
+                  <LucideIcon name="images-outline" size={17} color={COLORS.primary} style={{ marginRight: 8 }} />
+                  <Text style={s.secondaryBtnText}>Choose from Gallery</Text>
+                </Tappable>
+              </View>
+
+              <View style={s.trustRow}>
+                <View style={s.trustItem}>
+                  <LucideIcon name="scan-outline" size={14} color={COLORS.textMuted} />
+                  <Text style={s.trustText}>Food recognition</Text>
+                </View>
+                <View style={s.trustDivider} />
+                <View style={s.trustItem}>
+                  <LucideIcon name="scale-outline" size={14} color={COLORS.textMuted} />
+                  <Text style={s.trustText}>Portion estimate</Text>
+                </View>
+              </View>
             </LinearGradient>
-            <Text style={s.captureTitle}>Snap your meal</Text>
-            <Text style={s.captureSub}>AI will estimate what's on your plate — you confirm before it's logged.</Text>
-
-            <View style={{ width: "100%", marginBottom: 12 }}>
-              <PrimaryButton
-                title="Take Photo"
-                icon="camera"
-                onPress={pickFromCamera}
-                accessibilityLabel="Take photo"
-              />
-            </View>
-
-            <Tappable
-              style={[s.secondaryBtn, { width: "100%" }]}
-              onPress={pickFromGallery}
-              accessibilityRole="button"
-              accessibilityLabel="Choose from gallery"
-            >
-              <LucideIcon name="images-outline" size={16} color={COLORS.primary} style={{ marginRight: 8 }} />
-              <Text style={s.secondaryBtnText}>Choose from Gallery</Text>
-            </Tappable>
           </View>
         )}
 
@@ -483,152 +539,268 @@ export default function LogMealPhotoScreen({ navigation, route }) {
 }
 
 const s = StyleSheet.create({
-  // ============================================================
-  // SCREEN
-  // ============================================================
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
   },
 
   scroll: {
-    paddingHorizontal: 20,
-    paddingTop: 18,
-    paddingBottom: 44,
+    paddingHorizontal: 18,
+    paddingTop: 16,
+    paddingBottom: 48,
   },
 
-  // ============================================================
-  // HEADER
-  // ============================================================
   screenHeader: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 22,
+    marginBottom: 18,
   },
 
-  screenHeaderText: {
+  headerCopy: {
     flex: 1,
-    paddingRight: 16,
+    paddingRight: 14,
+  },
+
+  eyebrowRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 7,
+  },
+
+  liveDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: COLORS.primary,
+    marginRight: 7,
   },
 
   eyebrow: {
     fontSize: 10,
     lineHeight: 13,
-    fontWeight: "800",
-    color: COLORS.textMuted,
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
-    marginBottom: 5,
+    fontWeight: "900",
+    color: COLORS.primary,
+    letterSpacing: 1.25,
   },
 
   screenTitle: {
-    fontSize: 24,
-    lineHeight: 30,
-    fontWeight: "800",
+    fontSize: 28,
+    lineHeight: 33,
+    fontWeight: "900",
     color: COLORS.textDark,
-    letterSpacing: -0.7,
+    letterSpacing: -0.9,
     marginBottom: 6,
   },
 
   screenSub: {
     fontSize: 13,
-    lineHeight: 18,
+    lineHeight: 19,
     color: COLORS.textMuted,
     fontWeight: "600",
-    maxWidth: 320,
+    maxWidth: 330,
   },
 
   headerIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 15,
-    backgroundColor: BRAND[100],
+    width: 48,
+    height: 48,
+    borderRadius: 17,
+    backgroundColor: BRAND[50],
+    borderWidth: 1,
+    borderColor: BRAND[100],
     alignItems: "center",
     justifyContent: "center",
-    marginLeft: 10,
+    shadowColor: COLORS.primary,
+    shadowOpacity: 0.09,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 2,
   },
 
-  // ============================================================
-  // MEAL TABS
-  // ============================================================
+  tabShell: {
+    marginBottom: 18,
+    marginHorizontal: -18,
+  },
+
   tabRow: {
-    flexDirection: "row",
-    gap: 8,
-    marginBottom: 22,
+    paddingHorizontal: 18,
+    gap: 9,
   },
 
   tab: {
-    flex: 1,
-    minHeight: 46,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 10,
+    minHeight: 44,
+    paddingHorizontal: 15,
     borderRadius: 15,
     borderWidth: 1,
     borderColor: COLORS.border,
     backgroundColor: COLORS.card,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
   },
 
   tabTxt: {
     fontSize: 11.5,
     lineHeight: 15,
-    fontWeight: "700",
+    fontWeight: "800",
     color: COLORS.textLight,
   },
 
-  // ============================================================
-  // CAPTURE CARD
-  // ============================================================
   captureCard: {
+    borderRadius: 28,
+    overflow: "hidden",
     backgroundColor: COLORS.card,
-    borderRadius: 20,
-    paddingHorizontal: 22,
-    paddingVertical: 28,
-    alignItems: "center",
-    ...SHADOW,
+    borderWidth: 1,
+    borderColor: BRAND[100],
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 5,
   },
 
-  captureIconWrap: {
-    width: 76,
-    height: 76,
-    borderRadius: 20,
+  captureHero: {
+    paddingHorizontal: 22,
+    paddingTop: 26,
+    paddingBottom: 19,
+    alignItems: "center",
+  },
+
+  scanOrbOuter: {
+    width: 92,
+    height: 92,
+    borderRadius: 46,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 18,
+    backgroundColor: "rgba(108, 63, 190, 0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(108, 63, 190, 0.13)",
+    marginBottom: 13,
+  },
+
+  scanOrbInner: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: BRAND[100],
+    shadowColor: COLORS.primary,
+    shadowOpacity: 0.1,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
+  },
+
+  captureBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: BRAND[100],
+    marginBottom: 9,
+  },
+
+  captureBadgeText: {
+    fontSize: 9,
+    lineHeight: 11,
+    letterSpacing: 1,
+    color: COLORS.primary,
+    fontWeight: "900",
   },
 
   captureTitle: {
-    fontSize: 21,
+    fontSize: 22,
     lineHeight: 27,
-    fontWeight: "800",
+    fontWeight: "900",
     color: COLORS.textDark,
     textAlign: "center",
-    marginBottom: 8,
+    marginBottom: 7,
   },
 
   captureSub: {
     width: "100%",
-    maxWidth: 310,
-    fontSize: 13,
+    maxWidth: 320,
+    fontSize: 12.8,
     lineHeight: 19,
     color: COLORS.textMuted,
     fontWeight: "600",
     textAlign: "center",
-    marginBottom: 22,
+    marginBottom: 20,
   },
 
-  // ============================================================
-  // PREVIEW / ANALYSIS CARD
-  // ============================================================
+  captureActions: {
+    width: "100%",
+    gap: 10,
+  },
+
+  secondaryBtn: {
+    minHeight: 50,
+    borderRadius: 15,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(108, 63, 190, 0.055)",
+    borderWidth: 1,
+    borderColor: BRAND[100],
+  },
+
+  secondaryBtnText: {
+    color: COLORS.primary,
+    fontSize: 13.5,
+    lineHeight: 18,
+    fontWeight: "800",
+  },
+
+  trustRow: {
+    width: "100%",
+    marginTop: 17,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: BRAND[100],
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  trustItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 8,
+  },
+
+  trustText: {
+    fontSize: 10.5,
+    lineHeight: 14,
+    color: COLORS.textMuted,
+    fontWeight: "700",
+  },
+
+  trustDivider: {
+    width: 1,
+    height: 14,
+    backgroundColor: COLORS.border,
+  },
+
   previewCard: {
     backgroundColor: COLORS.card,
-    borderRadius: 20,
-    padding: 16,
-    ...SHADOW,
+    borderRadius: 24,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: BRAND[100],
+    shadowColor: "#000",
+    shadowOpacity: 0.07,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 4,
   },
 
   photoRow: {
@@ -646,7 +818,7 @@ const s = StyleSheet.create({
   photoThumb: {
     width: "100%",
     height: 185,
-    borderRadius: 17,
+    borderRadius: 19,
     backgroundColor: BRAND[100],
   },
 
@@ -654,25 +826,22 @@ const s = StyleSheet.create({
     position: "absolute",
     top: -6,
     right: -6,
-    width: 28,
-    height: 28,
-    borderRadius: 12,
-    backgroundColor: "rgba(15, 23, 42, 0.82)",
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "rgba(15, 23, 42, 0.86)",
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 2,
     borderColor: COLORS.card,
   },
 
-  // ============================================================
-  // ADD ANGLE
-  // ============================================================
   angleBtn: {
     minHeight: 46,
     backgroundColor: BRAND[50],
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
+    borderRadius: 14,
+    paddingHorizontal: 13,
+    paddingVertical: 10,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 12,
@@ -682,15 +851,12 @@ const s = StyleSheet.create({
 
   angleBtnText: {
     color: COLORS.primary,
-    fontSize: 12.5,
+    fontSize: 12.2,
     lineHeight: 17,
     fontWeight: "800",
     textAlign: "center",
   },
 
-  // ============================================================
-  // REFERENCE OBJECT
-  // ============================================================
   referenceRow: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -710,13 +876,12 @@ const s = StyleSheet.create({
   checkbox: {
     width: 23,
     height: 23,
-    borderRadius: 7,
+    borderRadius: 8,
     borderWidth: 2,
     borderColor: COLORS.border,
     backgroundColor: COLORS.card,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 0,
   },
 
   checkboxChecked: {
@@ -731,11 +896,8 @@ const s = StyleSheet.create({
     fontWeight: "800",
   },
 
-  // ============================================================
-  // ANALYZING STATE
-  // ============================================================
   analyzingWrap: {
-    paddingTop: 4,
+    paddingTop: 6,
   },
 
   analyzingIconRow: {
@@ -745,8 +907,8 @@ const s = StyleSheet.create({
   },
 
   analyzingIconCircle: {
-    width: 46,
-    height: 46,
+    width: 48,
+    height: 48,
     borderRadius: 16,
     backgroundColor: BRAND[100],
     alignItems: "center",
@@ -756,7 +918,7 @@ const s = StyleSheet.create({
   analyzingTitle: {
     fontSize: 15,
     lineHeight: 20,
-    fontWeight: "800",
+    fontWeight: "900",
     color: COLORS.textDark,
   },
 
@@ -768,34 +930,8 @@ const s = StyleSheet.create({
     marginTop: 3,
   },
 
-  // ============================================================
-  // SECONDARY BUTTON
-  // ============================================================
-  secondaryBtn: {
-    minHeight: 52,
-    backgroundColor: BRAND[50],
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: BRAND[100],
-  },
-
-  secondaryBtnText: {
-    color: COLORS.textDark,
-    fontSize: 14,
-    lineHeight: 19,
-    fontWeight: "800",
-  },
-
-  // ============================================================
-  // RETAKE / TEXT BUTTON
-  // ============================================================
   retakeBtn: {
-    minHeight: 42,
+    minHeight: 44,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 12,
@@ -809,13 +945,10 @@ const s = StyleSheet.create({
     fontWeight: "800",
   },
 
-  // ============================================================
-  // SECTION HEADERS
-  // ============================================================
   sectionTitle: {
     fontSize: 10.5,
     lineHeight: 14,
-    fontWeight: "800",
+    fontWeight: "900",
     color: COLORS.textMuted,
     letterSpacing: 1.2,
     textTransform: "uppercase",
@@ -830,18 +963,19 @@ const s = StyleSheet.create({
     marginBottom: 16,
   },
 
-  // ============================================================
-  // FOOD ITEM CARD
-  // ============================================================
   itemCard: {
     backgroundColor: COLORS.card,
-    borderRadius: 16,
+    borderRadius: 19,
     paddingHorizontal: 15,
     paddingVertical: 15,
     marginBottom: 12,
     borderWidth: 1,
     borderColor: BRAND[100],
-    ...SHADOW,
+    shadowColor: "#000",
+    shadowOpacity: 0.045,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 2,
   },
 
   itemCardMuted: {
@@ -857,9 +991,6 @@ const s = StyleSheet.create({
     gap: 12,
   },
 
-  // ============================================================
-  // FOOD ITEM TEXT
-  // ============================================================
   itemHeaderRow: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -871,7 +1002,7 @@ const s = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     lineHeight: 20,
-    fontWeight: "800",
+    fontWeight: "900",
     color: COLORS.textDark,
     marginRight: 10,
   },
@@ -879,14 +1010,14 @@ const s = StyleSheet.create({
   confBadge: {
     paddingHorizontal: 9,
     paddingVertical: 5,
-    borderRadius: 9,
+    borderRadius: 999,
     alignSelf: "flex-start",
   },
 
   confBadgeText: {
     fontSize: 9.5,
     lineHeight: 12,
-    fontWeight: "800",
+    fontWeight: "900",
   },
 
   itemMeta: {
@@ -920,9 +1051,6 @@ const s = StyleSheet.create({
     marginTop: 5,
   },
 
-  // ============================================================
-  // GRAM STEPPER
-  // ============================================================
   gramStepperRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -944,7 +1072,7 @@ const s = StyleSheet.create({
   gramBtn: {
     width: 34,
     height: 34,
-    borderRadius: 11,
+    borderRadius: 12,
     backgroundColor: BRAND[100],
     alignItems: "center",
     justifyContent: "center",
@@ -961,14 +1089,11 @@ const s = StyleSheet.create({
     minWidth: 52,
     fontSize: 14,
     lineHeight: 19,
-    fontWeight: "800",
+    fontWeight: "900",
     color: COLORS.textDark,
     textAlign: "center",
   },
 
-  // ============================================================
-  // NOTES
-  // ============================================================
   notesText: {
     fontSize: 12,
     lineHeight: 17,
@@ -978,22 +1103,25 @@ const s = StyleSheet.create({
     marginBottom: 15,
   },
 
-  // ============================================================
-  // EMPTY STATE
-  // ============================================================
   emptyCard: {
     backgroundColor: COLORS.card,
-    borderRadius: 20,
+    borderRadius: 24,
     paddingHorizontal: 24,
     paddingVertical: 30,
     alignItems: "center",
-    ...SHADOW,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 3,
   },
 
   emptyIconWrap: {
     width: 66,
     height: 66,
-    borderRadius: 20,
+    borderRadius: 22,
     backgroundColor: BRAND[50],
     alignItems: "center",
     justifyContent: "center",
@@ -1003,7 +1131,7 @@ const s = StyleSheet.create({
   emptyTitle: {
     fontSize: 17,
     lineHeight: 22,
-    fontWeight: "800",
+    fontWeight: "900",
     color: COLORS.textDark,
     textAlign: "center",
     marginBottom: 7,
