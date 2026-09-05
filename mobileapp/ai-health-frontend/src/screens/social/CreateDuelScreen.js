@@ -81,24 +81,44 @@ export default function CreateDuelScreen() {
                 <TextInput value={friendQuery} onChangeText={setFriendQuery} placeholder="Search your friends" placeholderTextColor={COLORS.textMuted} style={styles.searchInput} />
               </View>
               {loadingFriends ? (
-                <ActivityIndicator size="small" color={COLORS.primary} style={{ marginVertical: 16 }} />
+                <ActivityIndicator
+                  size="small"
+                  color={COLORS.primary}
+                  style={{ marginVertical: 16 }}
+                />
               ) : friends.length === 0 ? (
                 <View style={styles.emptyState}>
                   <LucideIcon name="people-outline" size={28} color={COLORS.textLight} />
-                  <Text style={styles.emptyText}>{friendQuery.trim().length < 2 ? "Search by name or username" : "No friends found"}</Text>
+                  <Text style={styles.emptyText}>
+                    {friendQuery.trim().length < 2
+                      ? "Search by name or username"
+                      : "No friends found"}
+                  </Text>
                 </View>
-              ) : friends.map((f) => (
-              <Pressable
-                key={f._id}
-                onPress={() => setOpponentId(f._id)}
-                style={[styles.friendPick, opponentId === f._id && styles.friendPickSelected]}
-              >
-                <Avatar name={f.name} size={36} />
-                <Text style={styles.friendPickName}>{f.name}</Text>
-                {opponentId === f._id && <LucideIcon name="checkmark-circle" size={20} color={COLORS.primary} />}
-              </Pressable>
-            ))
-          )}
+              ) : (
+                friends.map((f) => (
+                  <Pressable
+                    key={f._id}
+                    onPress={() => setOpponentId(f._id)}
+                    style={[
+                      styles.friendPick,
+                      opponentId === f._id && styles.friendPickSelected,
+                    ]}
+                  >
+                    <Avatar name={f.name} size={36} />
+                    <Text style={styles.friendPickName}>{f.name}</Text>
+                    {opponentId === f._id && (
+                      <LucideIcon
+                        name="checkmark-circle"
+                        size={20}
+                        color={COLORS.primary}
+                      />
+                    )}
+                  </Pressable>
+                ))
+              )}
+              </>
+            )}
         </FadeSlideIn>
 
         {/* Metric */}
