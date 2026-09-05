@@ -134,7 +134,6 @@ export default function PublicProfileScreen() {
           <View style={styles.statsCard}>
             <Pressable
               style={({ pressed }) => [styles.statTap, pressed && styles.statTapPressed]}
-              disabled={profile.profileVisibility === "private" && !profile.canView}
               onPress={() => router.push({ pathname: "/(app)/social/connections", params: { identifier: profile.username || profile._id, type: "followers" } })}
               accessibilityRole="button"
               accessibilityLabel={`Open ${profile.followerCount ?? 0} followers`}
@@ -145,7 +144,6 @@ export default function PublicProfileScreen() {
             <View style={styles.divider} />
             <Pressable
               style={({ pressed }) => [styles.statTap, pressed && styles.statTapPressed]}
-              disabled={profile.profileVisibility === "private" && !profile.canView}
               onPress={() => router.push({ pathname: "/(app)/social/connections", params: { identifier: profile.username || profile._id, type: "following" } })}
               accessibilityRole="button"
               accessibilityLabel={`Open ${profile.followingCount ?? 0} following`}
@@ -220,7 +218,7 @@ const styles = StyleSheet.create({
   topBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 },
   topBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, alignItems: "center", justifyContent: "center" },
   topTitle: { fontSize: 17, fontWeight: "800", color: COLORS.textDark },
-  hero: { borderRadius: 28, alignItems: "center", paddingHorizontal: 24, paddingTop: 26, paddingBottom: 28, ...SHADOW, shadowColor: COLORS.primaryDark, shadowOpacity: 0.25 },
+  hero: { borderRadius: 30, alignItems: "center", paddingHorizontal: 24, paddingTop: 28, paddingBottom: 30, ...SHADOW, shadowColor: COLORS.primaryDark, shadowOpacity: 0.22, overflow: "hidden" },
   heroAvatarWrap: { width: 102, height: 102, borderRadius: 51, padding: 3, backgroundColor: "rgba(255,255,255,0.22)", marginBottom: 13 },
   heroAvatar: { width: 96, height: 96, borderRadius: 48 },
   heroFallback: { width: 96, height: 96, borderRadius: 48, backgroundColor: "rgba(23,15,54,0.5)", alignItems: "center", justifyContent: "center" },
@@ -231,18 +229,18 @@ const styles = StyleSheet.create({
   followBtn: { minWidth: 132, minHeight: 44, paddingHorizontal: 18, borderRadius: 15, backgroundColor: COLORS.primaryDark, marginTop: 18, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7 },
   followBtnSecondary: { backgroundColor: "#fff" },
   followBtnText: { color: "#fff", fontSize: 13.5, fontWeight: "850" },
-  rankStrip: { marginTop: 10, flexDirection: "row", alignItems: "center", backgroundColor: COLORS.surface, borderRadius: 16, borderWidth: 1, borderColor: COLORS.border, padding: 12 },
+  rankStrip: { marginTop: 12, flexDirection: "row", alignItems: "center", backgroundColor: COLORS.surface, borderRadius: 18, borderWidth: 1, borderColor: COLORS.border, padding: 13 },
   rankStripIcon: { width: 38, height: 38, borderRadius: 12, backgroundColor: COLORS.surfaceMuted, alignItems: "center", justifyContent: "center", marginRight: 10 },
   rankStripTitle: { fontSize: 14, fontWeight: "800", color: COLORS.textDark },
   rankStripMeta: { marginTop: 2, fontSize: 11, color: COLORS.textMuted, fontWeight: "700" },
   rankPill: { paddingHorizontal: 9, paddingVertical: 6, borderRadius: 10, backgroundColor: COLORS.surfaceMuted },
   rankPillText: { color: COLORS.primary, fontSize: 10.5, fontWeight: "800" },
-  statsCard: { marginTop: 12, flexDirection: "row", alignItems: "stretch", backgroundColor: COLORS.surface, borderRadius: 18, borderWidth: 1, borderColor: COLORS.border, paddingVertical: 8, minHeight: 76 },
+  statsCard: { marginTop: 12, flexDirection: "row", alignItems: "stretch", backgroundColor: COLORS.surface, borderRadius: 20, borderWidth: 1, borderColor: COLORS.border, paddingVertical: 6, minHeight: 82, ...SHADOW, shadowOpacity: 0.035 },
   statTap: { flex: 1, minWidth: 0, alignItems: "center", justifyContent: "center", paddingHorizontal: 6, borderRadius: 12 },
   statTapPressed: { backgroundColor: COLORS.surfaceMuted },
-  statValue: { fontSize: 17, fontWeight: "850", color: COLORS.textDark, maxWidth: "100%" },
+  statValue: { fontSize: 18, fontWeight: "900", color: COLORS.textDark, maxWidth: "100%" },
   visibilityValue: { fontSize: 14.5 },
-  statLabel: { marginTop: 4, fontSize: 10.5, color: COLORS.textMuted, fontWeight: "750", letterSpacing: 0.1 },
+  statLabel: { marginTop: 5, fontSize: 10.5, color: COLORS.textMuted, fontWeight: "800", letterSpacing: 0.15 },
   divider: { width: 1, alignSelf: "center", height: 34, backgroundColor: COLORS.border },
   infoCard: { marginTop: 12, backgroundColor: COLORS.surface, borderRadius: 20, borderWidth: 1, borderColor: COLORS.border, padding: 18, flexDirection: "row" },
   infoTitle: { fontSize: 15, fontWeight: "850", color: COLORS.textDark },

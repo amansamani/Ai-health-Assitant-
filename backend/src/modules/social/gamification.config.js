@@ -2,15 +2,15 @@
 
 const LEVELS = [
   { level: 1, minXp: 0, title: "Rookie" },
-  { level: 2, minXp: 100, title: "Rising" },
-  { level: 3, minXp: 250, title: "Committed" },
-  { level: 4, minXp: 500, title: "Disciplined" },
-  { level: 5, minXp: 850, title: "Strong" },
-  { level: 6, minXp: 1300, title: "Athlete" },
-  { level: 7, minXp: 1900, title: "Elite" },
-  { level: 8, minXp: 2700, title: "Champion" },
-  { level: 9, minXp: 3800, title: "Legend" },
-  { level: 10, minXp: 5200, title: "Icon" },
+  { level: 2, minXp: 150, title: "Rising" },
+  { level: 3, minXp: 400, title: "Committed" },
+  { level: 4, minXp: 800, title: "Disciplined" },
+  { level: 5, minXp: 1400, title: "Strong" },
+  { level: 6, minXp: 2200, title: "Athlete" },
+  { level: 7, minXp: 3300, title: "Elite" },
+  { level: 8, minXp: 4700, title: "Champion" },
+  { level: 9, minXp: 6500, title: "Legend" },
+  { level: 10, minXp: 8500, title: "Icon" },
 ];
 
 const XP_VALUES = {
