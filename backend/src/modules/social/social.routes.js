@@ -1,5 +1,5 @@
 const express = require("express");
-const rateLimit = require("express-rate-limit");
+const { rateLimit, ipKeyGenerator } = require("express-rate-limit");
 const router = express.Router();
 const auth = require("../../middleware/authMiddleware");
 const validate = require("../../middleware/validate");
@@ -16,7 +16,7 @@ const followActionLimiter = rateLimit({
   max: 30,
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => req.user?.id?.toString() || req.ip,
+  keyGenerator: (req) => req.user?.id?.toString() || ipKeyGenerator(req.ip),
   message: { message: "Too many follow actions. Please try again later." },
 });
 
@@ -25,7 +25,7 @@ const followRequestResponseLimiter = rateLimit({
   max: 30,
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => req.user?.id?.toString() || req.ip,
+  keyGenerator: (req) => req.user?.id?.toString() || ipKeyGenerator(req.ip),
   message: { message: "Too many follow-request actions. Please try again later." },
 });
 
@@ -45,7 +45,7 @@ router.post("/follow-requests/:requestId/respond", auth, followRequestResponseLi
 router.get("/friends/code", auth, friendship.getMyCode);
 router.post("/friends", auth, validate(addFriendSchema), friendship.addFriend);
 router.get("/friends", auth, friendship.listFriends);
-router.get("/friends/search", auth, friendship.searchFriends);
+router.get("/friends/search", auth, (req, res, next) => { req.query.friendsOnly = "true"; return follow.discoverProfiles(req, res, next); });
 router.delete("/friends/:friendId", auth, friendship.removeFriend);
 
 // ── Duels ────────────────────────────────────────────────────────────────────
