@@ -369,10 +369,19 @@ export default function HomeScreen() {
             </View>
             <View style={styles.headerActions}>
               <Pressable
-              onPress={() => router.push("/(app)/profile")}
-              accessibilityRole="button"
-              accessibilityLabel="Open profile"
-            >
+                onPress={() => router.push("/(app)/notifications")}
+                style={styles.notificationButton}
+                accessibilityRole="button"
+                accessibilityLabel="Open notifications"
+              >
+                <LucideIcon name="notifications-outline" size={21} color={COLORS.textDark} />
+                <View style={styles.notificationDot} />
+              </Pressable>
+              <Pressable
+                onPress={() => router.push("/(app)/profile")}
+                accessibilityRole="button"
+                accessibilityLabel="Open profile"
+              >
               {getHomeProfileImage(user, token) ? (
                 <Image
                   source={getHomeProfileImage(user, token)}
@@ -394,7 +403,7 @@ export default function HomeScreen() {
           </View>
         </FadeSlideIn>
 
-        {/* ── TODAY'S MOTIVATION ── */}
+        {/* ── TODAY'S MOTIVATION ── */
         <FadeSlideIn delay={60}>
           <MotivationCard iconTrigger={iconTrigger} />
         </FadeSlideIn>
@@ -449,7 +458,7 @@ export default function HomeScreen() {
             onPress={() => router.push("/(app)/social")}
             style={({ pressed }) => [styles.competeCard, pressed && { transform: [{ scale: 0.99 }], opacity: 0.96 }]}
             accessibilityRole="button"
-            accessibilityLabel="Open Compete with Friends"
+            accessibilityLabel="Open Train Together"
           >
             <LinearGradient
               colors={[COLORS.primaryDark, COLORS.primary, "#7C3AED"]}
@@ -465,8 +474,8 @@ export default function HomeScreen() {
                   <LucideIcon name="users-outline" size={17} color="#fff" />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.competeEyebrow}>YOUR FITNESS CIRCLE</Text>
-                  <Text style={styles.competeTitle}>Compete with Friends</Text>
+                  <Text style={styles.competeEyebrow}>FITNESS TOGETHER</Text>
+                  <Text style={styles.competeTitle}>Train Together</Text>
                 </View>
                 <View style={styles.competeArrow}>
                   <LucideIcon name="chevron-forward" size={18} color="#fff" />
@@ -601,14 +610,19 @@ const styles = StyleSheet.create({
 
   headerRow: {
     flexDirection: "row", justifyContent: "space-between",
-    alignItems: "center", marginBottom: 22, paddingVertical: 6,
+    alignItems: "center", marginBottom: 22,
   },
-  greetingRow: { flexDirection: "row", alignItems: "center", flex: 1 },
-  greetingAccent: { width: 4, height: 42, borderRadius: 4, backgroundColor: COLORS.primary, marginRight: 12 },
-  greeting:   { fontSize: 23, lineHeight: 28, fontWeight: "800", color: COLORS.textDark, letterSpacing: -0.6 },
+  greetingRow: { flexDirection: "row", alignItems: "center", flex: 1, minWidth: 0 },
+  greetingAccent: { width: 4, height: 40, borderRadius: 999, backgroundColor: COLORS.primary, marginRight: 11 },
+  headerActions: { flexDirection: "row", alignItems: "center", gap: 9, marginLeft: 12 },
+  notificationButton: { width: 44, height: 44, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border },
+  notificationDot: { position: "absolute", top: 9, right: 10, width: 7, height: 7, borderRadius: 4, backgroundColor: "#EF4444", borderWidth: 1.5, borderColor: COLORS.surface },
+  greeting:   { fontSize: 22, fontWeight: "700", color: COLORS.textDark, letterSpacing: -0.5 },
   subtitle:   { fontSize: 14, color: COLORS.textLight, marginTop: 3 },
-  headerActions: { flexDirection: "row", alignItems: "center", marginLeft: 12 },
-  avatar: { overflow: "hidden", width: 44, height: 44, borderRadius: 14, justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: COLORS.border },
+  avatar: { overflow: "hidden",
+    width: 44, height: 44, borderRadius: 16,
+    justifyContent: "center", alignItems: "center",
+  },
   avatarText: { color: "#fff", fontWeight: "800", fontSize: 18 },
 
   heroCard: {

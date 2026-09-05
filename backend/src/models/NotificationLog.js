@@ -9,6 +9,10 @@ const notificationLogSchema = new mongoose.Schema(
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     moment: { type: String, required: true }, // e.g. "morningKickoff", "duelWon"
     dateKey: { type: String, required: true }, // "YYYY-MM-DD", server-local day
+    title: { type: String, default: "FitLip update" },
+    body: { type: String, default: "You have a new FitLip update." },
+    data: { type: mongoose.Schema.Types.Mixed, default: {} },
+    readAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

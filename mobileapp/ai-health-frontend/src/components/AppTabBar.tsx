@@ -1,6 +1,5 @@
 import { useEffect } from "react";
 import { View, Pressable, StyleSheet, Platform } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import LucideIcon from "./ui/LucideIcon";
 import * as Haptics from "expo-haptics";
 import Animated, {
@@ -12,6 +11,7 @@ import Animated, {
 } from "react-native-reanimated";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { COLORS } from "@/src/constants/theme";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // ─── Tab config ─────────────────────────────────────────────────────────────
 // Keyed by the file-based route name (app/(app)/(tabs)/<name>.tsx).
@@ -143,6 +143,7 @@ function CameraTabButton({
 
 export default function AppTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
+
   return (
     <View style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, 8) }]}>
       <View style={styles.bar}>
@@ -208,25 +209,25 @@ const styles = StyleSheet.create({
   bar: {
     flexDirection: "row",
     alignItems: "center",
+    minHeight: 66,
   },
   tabButton: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 58,
+    minHeight: 66,
     gap: 5,
   },
   chip: {
-    width: 48,
-    height: 32,
-    borderRadius: 12,
+    width: 44,
+    height: 30,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
   },
   label: {
     fontSize: 11.5,
-    lineHeight: 14,
-    fontWeight: "800",
+    fontWeight: "700",
     letterSpacing: 0.1,
   },
 

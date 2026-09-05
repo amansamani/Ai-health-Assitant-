@@ -8,7 +8,6 @@ const { sendPushNotification } = require("../utils/pushNotification");
 const { computeWorkoutStreak, STEP_GOAL } = require("../modules/social/achievement.service");
 const { pick } = require("./copy");
 const logger = require("../config/logger");
-const { createSocialNotification, actorName } = require("./socialNotification.service");
 
 // A user with a pushToken has already opted in at the OS level, but we
 // still cap how many *scheduled* nudges (not event-triggered ones — see
@@ -146,13 +145,32 @@ async function sendScheduledIfEligible(userId, pushToken, moment, vars) {
 async function sendEventNotification(userId, moment, vars = {}, uniqueEventId = "") {
   try {
     const user = await User.findById(userId).select("pushToken").lean();
-    if (!user?.pushToken) return { sent: false, reason: "no push token" };
-
     const key = uniqueEventId ? `${moment}:${uniqueEventId}` : moment;
-    const already = await NotificationLog.exists({ user: userId, moment: key, dateKey: dateKey() });
+    const today = dateKey();
+    const already = await NotificationLog.exists({ user: userId, moment: key, dateKey: today });
     if (already) return { sent: false, reason: "already sent" };
 
-    return deliverAndLog(userId, user.pushToken, moment, vars, dateKey(), key);
+    const content = pick(moment, vars);
+    if (!content) return { sent: false, reason: "no copy for moment" };
+
+    // Persist the in-app notification first. Push is a delivery channel, not the source of truth.
+    try {
+      await NotificationLog.create({
+        user: userId,
+        moment: key,
+        dateKey: today,
+        title: content.title,
+        body: content.body,
+        data: { moment, ...vars },
+      });
+    } catch (err) {
+      if (err?.code === 11000) return { sent: false, reason: "already sent" };
+      throw err;
+    }
+
+    if (!user?.pushToken) return { sent: false, reason: "no push token", stored: true };
+    const result = await sendPushNotification(user.pushToken, content.title, content.body, { moment, ...vars });
+    return { ...result, stored: true };
   } catch (err) {
     logger.warn({ err, userId, moment }, "Event notification failed");
     return { sent: false, reason: err.message };
@@ -167,7 +185,14 @@ async function deliverAndLog(userId, pushToken, moment, vars, today, logKey = mo
 
   if (result.sent) {
     try {
-      await NotificationLog.create({ user: userId, moment: logKey, dateKey: today });
+      await NotificationLog.create({
+        user: userId,
+        moment: logKey,
+        dateKey: today,
+        title: content.title,
+        body: content.body,
+        data: { moment, ...vars },
+      });
     } catch (err) {
       if (err.code !== 11000) throw err; // race with another process — already logged, fine
     }
@@ -222,18 +247,29 @@ async function sendFollowNotification(recipientId, actorId, type, vars = {}, rou
     const content = pick(type, { ...vars, name: actor.name || actor.username || "Someone" });
     if (!content) return { sent: false, reason: "no copy for follow notification" };
 
-    await createSocialNotification({
-      recipient: recipientId, actor: actorId, type, title: content.title, body: content.body,
-      data: { type, route, userId: String(actorId) },
-      dedupKey: `${type}:${String(actorId)}:${dateKey()}` ,
-    });
-
-    const result = await sendPushNotification(pushToken, content.title, content.body, {
+    const result = await sendPushNotification(recipient.pushToken, content.title, content.body, {
       type,
       route,
       userId: String(actorId),
     });
-    if (!result.sent) return result;
+
+    // Persist the notification for the in-app inbox regardless of push delivery.
+    const inboxKey = `${type}:${actorId}`;
+    const today = dateKey();
+    try {
+      await NotificationLog.create({
+        user: recipientId,
+        moment: inboxKey,
+        dateKey: today,
+        title: content.title,
+        body: content.body,
+        data: { type, route, userId: String(actorId) },
+      });
+    } catch (err) {
+      if (err?.code !== 11000) throw err;
+    }
+
+    if (!result.sent) return { ...result, stored: true };
 
     try {
       await FollowNotificationThrottle.findOneAndUpdate(

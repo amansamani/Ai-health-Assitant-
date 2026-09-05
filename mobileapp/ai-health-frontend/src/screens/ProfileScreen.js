@@ -55,6 +55,7 @@ export default function ProfileScreen() {
   const [token, setToken] = useState(userToken || null);
   const [loading, setLoading] = useState(true);
   const [logoutConfirmVisible, setLogoutConfirmVisible] = useState(false);
+  const [pendingFollowRequests, setPendingFollowRequests] = useState(0);
   const mountedRef = useRef(true);
 
   useEffect(() => () => { mountedRef.current = false; }, []);
@@ -62,13 +63,15 @@ export default function ProfileScreen() {
   const loadProfile = useCallback(async () => {
     try {
       setLoading(true);
-      const [profileRes, currentToken] = await Promise.all([
+      const [profileRes, currentToken, requestRes] = await Promise.all([
         API.get("/user/profile"),
         getToken(),
+        API.get("/social/follow-requests", { params: { page: 1, limit: 1 } }).catch(() => ({ data: { total: 0 } })),
       ]);
       if (!mountedRef.current) return;
       setProfile(profileRes.data);
       setToken(currentToken);
+      setPendingFollowRequests(Number(requestRes?.data?.total || 0));
     } catch (err) {
       console.log("Profile fetch error:", err.response?.data?.message || err.message);
     } finally {
@@ -136,6 +139,14 @@ export default function ProfileScreen() {
             subtitle="Profile, followers, following and posts"
             onPress={() => router.push({ pathname: "/(app)/social/profile", params: { identifier: profile.username } })}
           />
+          {profile.profileVisibility === "private" && (
+            <ProfileRow
+              icon="person-add-outline"
+              title="Follow Requests"
+              subtitle={pendingFollowRequests > 0 ? `${pendingFollowRequests} pending request${pendingFollowRequests === 1 ? "" : "s"}` : "Manage requests from people who want to follow you"}
+              onPress={() => router.push("/(app)/social/follow-requests")}
+            />
+          )}
           <ProfileRow
             icon="trophy-outline"
             title="Achievements"

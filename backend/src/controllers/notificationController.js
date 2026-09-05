@@ -1,25 +1,30 @@
-const SocialNotification = require("../models/SocialNotification");
-exports.listNotifications = async (req, res) => {
+const NotificationLog = require("../models/NotificationLog");
+
+exports.list = async (req, res, next) => {
   try {
     const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
     const limit = Math.min(50, Math.max(10, Number.parseInt(req.query.limit, 10) || 20));
-    const unreadOnly = String(req.query.unreadOnly || "").toLowerCase() === "true";
-    const filter = { recipient: req.user.id };
-    if (unreadOnly) filter.readAt = null;
-    const [items, total, unreadCount] = await Promise.all([
-      SocialNotification.find(filter).populate("actor", "name username picture profileImageUrl profileImageUpdatedAt").sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
-      SocialNotification.countDocuments(filter),
-      SocialNotification.countDocuments({ recipient: req.user.id, readAt: null }),
+    const skip = (page - 1) * limit;
+    const [total, unread, items] = await Promise.all([
+      NotificationLog.countDocuments({ user: req.user.id }),
+      NotificationLog.countDocuments({ user: req.user.id, readAt: null }),
+      NotificationLog.find({ user: req.user.id }).sort({ createdAt: -1, _id: -1 }).skip(skip).limit(limit).lean(),
     ]);
-    res.status(200).json({ items, total, unreadCount, page, limit, hasMore: page * limit < total });
-  } catch (err) { res.status(500).json({ message: "Failed to load notifications" }); }
+    res.json({ items, total, unread, page, limit, hasMore: skip + items.length < total });
+  } catch (err) { next(err); }
 };
-exports.markRead = async (req, res) => {
-  const updated = await SocialNotification.findOneAndUpdate({ _id: req.params.id, recipient: req.user.id }, { $set: { readAt: new Date() } }, { new: true }).lean();
-  if (!updated) return res.status(404).json({ message: "Notification not found" });
-  res.status(200).json(updated);
+
+exports.markRead = async (req, res, next) => {
+  try {
+    const doc = await NotificationLog.findOneAndUpdate({ _id: req.params.id, user: req.user.id }, { $set: { readAt: new Date() } }, { new: true }).lean();
+    if (!doc) return res.status(404).json({ message: "Notification not found" });
+    res.json({ success: true, data: doc });
+  } catch (err) { next(err); }
 };
-exports.markAllRead = async (req, res) => {
-  await SocialNotification.updateMany({ recipient: req.user.id, readAt: null }, { $set: { readAt: new Date() } });
-  res.status(200).json({ message: "Notifications marked as read" });
+
+exports.markAllRead = async (req, res, next) => {
+  try {
+    await NotificationLog.updateMany({ user: req.user.id, readAt: null }, { $set: { readAt: new Date() } });
+    res.json({ success: true });
+  } catch (err) { next(err); }
 };

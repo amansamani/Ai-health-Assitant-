@@ -2,8 +2,8 @@
 
 const logger = require("../../config/logger");
 const RunLog = require("./run.model");
+const { sendEventNotification } = require("../../notifications/engagement.service");
 const Follow = require("../social/follow.model");
-const { createSocialNotification, actorName } = require("../../notifications/socialNotification.service");
 
 const {
   isConfigured: cloudinaryConfigured,
@@ -444,16 +444,10 @@ exports.toggleLike = async (req, res) => {
         ? { $pull: { likes: req.user.id } }
         : { $addToSet: { likes: req.user.id } },
       { new: true }
-    ).select("user likes");
+    ).select("likes");
 
     if (!alreadyLiked && String(run.user) !== String(req.user.id)) {
-      const name = req.user.name || req.user.username || "Someone";
-      await createSocialNotification({
-        recipient: run.user, actor: req.user.id, type: "runLike",
-        title: "New like", body: `${name} liked your activity.`,
-        data: { type: "runLike", route: "/(app)/run-feed", runId: String(run._id) },
-        dedupKey: `runLike:${String(run._id)}:${String(req.user.id)}:${new Date().toISOString().slice(0,10)}`,
-      }).catch(() => {});
+      sendEventNotification(run.user, "runLiked", { name: req.user.name || "Someone" }, `${run._id}:${req.user.id}`).catch(() => {});
     }
 
     return res.status(200).json({

@@ -1902,17 +1902,16 @@ async function evaluateWeeklyProgress(
     }
   }
 
-  if (
-    weights.length <
-    2
-  ) {
-    return {
-      adjust: false,
-
-      reason:
-        "Not enough weight data",
-    };
-  }
+  /*
+   * A weekly insight should still be useful when the user tracks food
+   * consistently but has not entered two weight measurements yet.
+   * Weight change is therefore optional for the insight preview; actual
+   * calorie-plan adjustment still uses the normal adjustment rules.
+   */
+  const weightChange =
+    weights.length >= 2
+      ? +((weights[weights.length - 1].weight - weights[0].weight).toFixed(2))
+      : null;
 
   /*
    * IMPORTANT FIX:
@@ -1930,18 +1929,6 @@ async function evaluateWeeklyProgress(
    * We explicitly sort by date above.
    */
 
-  const firstWeight =
-    weights[0].weight;
-
-  const latestWeight =
-    weights[
-      weights.length - 1
-    ].weight;
-
-  const weightChange =
-    latestWeight -
-    firstWeight;
-
   /*
    * IMPORTANT FIX:
    *
@@ -1956,7 +1943,7 @@ async function evaluateWeeklyProgress(
     100;
 
   return {
-    adjust: true,
+    adjust: weights.length >= 2,
 
     adherence:
       +adherence.toFixed(
@@ -2632,13 +2619,33 @@ async function getLatestWeeklyInsight(
     );
   }
 
-  return WeeklyInsight.findOne(
+  const latest = await WeeklyInsight.findOne(
     {
       user: userId,
     }
   ).sort({
     weekEnding: -1,
   });
+
+  if (latest) return latest;
+
+  const evaluation = await evaluateWeeklyProgress(userId);
+  if (!evaluation.adherence || !evaluation.avgCalories) return null;
+
+  return {
+    _id: null,
+    weekEnding: new Date(),
+    adjusted: false,
+    oldCalories: null,
+    newCalories: null,
+    delta: 0,
+    reason: evaluation.weightEntries >= 2
+      ? "You have enough weekly data for an insight. Keep tracking to unlock adaptive changes."
+      : `You&apos;ve tracked ${evaluation.daysEvaluated || 0} days. Add another weight check to unlock adaptive calorie changes.`,
+    adherence: evaluation.adherence,
+    avgCalories: evaluation.avgCalories,
+    weightChange: evaluation.weightChange,
+  };
 }
 
 async function getWeeklyInsightHistory(

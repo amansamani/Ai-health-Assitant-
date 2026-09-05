@@ -28,14 +28,14 @@ const heroImage = require("./assets/run-hero-user.png");
 // A dark, brand-tinted palette scoped to the shareable card only — the rest
 // of the screen stays on the app's normal light theme (COLORS from theme.ts).
 const CARD = {
-  bg: "#160B20",
-  ink: "#F8F2FB",
-  inkDim: "rgba(248,242,251,0.74)",
-  inkFaint: "rgba(248,242,251,0.48)",
-  glass: "rgba(28,15,38,0.55)",
-  glassBorder: "rgba(255,255,255,0.14)",
-  glow: "#C79BD6",
-  glowSoft: "rgba(199,155,214,0.32)",
+  bg: "transparent",
+  ink: "#FFFFFF",
+  inkDim: "rgba(255,255,255,0.82)",
+  inkFaint: "rgba(255,255,255,0.58)",
+  glass: "rgba(24,16,31,0.48)",
+  glassBorder: "rgba(255,255,255,0.18)",
+  glow: "#D6B7E1",
+  glowSoft: "rgba(214,183,225,0.24)",
 };
 
 function initials(name) {
@@ -344,7 +344,7 @@ const styles = StyleSheet.create({
 
   // The shareable card itself — everything inside here is what gets captured
   // and sent to Instagram/WhatsApp/etc.
-  card: { width: "100%", overflow: "hidden", borderRadius: 32, backgroundColor: CARD.bg, padding: 20, borderWidth: 1, borderColor: "rgba(255,255,255,0.10)", ...SHADOW, shadowOpacity: 0.24, shadowRadius: 24, shadowOffset: { width: 0, height: 14 } },
+  card: { width: "100%", overflow: "hidden", borderRadius: 30, backgroundColor: "transparent", padding: 20 },
   cardStory: { aspectRatio: 9 / 16 },
   cardPost: { aspectRatio: 1 },
 
@@ -371,9 +371,9 @@ const styles = StyleSheet.create({
   // between the hero text and the stat bar — this is what keeps the same
   // layout looking right on both the 9:16 story and the 1:1 post.
   routeFlexWrap: { flex: 1, marginTop: 14, marginBottom: 14, minHeight: 64 },
-  routePanel: { flex: 1, borderRadius: 24, borderWidth: 1, borderColor: CARD.glassBorder, overflow: "hidden" },
+  routePanel: { flex: 1, borderRadius: 24, borderWidth: 0, backgroundColor: "transparent" },
 
-  statBar: { flexDirection: "row", alignItems: "center", borderRadius: 22, paddingVertical: 12, backgroundColor: "rgba(255,255,255,0.10)", borderWidth: 1, borderColor: "rgba(255,255,255,0.16)" },
+  statBar: { flexDirection: "row", alignItems: "center", borderRadius: 20, paddingVertical: 12, backgroundColor: "rgba(10,5,15,0.38)", borderWidth: 1, borderColor: "rgba(255,255,255,0.16)" },
   statChip: { flex: 1, alignItems: "center", gap: 3 },
   statDivider: { width: 1, height: "62%", backgroundColor: "rgba(255,255,255,0.12)" },
   statValue: { color: "#fff", fontSize: 14, fontWeight: "900", fontVariant: ["tabular-nums"] },
