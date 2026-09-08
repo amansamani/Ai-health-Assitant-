@@ -93,19 +93,23 @@ app.use(
  * Body parsing
  * ---------------------------------------------------------------------------
  *
- * 10 MB is intentionally retained because the application has
- * image-related nutrition functionality.
+ * Keep normal JSON requests small to reduce memory/DoS exposure. The one
+ * endpoint that intentionally accepts base64 meal images gets a larger limit.
  */
-app.use(
-  express.json({
-    limit: "10mb",
-  })
-);
+const normalJsonParser = express.json({ limit: "1mb" });
+const mealPhotoJsonParser = express.json({ limit: "12mb" });
+
+app.use((req, res, next) => {
+  if (req.path === "/api/nutrition/analyze-meal-photo") {
+    return mealPhotoJsonParser(req, res, next);
+  }
+  return normalJsonParser(req, res, next);
+});
 
 app.use(
   express.urlencoded({
     extended: true,
-    limit: "10mb",
+    limit: "100kb",
   })
 );
 

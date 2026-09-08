@@ -10,6 +10,7 @@ import FormField from "../components/auth/FormField";
 import PrimaryButton from "../components/auth/PrimaryButton";
 import GoogleSignInButton from "../components/GoogleSignInButton";
 import { Divider, Banner, FooterLink } from "../components/auth/AuthBits";
+import { setPendingSession } from "../utils/secureToken";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -40,12 +41,13 @@ export default function LoginScreen() {
           params: {
             name: res.data.user?.name ?? "",
             email: res.data.user?.email ?? "",
-            token: res.data.token,
+            token: res.data.accessToken || res.data.token,
           },
         });
+        await setPendingSession(res.data.accessToken || res.data.token, res.data.refreshToken);
         return;
       }
-      await login(res.data.token);
+      await login(res.data.accessToken || res.data.token, res.data.refreshToken);
       // AuthContext flips userToken -> the (auth) layout guard redirects to /(app)/home.
     } catch (err) {
       setError(err.response?.data?.message || "Login failed. Please try again.");
@@ -92,18 +94,19 @@ export default function LoginScreen() {
       <Divider />
 
       <GoogleSignInButton
-        onSuccess={(data) => {
+        onSuccess={async (data) => {
           if (data.hasHealthProfile) {
-            login(data.token);
+            await login(data.accessToken || data.token, data.refreshToken);
           } else {
             router.push({
               pathname: "/(auth)/health-profile",
               params: {
                 name: data.user?.name ?? "",
                 email: data.user?.email ?? "",
-                token: data.token,
+                token: data.accessToken || data.token,
               },
             });
+            await setPendingSession(data.accessToken || data.token, data.refreshToken);
           }
         }}
       />

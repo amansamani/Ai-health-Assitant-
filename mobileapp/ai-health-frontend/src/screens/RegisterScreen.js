@@ -11,6 +11,7 @@ import FormField from "../components/auth/FormField";
 import PrimaryButton from "../components/auth/PrimaryButton";
 import { Divider, Banner, FooterLink } from "../components/auth/AuthBits";
 import GoogleSignInButton from "../components/GoogleSignInButton";
+import { setPendingSession } from "../utils/secureToken";
 
 const GOALS = [
   { key: "bulk", label: "Bulk", icon: "barbell-outline", desc: "Build mass", color: COLORS.warning },
@@ -75,9 +76,10 @@ export default function RegisterScreen() {
         return;
       }
       const { data } = await API.post("/auth/register", { name, email, password, goal });
+      await setPendingSession(data.accessToken || data.token, data.refreshToken);
       router.push({
         pathname: "/(auth)/health-profile",
-        params: { name, email, password, token: data.token, workoutGoal: goal },
+        params: { name, email, token: data.accessToken || data.token, workoutGoal: goal },
       });
     } catch (err) {
       setError(err.response?.data?.message || err.message);
@@ -134,20 +136,21 @@ export default function RegisterScreen() {
 
       {/* Keep registration Google auth visually identical to Login via the shared button. */}
       <GoogleSignInButton
-        onSuccess={(data) => {
+        onSuccess={async (data) => {
           if (data.hasHealthProfile) {
             // Returning Google user who already set up their profile.
-            login(data.token);
+            await login(data.accessToken || data.token, data.refreshToken);
           } else {
             // First Google sign-in (or an account that never finished
             // setup) — send them through the same health-profile step
             // manual registration uses, instead of straight to home.
+            await setPendingSession(data.accessToken || data.token, data.refreshToken);
             router.push({
               pathname: "/(auth)/health-profile",
               params: {
                 name: data.user?.name ?? "",
                 email: data.user?.email ?? "",
-                token: data.token,
+                token: data.accessToken || data.token,
                 workoutGoal: goal,
               },
             });

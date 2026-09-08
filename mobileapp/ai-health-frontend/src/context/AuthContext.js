@@ -1,68 +1,78 @@
 import { createContext, useState, useEffect, useCallback } from "react";
-import { setLogoutHandler, setTokenCache, clearTokenCache } from "../services/api";
+import { setLogoutHandler, setAccessTokenUpdatedHandler, setTokenCache, clearTokenCache } from "../services/api";
 import API from "../services/api";
-import { getToken, setToken, removeToken } from "../utils/secureToken";
+import { getToken, getRefreshToken, setToken, setRefreshToken, removeToken, getDeviceId, clearPendingSession } from "../utils/secureToken";
 
 export const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
   const [userToken, setUserToken] = useState(null);
-  const [loading, setLoading]     = useState(true);
-  const [userGoal, setUserGoal]   = useState(null);
-  const [user, setUser]           = useState(null); // ← stores full profile
+  const [loading, setLoading] = useState(true);
+  const [userGoal, setUserGoal] = useState(null);
+  const [user, setUser] = useState(null);
 
   const logout = useCallback(async () => {
-    console.log("🚨 logout() triggered");
-    await removeToken();
-    clearTokenCache();
-    setUserToken(null);
-    setUserGoal(null);
-    setUser(null);
+    const refreshToken = await getRefreshToken();
+    try {
+      if (refreshToken) {
+        await API.post("/auth/logout", { refreshToken }, { skipAuthRefresh: true });
+      }
+    } catch (_) {
+      // Local logout still succeeds if the server is unreachable.
+    } finally {
+      await removeToken();
+      await clearPendingSession();
+      clearTokenCache();
+      setUserToken(null);
+      setUserGoal(null);
+      setUser(null);
+    }
   }, []);
 
-  // ── Fetch profile (goal + name) ───────────────────────────────────────────
   const fetchUserGoal = useCallback(async () => {
     try {
       const res = await API.get("/user/profile");
       const data = res.data ?? {};
       setUserGoal(data.goal ?? "fit");
-      setUser(data); // ← save entire profile object
-    } catch (err) {
-      // not critical
-    }
+      setUser(data);
+    } catch (_) {}
   }, []);
 
-  const login = async (token) => {
-    await setToken(token);
-    setTokenCache(token);
-    setUserToken(token);
+  const login = useCallback(async (accessToken, refreshToken) => {
+    if (!accessToken) throw new Error("Access token is required");
+    await setToken(accessToken);
+    if (refreshToken) await setRefreshToken(refreshToken);
+    setTokenCache(accessToken);
+    setUserToken(accessToken);
+    await clearPendingSession();
     await fetchUserGoal();
-    console.log("✅ login() — token cached and state updated");
-  };
+  }, [fetchUserGoal]);
 
   useEffect(() => {
     const loadToken = async () => {
       try {
         const token = await getToken();
-        if (token && token !== "undefined" && token !== "null") {
+        const refreshToken = await getRefreshToken();
+        if (token && refreshToken) {
           setTokenCache(token);
           setUserToken(token);
           fetchUserGoal();
+        } else if (token && !refreshToken) {
+          await removeToken();
         }
       } catch (err) {
-        console.log("Failed to load token:", err);
+        if (__DEV__) console.log("Failed to load session:", err);
       } finally {
         setLoading(false);
       }
     };
     loadToken();
     setLogoutHandler(logout);
-  }, [logout]);
+    setAccessTokenUpdatedHandler((nextToken) => setUserToken(nextToken));
+  }, [logout, fetchUserGoal]);
 
   return (
-    <AuthContext.Provider
-      value={{ userToken, token: userToken, login, logout, loading, userGoal, setUserGoal, fetchUserGoal, user }}
-    >
+    <AuthContext.Provider value={{ userToken, token: userToken, login, logout, loading, userGoal, setUserGoal, fetchUserGoal, user }}>
       {children}
     </AuthContext.Provider>
   );

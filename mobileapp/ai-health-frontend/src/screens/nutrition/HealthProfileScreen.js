@@ -8,6 +8,7 @@ import { AuthContext } from "../../context/AuthContext";
 import { LinearGradient } from "expo-linear-gradient";
 import API from "../../services/api";
 import { WORKOUT_TO_DIET_GOAL } from "../../constants/goalMap";
+import { getPendingSession } from "../../utils/secureToken";
 
 const { width } = Dimensions.get("window");
 
@@ -177,7 +178,8 @@ export default function HealthProfileScreen({ navigation, route }) {
 
       await API.post("/nutrition/generate", {}, authHeader);
 
-      await login(token);
+      const pending = await getPendingSession();
+      await login(token, pending.refreshToken);
     } catch (err) {
       console.log("❌ ERROR:", err.response?.data || err.message);
       setSubmitting(false);

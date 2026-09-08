@@ -6,6 +6,12 @@ const jwt = require("jsonwebtoken");
 const sendEmail = require("../utils/sendEmail");
 const { OAuth2Client } = require("google-auth-library");
 const logger = require("../config/logger");
+const {
+  createSession,
+  refreshSession,
+  revokeSession,
+  revokeAllSessions,
+} = require("../services/authSession.service");
 
 const googleClient = new OAuth2Client(
   process.env.GOOGLE_WEB_CLIENT_ID
@@ -28,21 +34,12 @@ const isValidEmail = (email) =>
   /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
 /**
- * Create the application's JWT.
+ * Create a short-lived access token + long-lived, revocable refresh session.
  */
-const createAuthToken = (user) => {
-  if (!process.env.JWT_SECRET) {
-    throw new Error("JWT_SECRET is not configured");
-  }
-
-  return jwt.sign(
-    { 
-      id: user._id, 
-      tokenVersion: user.tokenVersion ?? 0,
-    },
-    process.env.JWT_SECRET,
-    { expiresIn: "30d" }
-  );
+const issueSession = async (user, req) => {
+  const deviceId = req.body?.deviceId || req.headers["x-device-id"];
+  const pushToken = req.body?.pushToken;
+  return createSession({ user, deviceId, pushToken });
 };
 
 /**
@@ -119,11 +116,13 @@ const registerUser = async (req, res) => {
       goal: validGoals.includes(goal) ? goal : "fit",
     });
 
-    const token = createAuthToken(user);
+    const session = await issueSession(user, req);
 
     return res.status(201).json({
       message: "User registered successfully",
-      token,
+      token: session.accessToken,
+      accessToken: session.accessToken,
+      refreshToken: session.refreshToken,
       hasHealthProfile: false,
       user: {
         id: user._id,
@@ -187,7 +186,7 @@ const loginUser = async (req, res) => {
       });
     }
 
-    const token = createAuthToken(user);
+    const session = await issueSession(user, req);
 
     const healthProfile = await HealthProfile.findOne({
       user: user._id,
@@ -197,7 +196,9 @@ const loginUser = async (req, res) => {
 
     return res.status(200).json({
       message: "Login successful",
-      token,
+      token: session.accessToken,
+      accessToken: session.accessToken,
+      refreshToken: session.refreshToken,
       hasHealthProfile: Boolean(healthProfile),
       user: {
         id: user._id,
@@ -714,11 +715,13 @@ const googleLogin = async (req, res) => {
         .select("_id")
         .lean();
 
-    const token = createAuthToken(user);
+    const session = await issueSession(user, req);
 
     return res.status(200).json({
       message: "Google login successful",
-      token,
+      token: session.accessToken,
+      accessToken: session.accessToken,
+      refreshToken: session.refreshToken,
       hasHealthProfile: Boolean(
         healthProfile
       ),
@@ -741,6 +744,74 @@ const googleLogin = async (req, res) => {
   }
 };
 
+
+/**
+ * REFRESH ACCESS TOKEN
+ *
+ * Refresh tokens are opaque, stored only as SHA-256 hashes, and rotated on
+ * every successful use. Replaying an old refresh token therefore fails.
+ */
+const refreshAccessToken = async (req, res) => {
+  try {
+    const refreshToken = String(req.body?.refreshToken || "").trim();
+    if (!refreshToken) {
+      return res.status(401).json({ message: "Refresh token is required" });
+    }
+
+    const session = await refreshSession(refreshToken);
+    if (!session) {
+      return res.status(401).json({ message: "Session expired. Please login again." });
+    }
+
+    return res.status(200).json({
+      accessToken: session.accessToken,
+      token: session.accessToken,
+      refreshToken: session.refreshToken,
+    });
+  } catch (error) {
+    logger.error({ err: error }, "Refresh token error");
+    return res.status(401).json({ message: "Session expired. Please login again." });
+  }
+};
+
+/**
+ * LOGOUT CURRENT DEVICE SESSION
+ *
+ * Prefer the refresh token so logout still revokes the server-side session
+ * even when the 15-minute access token has already expired.
+ */
+const logoutUser = async (req, res) => {
+  try {
+    const refreshToken = String(req.body?.refreshToken || "").trim();
+    if (refreshToken) {
+      const AuthSession = require("../models/AuthSession");
+      const { hashRefreshToken } = require("../services/authSession.service");
+      await AuthSession.updateOne(
+        { tokenHash: hashRefreshToken(refreshToken), revokedAt: null },
+        { $set: { revokedAt: new Date() } }
+      );
+    }
+
+    // Return a generic success response even when the token is already gone.
+    return res.status(200).json({ message: "Logged out successfully" });
+  } catch (error) {
+    logger.error({ err: error }, "Logout error");
+    return res.status(500).json({ message: "Unable to logout" });
+  }
+};
+
+const logoutAllDevices = async (req, res) => {
+  try {
+    await revokeAllSessions(req.user._id);
+    req.user.tokenVersion = (req.user.tokenVersion ?? 0) + 1;
+    await req.user.save();
+    return res.status(200).json({ message: "Logged out of all devices" });
+  } catch (error) {
+    logger.error({ err: error }, "Logout all devices error");
+    return res.status(500).json({ message: "Unable to logout all devices" });
+  }
+};
+
 module.exports = {
   registerUser,
   loginUser,
@@ -748,4 +819,7 @@ module.exports = {
   verifyOtp,
   resetPassword,
   googleLogin,
+  refreshAccessToken,
+  logoutUser,
+  logoutAllDevices,
 };

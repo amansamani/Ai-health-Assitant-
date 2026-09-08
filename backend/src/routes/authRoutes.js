@@ -8,9 +8,13 @@ const {
   forgotPassword,
   verifyOtp,
   resetPassword,
+  refreshAccessToken,
+  logoutUser,
+  logoutAllDevices,
 } = require("../controllers/authController");
 
 const router = express.Router();
+const protect = require("../middleware/authMiddleware");
 
 /*
  * Login limiter.
@@ -90,6 +94,10 @@ router.post(
   loginLimiter,
   googleLogin
 );
+
+router.post("/refresh", refreshAccessToken);
+router.post("/logout", logoutUser);
+router.post("/logout-all", protect, logoutAllDevices);
 
 // -----------------------------------------------------------------------------
 // Password recovery
