@@ -19,6 +19,8 @@ async function sendPushNotification(pushToken, title, body, data = {}) {
     title,
     body,
     data,
+    channelId: "default",
+    priority: "high",
   };
 
   try {

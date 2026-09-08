@@ -25,34 +25,43 @@ const NOTIFICATION_COPY = {
 
   lunchReminder: [
     { title: "Lunch o'clock 🍽️", body: "Snap a pic and let's see what's cooking." },
-    { title: "Psst", body: "Your stomach called. It said 'log me before I forget what I ate.' 😄" },
+    { title: "Psst", body: "Your stomach called. It said 'log me before I forget what I ate.'" },
     { title: "10-second favor?", body: "Logging lunch takes less time than deciding what to order." },
-    { title: "Hey", body: "Did lunch happen yet? No judgment either way, just log it when it does 👀" },
+    { title: "Hey", body: "Did lunch happen yet? No judgment either way, just log it when it does." },
+    { title: "What did you eat today? 👀", body: "Log your meal and let FitLip keep your nutrition on track." },
   ],
 
   dinnerReminder: [
     { title: "Dinner time 🌙", body: "One more log and today's diary is complete." },
-    { title: "Last meal of the day?", body: "Whatever's on the plate tonight, FitLip wants the tea ☕" },
+    { title: "Last meal of the day?", body: "Whatever's on the plate tonight, FitLip wants the tea." },
     { title: "Quick one", body: "Log dinner now so future-you doesn't have to remember it tomorrow." },
+    { title: "Small choice. Big difference. 🥗", body: "One good meal today can keep tomorrow moving in the right direction." },
   ],
 
   waterNudge: [
     { title: "Hydration check 💧", body: "Your water goal is feeling a little neglected today." },
-    { title: "Drink some water", body: "Not because we said so — because you deserve to feel good. 💦" },
-    { title: "PSA from your kidneys", body: "Water. Now. They'd appreciate it. 🙏" },
+    { title: "Drink some water", body: "Not because we said so — because you deserve to feel good." },
+    { title: "PSA from your kidneys", body: "Water. Now. They'd appreciate it." },
+    { title: "Your body sent a memo 💧", body: "It might be time for a glass of water." },
+    { title: "Hydration check 👀", body: "Before you scroll again… drink some water. Your body will thank you." },
   ],
 
   stepNudge: [
     { title: "Still time for a walk 🚶", body: "Even a lap around the block counts toward today's goal." },
-    { title: "Your steps are napping", body: "Wake them up before the day clocks out 👟" },
+    { title: "Your steps are napping", body: "Wake them up before the day clocks out." },
     { title: "Fun fact", body: "The couch will still be there after a 10-minute walk." },
     { title: "{stepsLeft} steps to go", body: "That's basically one good playlist's worth of walking." },
+    { title: "Almost there 👀", body: "A few more steps and today's movement goal is yours." },
   ],
 
   workoutReminder: [
-    { title: "Today's workout is waiting", body: "It won't complete itself. We checked. 💪" },
+    { title: "Today's workout is waiting", body: "It won't complete itself. We checked." },
     { title: "Small effort > perfect effort", body: "Especially the kind that never happens. Let's move." },
-    { title: "Your workout plan sent a message", body: "It said: 'where are they?' 👀" },
+    { title: "Your workout plan sent a message", body: "It said: 'where are they?'" },
+    { title: "Your body is waiting 👀", body: "You've got a little energy left today. Turn it into a win." },
+    { title: "Future you is watching 👊", body: "20 minutes today. A stronger you tomorrow." },
+    { title: "Don't break the momentum ⚡", body: "You've already started building the habit. Keep it going today." },
+    { title: "5 minutes counts ⏱️", body: "You don't need a perfect workout. You just need to start." },
   ],
 
   streakAtRisk: [
@@ -68,9 +77,12 @@ const NOTIFICATION_COPY = {
   ],
 
   comeback: [
-    { title: "It's been a few days", body: "No guilt, just glad to have you back whenever you're ready. 💜" },
+    { title: "It's been a few days", body: "No guilt, just glad to have you back whenever you're ready." },
     { title: "Your streak's a little dusty", body: "Let's dust it off together, whenever suits you." },
-    { title: "FitLip misses you", body: "Steps miss you. Even the water tracker misses you. 💧" },
+    { title: "FitLip misses you", body: "Steps miss you. Even the water tracker misses you." },
+    { title: "We haven't seen you today 👀", body: "Your goals didn't disappear. Neither should you." },
+    { title: "You've got this. 🔥", body: "One small action today can keep your whole week moving forward." },
+    { title: "Still chasing that goal? 🔥", body: "Today is another chance to move closer." },
   ],
 
   followRequest: [

@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from "react";
-import { Stack, useRouter } from "expo-router";
+import { useContext, useEffect, useRef, useState } from "react";
+import { Stack, useRootNavigationState, useRouter } from "expo-router";
 import * as Notifications from "expo-notifications";
 import * as SplashScreen from "expo-splash-screen";
-import { AuthProvider } from "@/src/context/AuthContext";
+import { AuthProvider, AuthContext } from "@/src/context/AuthContext";
 import FeedbackToast from "@/src/components/ui/FeedbackToast";
 import AppLoading from "@/src/components/ui/AppLoading";
 import { navigateFromNotification } from "@/src/services/notificationNavigation";
@@ -13,28 +13,47 @@ SplashScreen.preventAutoHideAsync();
 
 function NotificationTapHandler() {
   const router = useRouter();
+  const navigationState = useRootNavigationState();
+  const { userToken, loading: authLoading } = useContext(AuthContext);
   const handledId = useRef<string | null>(null);
+  const pendingResponse = useRef<Notifications.NotificationResponse | null>(null);
 
   useEffect(() => {
-    const handle = (response: Notifications.NotificationResponse | null) => {
+    const handleResponse = (response: Notifications.NotificationResponse | null) => {
       if (!response) return;
       const id = response.notification.request.identifier;
       if (handledId.current === id) return;
-      handledId.current = id;
-      // Let Expo Router finish mounting before replacing the current route.
-      requestAnimationFrame(() => {
-        navigateFromNotification(router, response);
-      });
+      pendingResponse.current = response;
     };
 
-    const subscription = Notifications.addNotificationResponseReceivedListener(handle);
+    const subscription = Notifications.addNotificationResponseReceivedListener(handleResponse);
 
     Notifications.getLastNotificationResponseAsync()
-      .then(handle)
+      .then(handleResponse)
       .catch((error) => console.warn("Notification response lookup failed:", error));
 
     return () => subscription.remove();
-  }, [router]);
+  }, []);
+
+  useEffect(() => {
+    if (!pendingResponse.current || !navigationState?.key || authLoading) return;
+
+    // If the user has a session, wait until the protected app tree can mount.
+    // This prevents a cold-start tap from being redirected away before the
+    // AuthContext has restored the stored token.
+    if (!userToken) return;
+
+    const response = pendingResponse.current;
+    const id = response.notification.request.identifier;
+    pendingResponse.current = null;
+    handledId.current = id;
+
+    requestAnimationFrame(() => {
+      navigateFromNotification(router, response);
+      const clearLast = Notifications.clearLastNotificationResponseAsync?.();
+      if (clearLast) clearLast.catch(() => {});
+    });
+  }, [navigationState?.key, authLoading, userToken, router]);
 
   return null;
 }

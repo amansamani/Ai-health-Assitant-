@@ -3,9 +3,8 @@ import type { Href, Router } from "expo-router";
 
 /**
  * Resolve a push notification payload to a real Expo Router route.
- * The backend can supply an explicit `route`, `url`, or `screen` in the
- * future. Existing notifications are also supported through their `moment`
- * and `type` values, so older notifications remain useful.
+ * Prefer an explicit route when the backend supplies one; otherwise map
+ * FitLip notification types/moments to the appropriate screen.
  */
 export function getNotificationRoute(data: Record<string, unknown>): Href | null {
   const explicit = data.route ?? data.url ?? data.screen;
@@ -34,6 +33,7 @@ export function getNotificationRoute(data: Record<string, unknown>): Href | null
       return "/(app)/weekly-summary" as Href;
 
     case "morningKickoff":
+    case "comeback":
       return "/(app)/(tabs)/home" as Href;
 
     case "lunchReminder":
@@ -58,15 +58,16 @@ export function getNotificationRoute(data: Record<string, unknown>): Href | null
     case "newFollower":
     case "followAccepted":
       if (typeof data.userId === "string" && data.userId) {
-        return { pathname: "/(app)/social/profile", params: { identifier: data.userId } } as Href;
+        return {
+          pathname: "/(app)/social/profile",
+          params: { identifier: data.userId },
+        } as Href;
       }
       return "/(app)/social" as Href;
 
-
-    case "comeback":
-      return "/(app)/(tabs)/home" as Href;
-
     default:
+      // A notification without routing metadata should still take the user
+      // into FitLip rather than doing nothing.
       return "/(app)/(tabs)/home" as Href;
   }
 }
