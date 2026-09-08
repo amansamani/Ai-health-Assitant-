@@ -18,25 +18,24 @@ import * as Sharing from "expo-sharing";
 import { LinearGradient } from "expo-linear-gradient";
 import LucideIcon from "../../components/ui/LucideIcon";
 import RunRouteArt from "../../components/RunRouteArt";
-import { COLORS, SHADOW } from "../../constants/theme";
+import { COLORS } from "../../constants/theme";
 import { AuthContext } from "../../context/AuthContext";
 import { getRunById } from "../../services/runService";
 import { formatDistanceKm, formatDuration, formatPace, paceSecPerKm } from "../../utils/runMath";
 
-const heroImage = require("./assets/run-hero-user.png");
-
-// A dark, brand-tinted palette scoped to the shareable card only — the rest
-// of the screen stays on the app's normal light theme (COLORS from theme.ts).
-const CARD = {
-  bg: "transparent",
-  ink: "#FFFFFF",
-  inkDim: "rgba(255,255,255,0.82)",
-  inkFaint: "rgba(255,255,255,0.58)",
-  glass: "rgba(24,16,31,0.48)",
-  glassBorder: "rgba(255,255,255,0.18)",
-  glow: "#D6B7E1",
-  glowSoft: "rgba(214,183,225,0.24)",
+// ─────────────────────────────────────────────────────────────
+// ELITE PREMIUM PALETTE
+// ─────────────────────────────────────────────────────────────
+const ELITE = {
+  bg: "#0B0910",
+  border: "rgba(255,255,255,0.08)",
+  text: "#FFFFFF",
+  textDim: "rgba(255,255,255,0.60)",
+  textFaint: "rgba(255,255,255,0.30)",
 };
+
+// Single source of truth for the card corner radius.
+const CARD_RADIUS = 34;
 
 function initials(name) {
   return (
@@ -50,21 +49,11 @@ function initials(name) {
   );
 }
 
-function StatChip({ icon, label, value }) {
-  return (
-    <View style={styles.statChip}>
-      <LucideIcon name={icon} size={13} color={CARD.inkDim} />
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
-    </View>
-  );
-}
-
 export default function ShareActivityScreen() {
   const router = useRouter();
   const { runId } = useLocalSearchParams();
   const { user: viewer } = useContext(AuthContext);
-  const shareRef = useRef(null);
+  const shareRef = useRef(null); // ← now points at the TRANSPARENT stage, not the card
   const [run, setRun] = useState(null);
   const [loading, setLoading] = useState(true);
   const [sharing, setSharing] = useState(false);
@@ -108,22 +97,21 @@ export default function ShareActivityScreen() {
   const pace = run ? paceSecPerKm(run.distanceMeters, run.durationSeconds) : 0;
   const activityType = run?.activityType || "run";
   const activityLabel = activityType === "cycle" ? "Cycling" : activityType === "walk" ? "Walk" : "Running";
-  const activityIcon = activityType === "cycle" ? "bicycle-outline" : "footsteps-outline";
   const person = run?.user?.name || "FitLip athlete";
   const viewerName = viewer?.name || "You";
   const isOwner = Boolean(run?.isOwner) || Boolean(viewer?._id && run?.user?._id && String(viewer._id) === String(run.user._id));
   const sharedByOther = !isOwner;
   const avatarUri = run?.user?.picture || run?.user?.profileImageUrl || null;
-  const heroSource = run?.photoUrl ? { uri: run.photoUrl } : heroImage;
   const dateLabel = run?.startedAt
     ? new Date(run.startedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
     : "";
   const distanceStr = run ? formatDistanceKm(run.distanceMeters) : "0.00";
-  const heroFontSize = distanceStr.length > 5 ? 58 : 78;
 
   const captureCard = async () => {
     if (!shareRef.current || !run) return null;
     const dims = isStory ? { width: 1080, height: 1920 } : { width: 1080, height: 1080 };
+    // PNG is mandatory: it is the only format that keeps the transparent
+    // (rounded) corners in the exported file.
     return captureRef(shareRef, { format: "png", quality: 1, result: "tmpfile", ...dims });
   };
 
@@ -182,7 +170,7 @@ export default function ShareActivityScreen() {
         <Text style={styles.pageTitle}>{sharedByOther ? "Share their achievement." : "Make it yours."}</Text>
         <Text style={styles.pageSubtitle}>
           {sharedByOther
-            ? `Share ${person}\'s activity with your friends, or post it to Instagram, Snapchat, WhatsApp, and more.`
+            ? `Share ${person}'s activity with your friends, or post it to Instagram, Snapchat, WhatsApp, and more.`
             : "A share-ready card for Instagram, Snapchat, WhatsApp — or anywhere else that takes an image."}
         </Text>
 
@@ -195,94 +183,115 @@ export default function ShareActivityScreen() {
           </Pressable>
         </View>
 
-        <Animated.View style={{ opacity: fade, transform: [{ translateY: rise }] }}>
-          <View
-            ref={shareRef}
-            collapsable={false}
-            style={[styles.card, isStory ? styles.cardStory : styles.cardPost]}
-          >
-            <Image source={heroSource} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
-            <LinearGradient
-              colors={["rgba(11,6,17,0.90)", "rgba(20,10,28,0.26)", "rgba(14,8,20,0.40)", "rgba(7,3,11,0.95)"]}
-              locations={[0, 0.32, 0.58, 1]}
-              style={StyleSheet.absoluteFillObject}
-            />
+        {/* Dark presentation well — NOT captured. Only makes the rounded
+            corners + floating shadow visible inside the app. */}
+        <View style={styles.previewWell}>
+          <Animated.View style={{ opacity: fade, transform: [{ translateY: rise }] }}>
+            {/* ── CAPTURE STAGE ─────────────────────────────────
+                Transparent root. This is the view we capture, so the
+                exported PNG keeps TRUE rounded (alpha) corners. */}
+            <View
+              ref={shareRef}
+              collapsable={false}
+              style={[styles.captureStage, isStory ? styles.captureStageStory : styles.captureStagePost]}
+            >
+              <View style={styles.shadowWrap}>
+                {/* Baked soft shadow — real elevation shadows do NOT
+                    survive native capture, so we paint 3 feathered rings. */}
+                <View style={[styles.bakedShadow, { top: -20, left: -20, right: -20, bottom: -20, borderRadius: CARD_RADIUS + 20, backgroundColor: "rgba(4,3,8,0.10)" }]} />
+                <View style={[styles.bakedShadow, { top: -12, left: -12, right: -12, bottom: -12, borderRadius: CARD_RADIUS + 12, backgroundColor: "rgba(4,3,8,0.20)" }]} />
+                <View style={[styles.bakedShadow, { top: -6, left: -6, right: -6, bottom: -6, borderRadius: CARD_RADIUS + 6, backgroundColor: "rgba(4,3,8,0.38)" }]} />
 
-            <View style={styles.cardTopRow}>
-              <View style={styles.brandMark}>
-                <LinearGradient colors={[CARD.glow, COLORS.primary]} style={styles.brandGlyph}>
-                  <LucideIcon name="footsteps-outline" size={12} color="#fff" />
-                </LinearGradient>
-                <Text style={styles.brandWordmark}>FITLIP</Text>
-              </View>
-              <View style={styles.cardDateBlock}>
-                {sharedByOther && (
-                  <View style={styles.sharedBadge}>
-                    <LucideIcon name="share-outline" size={9} color={CARD.ink} />
-                    <Text style={styles.sharedBadgeText}>SHARED BY {viewerName.toUpperCase()}</Text>
+                {/* ── THE CARD (child of the stage) ─────────────
+                    Rounding lives HERE, on a child, which the capture
+                    pipeline clips correctly on both platforms. */}
+                <View style={styles.eliteCard}>
+                  {/* Gradient gets its OWN borderRadius as a safety net:
+                      even if parent clipping ever fails during capture,
+                      the gradient can never paint square corners. */}
+                  <LinearGradient
+                    colors={["#0B0910", "#14111D", "#0B0910"]}
+                    locations={[0, 0.5, 1]}
+                    style={[StyleSheet.absoluteFillObject, { borderRadius: CARD_RADIUS }]}
+                  />
+
+                  {/* 1. TOP BAR */}
+                  <View style={styles.eliteTopRow}>
+                    <Text style={styles.eliteBrand}>FITLIP</Text>
+                    <Text style={styles.eliteDate}>{dateLabel.toUpperCase()}</Text>
                   </View>
-                )}
-                <Text style={styles.cardDate}>{dateLabel}</Text>
-              </View>
-            </View>
 
-            <View style={[styles.heroBlock, !isStory && styles.heroBlockCentered]}>
-              <View style={[styles.eyebrowPill, !isStory && styles.eyebrowPillCentered]}>
-                <LucideIcon name={activityIcon} size={11} color={CARD.ink} />
-                <Text style={styles.eyebrowText}>{activityLabel}</Text>
-              </View>
-              <Text style={[styles.heroNumber, { fontSize: heroFontSize, lineHeight: heroFontSize + 6 }]}>
-                {distanceStr}
-              </Text>
-              <Text style={styles.heroUnit}>KILOMETERS</Text>
-              {!!run.caption && (
-                <Text style={[styles.heroCaption, !isStory && styles.heroCaptionCentered]} numberOfLines={isStory ? 3 : 1}>
-                  {run.caption}
-                </Text>
-              )}
-            </View>
-
-            <View style={styles.routeFlexWrap}>
-              <RunRouteArt route={run.route} tint={CARD.glow} style={styles.routePanel} />
-            </View>
-
-            <View style={styles.statBar}>
-              <StatChip icon="time-outline" label="TIME" value={formatDuration(run.durationSeconds)} />
-              <View style={styles.statDivider} />
-              <StatChip icon="flash-outline" label="PACE" value={pace ? `${formatPace(pace)}/km` : "—"} />
-              <View style={styles.statDivider} />
-              <StatChip icon="flame-outline" label="CALORIES" value={`${run.caloriesBurned || 0}`} />
-            </View>
-
-            <View style={styles.cardFooter}>
-              <View style={styles.athleteLine}>
-                {avatarUri ? (
-                  <Image source={{ uri: avatarUri }} style={styles.avatarImg} />
-                ) : (
-                  <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>{initials(person)}</Text>
+                  {/* 2. HERO DISTANCE */}
+                  <View style={[styles.eliteHeroBlock, !isStory && styles.eliteHeroBlockCentered]}>
+                    <View style={[styles.eliteEyebrow, !isStory && styles.eliteEyebrowCentered]}>
+                      <View style={styles.eliteDot} />
+                      <Text style={styles.eliteEyebrowText}>{activityLabel.toUpperCase()}</Text>
+                    </View>
+                    <Text style={[styles.eliteDistance, { fontSize: isStory ? 100 : 72, lineHeight: isStory ? 90 : 64 }]}>
+                      {distanceStr}
+                    </Text>
+                    <Text style={styles.eliteUnit}>KILOMETERS</Text>
+                    {!!run.caption && (
+                      <Text style={[styles.eliteCaption, !isStory && styles.eliteCaptionCentered]} numberOfLines={2}>
+                        {run.caption}
+                      </Text>
+                    )}
                   </View>
-                )}
-                <View>
-                  <Text style={styles.athleteName} numberOfLines={1}>{person}</Text>
-                  <Text style={styles.athleteSub}>{sharedByOther ? "Original athlete" : "Your activity"}</Text>
+
+                  {/* 3. ETCHED GLASS ROUTE CONTAINER */}
+                  <View style={styles.eliteRouteContainer}>
+                    <RunRouteArt route={run.route} tint="#FFFFFF" style={styles.eliteRouteArt} />
+                  </View>
+
+                  {/* 4. ELITE STATS GRID */}
+                  <View style={styles.eliteStatsRow}>
+                    <View style={styles.eliteStat}>
+                      <Text style={styles.eliteStatLabel}>TIME</Text>
+                      <Text style={styles.eliteStatValue}>{formatDuration(run.durationSeconds)}</Text>
+                    </View>
+                    <View style={styles.eliteDivider} />
+                    <View style={styles.eliteStat}>
+                      <Text style={styles.eliteStatLabel}>PACE</Text>
+                      <Text style={styles.eliteStatValue}>{pace ? `${formatPace(pace)}` : "—"}</Text>
+                    </View>
+                    <View style={styles.eliteDivider} />
+                    <View style={styles.eliteStat}>
+                      <Text style={styles.eliteStatLabel}>CALORIES</Text>
+                      <Text style={styles.eliteStatValue}>{run.caloriesBurned || 0}</Text>
+                    </View>
+                  </View>
+
+                  {/* 5. FOOTER */}
+                  <View style={styles.eliteFooter}>
+                    <View style={styles.eliteAthleteLine}>
+                      {avatarUri ? (
+                        <Image source={{ uri: avatarUri }} style={styles.eliteAvatar} />
+                      ) : (
+                        <View style={styles.eliteAvatarFallback}>
+                          <Text style={styles.eliteAvatarText}>{initials(person)}</Text>
+                        </View>
+                      )}
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.eliteAthleteName} numberOfLines={1}>{person}</Text>
+                        <Text style={styles.eliteAthleteSub}>{sharedByOther ? "Original athlete" : "Verified Activity"}</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.eliteHashtag}>#MoveWithFitLip</Text>
+                  </View>
+
+                  {/* 6. HAIRLINE BORDER OVERLAY */}
+                  <View style={[styles.eliteBorderOverlay, { borderRadius: CARD_RADIUS }]} />
                 </View>
               </View>
-              <View style={styles.footerRight}>
-                {sharedByOther && (
-                  <Text style={styles.sharedByLine}>Shared by {viewerName}</Text>
-                )}
-                <Text style={styles.hashtag}>#MoveWithFitLip</Text>
-              </View>
             </View>
-          </View>
-        </Animated.View>
+          </Animated.View>
+        </View>
 
         <View style={styles.sharePanel}>
           <View style={styles.sharePanelTitleRow}>
             <View>
               <Text style={styles.shareTitle}>Share anywhere</Text>
-              <Text style={styles.shareSubtitle}>Your phone will show compatible apps.</Text>
+              <Text style={styles.shareSubtitle}>Rounded corners & soft shadow are baked into the image.</Text>
             </View>
             <LucideIcon name="share-outline" size={21} color={COLORS.primary} />
           </View>
@@ -317,7 +326,7 @@ export default function ShareActivityScreen() {
         <View style={styles.infoCard}>
           <LucideIcon name="information-circle-outline" size={17} color={COLORS.primary} />
           <Text style={styles.infoText}>
-            The activity is already saved to FitLip and follows its visibility setting. Sharing this card only creates an image for another app.
+            The exported PNG keeps transparent rounded corners. Tip: use “Save Image” in the share sheet to download it exactly as previewed.
           </Text>
         </View>
       </ScrollView>
@@ -336,61 +345,102 @@ const styles = StyleSheet.create({
   pageTitle: { color: COLORS.textDark, fontSize: 26, fontWeight: "900", marginTop: 8 },
   pageSubtitle: { color: COLORS.textMuted, fontSize: 12.5, lineHeight: 18, marginTop: 6, marginBottom: 14 },
 
-  formatSwitch: { flexDirection: "row", backgroundColor: COLORS.surfaceMuted, borderRadius: 14, padding: 4, marginBottom: 14, borderWidth: 1, borderColor: COLORS.border },
+  formatSwitch: { flexDirection: "row", backgroundColor: COLORS.surfaceMuted, borderRadius: 14, padding: 4, marginBottom: 16, borderWidth: 1, borderColor: COLORS.border },
   formatBtn: { flex: 1, minHeight: 38, borderRadius: 11, alignItems: "center", justifyContent: "center" },
   formatBtnActive: { backgroundColor: COLORS.primary },
   formatBtnText: { fontSize: 12.5, fontWeight: "800", color: COLORS.textMuted },
   formatBtnTextActive: { color: COLORS.onPrimary },
 
-  // The shareable card itself — everything inside here is what gets captured
-  // and sent to Instagram/WhatsApp/etc.
-  card: { width: "100%", overflow: "hidden", borderRadius: 30, backgroundColor: "transparent", padding: 20 },
-  cardStory: { aspectRatio: 9 / 16 },
-  cardPost: { aspectRatio: 1 },
+  // In-app presentation only (never captured)
+  previewWell: {
+    backgroundColor: "#0E0C13",
+    borderRadius: 40,
+    padding: 6,
+    overflow: "hidden",
+  },
 
-  cardTopRow: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" },
-  brandMark: { flexDirection: "row", alignItems: "center", gap: 7 },
-  brandGlyph: { width: 22, height: 22, borderRadius: 11, alignItems: "center", justifyContent: "center" },
-  brandWordmark: { color: "#fff", fontSize: 11, fontWeight: "900", letterSpacing: 1.6 },
-  cardDateBlock: { alignItems: "flex-end", gap: 4 },
-  cardDate: { color: CARD.inkFaint, fontSize: 10.5, fontWeight: "700" },
-  sharedBadge: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "rgba(255,255,255,0.10)", borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", borderRadius: 999, paddingHorizontal: 7, paddingVertical: 4 },
-  sharedBadgeText: { color: CARD.inkDim, fontSize: 7.5, fontWeight: "900", letterSpacing: 0.6 },
+  // ── CAPTURE STAGE: transparent root, owns the aspect ratio ──
+  captureStage: {
+    width: "100%",
+    backgroundColor: "transparent",
+    padding: 24, // room for the baked shadow inside the export
+  },
+  captureStageStory: { aspectRatio: 9 / 16 },
+  captureStagePost: { aspectRatio: 1 },
 
-  heroBlock: { marginTop: 16 },
-  heroBlockCentered: { alignItems: "center", marginTop: 10 },
-  eyebrowPill: { flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start", backgroundColor: "rgba(255,255,255,0.10)", borderWidth: 1, borderColor: "rgba(255,255,255,0.16)", borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6, marginBottom: 6 },
-  eyebrowPillCentered: { alignSelf: "center" },
-  eyebrowText: { color: CARD.ink, fontSize: 10.5, fontWeight: "900", letterSpacing: 1.1, textTransform: "uppercase" },
-  heroNumber: { color: "#fff", fontWeight: "900", letterSpacing: -1.5, fontVariant: ["tabular-nums"] },
-  heroUnit: { color: "rgba(255,255,255,0.78)", fontSize: 12.5, fontWeight: "800", letterSpacing: 2.4 },
-  heroCaption: { color: "rgba(255,255,255,0.88)", fontSize: 12, lineHeight: 17, marginTop: 10, maxWidth: "88%", fontWeight: "600" },
-  heroCaptionCentered: { maxWidth: "94%", textAlign: "center", alignSelf: "center" },
+  shadowWrap: { flex: 1 },
+  bakedShadow: { position: "absolute" },
 
-  // Flex:1 so the route panel absorbs whatever vertical space is left
-  // between the hero text and the stat bar — this is what keeps the same
-  // layout looking right on both the 9:16 story and the 1:1 post.
-  routeFlexWrap: { flex: 1, marginTop: 14, marginBottom: 14, minHeight: 64 },
-  routePanel: { flex: 1, borderRadius: 24, borderWidth: 0, backgroundColor: "transparent" },
+  // ── THE ELITE CARD ──
+  eliteCard: {
+    flex: 1,
+    borderRadius: CARD_RADIUS,
+    borderCurve: "continuous", // iOS squircle-style continuous corners
+    overflow: "hidden",
+    backgroundColor: ELITE.bg, // solid paint UNDER the gradient = safe clipping
+    padding: 30,
+    justifyContent: "space-between",
+  },
+  eliteBorderOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    borderWidth: 1,
+    borderColor: ELITE.border,
+    pointerEvents: "none",
+  },
 
-  statBar: { flexDirection: "row", alignItems: "center", borderRadius: 20, paddingVertical: 12, backgroundColor: "rgba(10,5,15,0.38)", borderWidth: 1, borderColor: "rgba(255,255,255,0.16)" },
-  statChip: { flex: 1, alignItems: "center", gap: 3 },
-  statDivider: { width: 1, height: "62%", backgroundColor: "rgba(255,255,255,0.12)" },
-  statValue: { color: "#fff", fontSize: 14, fontWeight: "900", fontVariant: ["tabular-nums"] },
-  statLabel: { color: "rgba(255,255,255,0.55)", fontSize: 8.5, letterSpacing: 0.8, fontWeight: "800" },
+  eliteTopRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 },
+  eliteBrand: { color: "rgba(255,255,255,0.40)", fontSize: 10, fontWeight: "800", letterSpacing: 4 },
+  eliteDate: { color: "rgba(255,255,255,0.40)", fontSize: 9, fontWeight: "700", letterSpacing: 1.5 },
 
-  cardFooter: { marginTop: 12, flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end", gap: 10 },
-  athleteLine: { flexDirection: "row", alignItems: "center", gap: 8, flex: 1 },
-  avatar: { width: 30, height: 30, borderRadius: 15, backgroundColor: "rgba(255,255,255,0.17)", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.18)" },
-  avatarImg: { width: 30, height: 30, borderRadius: 15, borderWidth: 1, borderColor: "rgba(255,255,255,0.18)" },
-  avatarText: { color: "#fff", fontSize: 10, fontWeight: "900" },
-  athleteName: { color: "#fff", fontSize: 10.5, fontWeight: "800", maxWidth: 140 },
-  athleteSub: { color: "rgba(255,255,255,0.52)", fontSize: 8.5, marginTop: 1, fontWeight: "600" },
-  footerRight: { alignItems: "flex-end", gap: 3 },
-  sharedByLine: { color: CARD.inkFaint, fontSize: 8.2, fontWeight: "700" },
-  hashtag: { color: CARD.glow, fontSize: 8.5, fontWeight: "900" },
+  eliteHeroBlock: { marginBottom: 6 },
+  eliteHeroBlockCentered: { alignItems: "center" },
+  eliteEyebrow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 },
+  eliteEyebrowCentered: { alignSelf: "center" },
+  eliteDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: "#FFFFFF" },
+  eliteEyebrowText: { color: "rgba(255,255,255,0.80)", fontSize: 10, fontWeight: "800", letterSpacing: 2 },
+  eliteDistance: { color: "#FFFFFF", fontWeight: "900", letterSpacing: -4, fontVariant: ["tabular-nums"] },
+  eliteUnit: { color: "rgba(255,255,255,0.40)", fontSize: 11, fontWeight: "700", letterSpacing: 3, marginTop: 4 },
+  eliteCaption: { color: "rgba(255,255,255,0.60)", fontSize: 13, lineHeight: 18, marginTop: 14, fontWeight: "500", maxWidth: "85%" },
+  eliteCaptionCentered: { maxWidth: "90%", textAlign: "center", alignSelf: "center" },
 
-  sharePanel: { marginTop: 18, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, borderRadius: 22, padding: 16 },
+  eliteRouteContainer: {
+    flex: 1,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.05)",
+    backgroundColor: "rgba(0,0,0,0.25)",
+    overflow: "hidden",
+    marginVertical: 22,
+    minHeight: 110,
+  },
+  eliteRouteArt: { flex: 1, backgroundColor: "transparent" },
+
+  eliteStatsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 18,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: ELITE.border,
+    marginBottom: 20,
+  },
+  eliteStat: { flex: 1, alignItems: "center", gap: 6 },
+  eliteStatLabel: { color: ELITE.textFaint, fontSize: 8.5, fontWeight: "700", letterSpacing: 1.5 },
+  eliteStatValue: { color: "#FFFFFF", fontSize: 18, fontWeight: "800", fontVariant: ["tabular-nums"], letterSpacing: -0.5 },
+  eliteDivider: { width: 1, height: 24, backgroundColor: ELITE.border },
+
+  eliteFooter: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 16 },
+  eliteAthleteLine: { flexDirection: "row", alignItems: "center", gap: 12, flex: 1 },
+  eliteAvatar: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: "rgba(255,255,255,0.15)" },
+  eliteAvatarFallback: { width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.08)", alignItems: "center", justifyContent: "center" },
+  eliteAvatarText: { color: "#FFFFFF", fontSize: 12, fontWeight: "800" },
+  eliteAthleteName: { color: "#FFFFFF", fontSize: 14, fontWeight: "700" },
+  eliteAthleteSub: { color: "rgba(255,255,255,0.40)", fontSize: 10, fontWeight: "600", marginTop: 2 },
+  eliteHashtag: { color: ELITE.textFaint, fontSize: 10, fontWeight: "800", letterSpacing: 1 },
+
+  // Outer app UI
+  sharePanel: { marginTop: 20, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, borderRadius: 22, padding: 16 },
   sharePanelTitleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   shareTitle: { color: COLORS.textDark, fontSize: 16, fontWeight: "900" },
   shareSubtitle: { color: COLORS.textMuted, fontSize: 11.5, marginTop: 3 },

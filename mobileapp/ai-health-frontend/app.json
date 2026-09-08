@@ -17,7 +17,6 @@
       "bundleIdentifier": "com.amansamani.aihealthfrontend"
     },
     "android": {
-
       "package": "com.amansamani.aihealthfrontend",
       "permissions": [
         "android.permission.CAMERA",
@@ -66,12 +65,12 @@
       ],
       [
         "expo-splash-screen",
-          {
-            "image": "./assets/images/splash-icon.png",
-            "backgroundColor": "#1a0a3f",
-            "resizeMode": "contain",
-            "dark": {
-              "backgroundColor": "#0E0223"
+        {
+          "image": "./assets/images/splash-icon.png",
+          "backgroundColor": "#1a0a3f",
+          "resizeMode": "contain",
+          "dark": {
+            "backgroundColor": "#0E0223"
           },
           "ios": {
             "image": "./assets/images/splash-fullscreen.png",
@@ -107,6 +106,13 @@
         {
           "photosPermission": "Allow FitLip to access your photos so you can log a meal from a picture.",
           "cameraPermission": "Allow FitLip to use the camera to snap a photo of your meal."
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow FitLip to save your share cards to your photos.",
+          "savePhotosPermission": "Allow FitLip to save your share cards to your photos."
         }
       ]
     ],
