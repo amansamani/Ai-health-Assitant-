@@ -548,48 +548,97 @@ export default function HomeScreen() {
               activityFeed.map((run) => {
                 const pace = paceSecPerKm(run.distanceMeters, run.durationSeconds);
                 const activityLabel = run.activityType === "cycle" ? "Cycling" : run.activityType === "walk" ? "Walk" : "Run";
-                const username = run.user?.username;
-                const profileIdentifier = username || run.user?._id;
+                const profileIdentifier = run.user?.username || run.user?._id;
                 return (
-                  <View key={run._id} style={styles.feedCard}>
-                    <Pressable
-                      style={({ pressed }) => [styles.feedMainRow, { opacity: pressed ? 0.92 : 1 }]}
-                      onPress={() => profileIdentifier && router.push({ pathname: "/(app)/social/profile", params: { identifier: profileIdentifier } })}
-                    >
-                    {run.user?.hasProfilePhoto || run.user?.profileImageUpdatedAt || run.user?.profileImageUrl || run.user?.picture ? (
-                      <Image
-                        source={{
-                          uri: run.user?.hasProfilePhoto || run.user?.profileImageUpdatedAt
-                            ? `${API_BASE_URL}/user/profile/photo/${run.user._id}?v=${encodeURIComponent(run.user.profileImageUpdatedAt || "1")}`
-                            : run.user.profileImageUrl || run.user.picture,
-                          ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
+                  <Pressable
+                    key={run._id}
+                    style={({ pressed }) => [styles.feedCard, pressed && styles.feedCardPressed]}
+                    onPress={() => router.push({ pathname: "/(app)/share-activity", params: { runId: run._id } })}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Open ${activityLabel.toLowerCase()} activity by ${run.user?.name || "someone"}`}
+                  >
+                    <View style={styles.feedMainRow}>
+                      <Pressable
+                        onPress={(event) => {
+                          event?.stopPropagation?.();
+                          if (profileIdentifier) {
+                            router.push({ pathname: "/(app)/social/profile", params: { identifier: profileIdentifier } });
+                          }
                         }}
-                        style={styles.feedAvatar}
-                        resizeMode="cover"
-                      />
-                    ) : (
-                      <View style={styles.feedAvatar}>
-                        <Text style={styles.feedAvatarText}>{String(run.user?.name || "U").trim().charAt(0).toUpperCase()}</Text>
-                      </View>
-                    )}
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.feedName}>{run.user?.name || "Someone you follow"}</Text>
-                      <Text style={styles.feedActivity}>{activityLabel} · {formatDistanceKm(run.distanceMeters)} km · {formatDuration(run.durationSeconds)}</Text>
-                      <Text style={styles.feedMetrics}>{pace ? `${formatPace(pace)} /km` : "Activity complete"}{run.caloriesBurned ? ` · ${run.caloriesBurned} kcal` : ""}</Text>
-                    </View>
-                      <LucideIcon name={run.activityType === "cycle" ? "bicycle-outline" : run.activityType === "walk" ? "walk-outline" : "footsteps-outline"} size={19} color={COLORS.primary} />
-                    </Pressable>
-                    <View style={styles.feedActions}>
-                      <Pressable style={styles.feedAction} onPress={() => handleFeedLike(run)}>
-                        <LucideIcon name={run.likedByMe ? "heart" : "heart-outline"} size={16} color={run.likedByMe ? COLORS.error : COLORS.textLight} />
-                        <Text style={styles.feedActionText}>{run.likesCount || 0}</Text>
+                        hitSlop={8}
+                        style={styles.feedIdentityPressable}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Open ${run.user?.name || "user"} profile`}
+                      >
+                        {run.user?.hasProfilePhoto || run.user?.profileImageUpdatedAt || run.user?.profileImageUrl || run.user?.picture ? (
+                          <Image
+                            source={{
+                              uri: run.user?.hasProfilePhoto || run.user?.profileImageUpdatedAt
+                                ? `${API_BASE_URL}/user/profile/photo/${run.user._id}?v=${encodeURIComponent(run.user.profileImageUpdatedAt || "1")}`
+                                : run.user.profileImageUrl || run.user.picture,
+                              ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
+                            }}
+                            style={styles.feedAvatar}
+                            resizeMode="cover"
+                          />
+                        ) : (
+                          <View style={styles.feedAvatar}>
+                            <Text style={styles.feedAvatarText}>{String(run.user?.name || "U").trim().charAt(0).toUpperCase()}</Text>
+                          </View>
+                        )}
+                        <View style={{ flex: 1, minWidth: 0 }}>
+                          <Text style={styles.feedName} numberOfLines={1}>{run.user?.name || "Someone you follow"}</Text>
+                          <Text style={styles.feedProfileHint}>View profile</Text>
+                        </View>
                       </Pressable>
-                      <Pressable style={styles.feedAction} onPress={() => handleFeedShare(run)}>
-                        <LucideIcon name="share" size={16} color={COLORS.textLight} />
+
+                      <View style={styles.feedTypePill}>
+                        <LucideIcon
+                          name={run.activityType === "cycle" ? "bicycle-outline" : run.activityType === "walk" ? "walk-outline" : "footsteps-outline"}
+                          size={14}
+                          color={COLORS.primary}
+                        />
+                        <Text style={styles.feedTypeText}>{activityLabel}</Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.feedSummary}>
+                      <View style={styles.feedSummaryMain}>
+                        <Text style={styles.feedActivity}>{activityLabel} · {formatDistanceKm(run.distanceMeters)} km</Text>
+                        <Text style={styles.feedMetrics}>
+                          {formatDuration(run.durationSeconds)} · {pace ? `${formatPace(pace)} /km` : "Activity complete"}
+                          {run.caloriesBurned ? ` · ${run.caloriesBurned} kcal` : ""}
+                        </Text>
+                      </View>
+                      <View style={styles.feedOpenIcon}>
+                        <LucideIcon name="chevron-forward" size={17} color={COLORS.textMuted} />
+                      </View>
+                    </View>
+
+                    <View style={styles.feedActions}>
+                      <Pressable
+                        style={styles.feedAction}
+                        onPress={(event) => {
+                          event?.stopPropagation?.();
+                          handleFeedLike(run);
+                        }}
+                      >
+                        <LucideIcon name={run.likedByMe ? "heart" : "heart-outline"} size={17} color={run.likedByMe ? COLORS.error : COLORS.textLight} />
+                        <Text style={[styles.feedActionText, run.likedByMe && { color: COLORS.error }]}>{run.likesCount || 0}</Text>
+                      </Pressable>
+                      <Pressable
+                        style={styles.feedAction}
+                        onPress={(event) => {
+                          event?.stopPropagation?.();
+                          handleFeedShare(run);
+                        }}
+                      >
+                        <LucideIcon name="share-outline" size={17} color={COLORS.textLight} />
                         <Text style={styles.feedActionText}>Share</Text>
                       </Pressable>
+                      <Text style={styles.feedOpenText}>Tap card to open</Text>
                     </View>
-                  </View>
+                  </Pressable>
                 );
               })
             )}
@@ -675,7 +724,17 @@ const styles = StyleSheet.create({
   feedEmptyTitle: { color: COLORS.textDark, fontSize: 13, fontWeight: "800" },
   feedEmptyText: { marginTop: 3, color: COLORS.textLight, fontSize: 11.5, lineHeight: 16 },
   feedCard: { backgroundColor: COLORS.surface, borderRadius: 18, borderWidth: 1, borderColor: COLORS.border, padding: 13, marginBottom: 9 },
-  feedMainRow: { flexDirection: "row", alignItems: "center", gap: 11 },
+  feedMainRow: { flexDirection: "row", alignItems: "center", gap: 14 },
+  feedCardPressed: { opacity: 0.96, transform: [{ scale: 0.995 }] },
+  feedIdentityPressable: { flexDirection: "row", alignItems: "center", flex: 1, minWidth: 0,  gap: 12 },
+  feedProfileHint: { marginTop: 2, color: COLORS.textMuted, fontSize: 9.5, fontWeight: "700" },
+  feedTypePill: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: COLORS.primaryLight + "24", borderRadius: 999, paddingHorizontal: 8, paddingVertical: 5 },
+  feedTypeText: { color: COLORS.primaryDark, fontSize: 9.5, fontWeight: "800" },
+  feedSummary: { flexDirection: "row", alignItems: "center", marginTop: 12, padding: 11, borderRadius: 14, backgroundColor: COLORS.surfaceMuted },
+  feedSummaryMain: { flex: 1 },
+  feedOpenIcon: { width: 28, height: 28, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.surface },
+  feedOpenText: { marginLeft: "auto", color: COLORS.textMuted, fontSize: 9.5, fontWeight: "700" },
+
   feedActions: { flexDirection: "row", alignItems: "center", gap: 18, marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: COLORS.border },
   feedAction: { flexDirection: "row", alignItems: "center", gap: 5, minHeight: 28 },
   feedActionText: { color: COLORS.textLight, fontSize: 10.5, fontWeight: "700" },

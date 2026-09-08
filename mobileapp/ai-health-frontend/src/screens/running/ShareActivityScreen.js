@@ -19,8 +19,10 @@ import { LinearGradient } from "expo-linear-gradient";
 import LucideIcon from "../../components/ui/LucideIcon";
 import RunRouteArt from "../../components/RunRouteArt";
 import { COLORS } from "../../constants/theme";
+import ConfirmModal from "../../components/ui/ConfirmModal";
+import { showToast } from "../../services/uiFeedback";
 import { AuthContext } from "../../context/AuthContext";
-import { getRunById } from "../../services/runService";
+import { deleteRun, getRunById } from "../../services/runService";
 import { formatDistanceKm, formatDuration, formatPace, paceSecPerKm } from "../../utils/runMath";
 
 // ─────────────────────────────────────────────────────────────
@@ -57,6 +59,8 @@ export default function ShareActivityScreen() {
   const [run, setRun] = useState(null);
   const [loading, setLoading] = useState(true);
   const [sharing, setSharing] = useState(false);
+  const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [format, setFormat] = useState("story"); // "story" (9:16) | "post" (1:1)
   const isStory = format === "story";
 
@@ -98,14 +102,36 @@ export default function ShareActivityScreen() {
   const activityType = run?.activityType || "run";
   const activityLabel = activityType === "cycle" ? "Cycling" : activityType === "walk" ? "Walk" : "Running";
   const person = run?.user?.name || "FitLip athlete";
-  const viewerName = viewer?.name || "You";
-  const isOwner = Boolean(run?.isOwner) || Boolean(viewer?._id && run?.user?._id && String(viewer._id) === String(run.user._id));
+  const ownerId = run?.user?._id || run?.user?.id || run?.userId || run?.ownerId || null;
+  const viewerId = viewer?._id || viewer?.id || null;
+  const isOwner = Boolean(run?.isOwner) || Boolean(viewerId && ownerId && String(viewerId) === String(ownerId));
   const sharedByOther = !isOwner;
   const avatarUri = run?.user?.picture || run?.user?.profileImageUrl || null;
   const dateLabel = run?.startedAt
     ? new Date(run.startedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
     : "";
   const distanceStr = run ? formatDistanceKm(run.distanceMeters) : "0.00";
+
+  const removeActivity = async () => {
+    if (!run?._id || deleting) return;
+    setDeleting(true);
+    try {
+      await deleteRun(run._id);
+      setDeleteConfirmVisible(false);
+      showToast("Your activity has been deleted.", {
+        title: "Activity deleted",
+        type: "success",
+      });
+      router.replace("/(app)/run-feed");
+    } catch (error) {
+      showToast(error?.response?.data?.message || "Couldn't delete this activity. Please try again.", {
+        title: "Delete failed",
+        type: "error",
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const captureCard = async () => {
     if (!shareRef.current || !run) return null;
@@ -120,8 +146,10 @@ export default function ShareActivityScreen() {
     setSharing(true);
     try {
       const uri = await captureCard();
+      if (!uri) throw new Error("Could not create the share image.");
+
       const available = await Sharing.isAvailableAsync();
-      if (available && uri) {
+      if (available) {
         await Sharing.shareAsync(uri, {
           mimeType: "image/png",
           dialogTitle: `Share your ${activityLabel.toLowerCase()} ${isStory ? "story" : "post"}`,
@@ -129,6 +157,15 @@ export default function ShareActivityScreen() {
       } else {
         await Share.share({
           message: `${activityLabel} with FitLip — ${formatDistanceKm(run.distanceMeters)} km in ${formatDuration(run.durationSeconds)}.`,
+        });
+      }
+    } catch (error) {
+      // iOS/Android can throw when the user dismisses the native share sheet or
+      // when image capture is unavailable. Do not leave the button spinning.
+      if (error?.message && !/cancel|dismiss/i.test(error.message)) {
+        showToast("We couldn't open the share sheet. Please try again.", {
+          title: "Share failed",
+          type: "error",
         });
       }
     } finally {
@@ -162,8 +199,19 @@ export default function ShareActivityScreen() {
         <Pressable style={styles.headerBtn} onPress={() => router.back()}>
           <LucideIcon name="chevron-back" size={22} color={COLORS.textDark} />
         </Pressable>
-        <Text style={styles.headerTitle}>Share Activity</Text>
-        <View style={styles.headerBtn} />
+        <Text style={styles.headerTitle}>Activity</Text>
+        {isOwner ? (
+          <Pressable
+            style={styles.headerBtn}
+            onPress={() => setDeleteConfirmVisible(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Delete activity"
+          >
+            <LucideIcon name="trash-2" size={19} color={COLORS.error} />
+          </Pressable>
+        ) : (
+          <View style={styles.headerBtn} />
+        )}
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -173,6 +221,28 @@ export default function ShareActivityScreen() {
             ? `Share ${person}'s activity with your friends, or post it to Instagram, Snapchat, WhatsApp, and more.`
             : "A share-ready card for Instagram, Snapchat, WhatsApp — or anywhere else that takes an image."}
         </Text>
+
+        {!!ownerId && (
+          <Pressable
+            style={styles.ownerLink}
+            onPress={() => router.push({ pathname: "/(app)/social/profile", params: { identifier: String(ownerId) } })}
+            accessibilityRole="button"
+            accessibilityLabel={`Open ${person}'s profile`}
+          >
+            {avatarUri ? (
+              <Image source={{ uri: avatarUri }} style={styles.ownerLinkAvatar} />
+            ) : (
+              <View style={styles.ownerLinkAvatarFallback}>
+                <Text style={styles.ownerLinkAvatarText}>{initials(person)}</Text>
+              </View>
+            )}
+            <View style={styles.ownerLinkCopy}>
+              <Text style={styles.ownerLinkLabel}>ACTIVITY BY</Text>
+              <Text style={styles.ownerLinkName} numberOfLines={1}>{person}</Text>
+            </View>
+            <LucideIcon name="chevron-forward" size={18} color={COLORS.textMuted} />
+          </Pressable>
+        )}
 
         <View style={styles.formatSwitch}>
           <Pressable style={[styles.formatBtn, isStory && styles.formatBtnActive]} onPress={() => setFormat("story")}>
@@ -330,6 +400,20 @@ export default function ShareActivityScreen() {
           </Text>
         </View>
       </ScrollView>
+
+      <ConfirmModal
+        visible={deleteConfirmVisible}
+        title="Delete activity?"
+        message="This removes the activity from your profile and the activity feed. This action can't be undone."
+        confirmText={deleting ? "Deleting…" : "Delete activity"}
+        cancelText="Keep it"
+        icon="trash-2"
+        tone="danger"
+        onCancel={() => {
+          if (!deleting) setDeleteConfirmVisible(false);
+        }}
+        onConfirm={removeActivity}
+      />
     </SafeAreaView>
   );
 }
@@ -343,7 +427,14 @@ const styles = StyleSheet.create({
   headerTitle: { color: COLORS.textDark, fontSize: 17, fontWeight: "800" },
   content: { paddingHorizontal: 16, paddingBottom: 36 },
   pageTitle: { color: COLORS.textDark, fontSize: 26, fontWeight: "900", marginTop: 8 },
-  pageSubtitle: { color: COLORS.textMuted, fontSize: 12.5, lineHeight: 18, marginTop: 6, marginBottom: 14 },
+  pageSubtitle: { color: COLORS.textMuted, fontSize: 12.5, lineHeight: 18, marginTop: 6, marginBottom: 12 },
+  ownerLink: { flexDirection: "row", alignItems: "center", minHeight: 58, paddingHorizontal: 12, paddingVertical: 8, marginBottom: 14, borderRadius: 16, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border },
+  ownerLinkAvatar: { width: 38, height: 38, borderRadius: 19, borderWidth: 1, borderColor: COLORS.border },
+  ownerLinkAvatarFallback: { width: 38, height: 38, borderRadius: 19, backgroundColor: COLORS.surfaceMuted, alignItems: "center", justifyContent: "center" },
+  ownerLinkAvatarText: { color: COLORS.textDark, fontSize: 12, fontWeight: "900" },
+  ownerLinkCopy: { flex: 1, marginLeft: 10 },
+  ownerLinkLabel: { color: COLORS.textMuted, fontSize: 8.5, fontWeight: "800", letterSpacing: 1.2 },
+  ownerLinkName: { color: COLORS.textDark, fontSize: 14, fontWeight: "800", marginTop: 2 },
 
   formatSwitch: { flexDirection: "row", backgroundColor: COLORS.surfaceMuted, borderRadius: 14, padding: 4, marginBottom: 16, borderWidth: 1, borderColor: COLORS.border },
   formatBtn: { flex: 1, minHeight: 38, borderRadius: 11, alignItems: "center", justifyContent: "center" },

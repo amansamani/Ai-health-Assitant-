@@ -83,6 +83,9 @@ import {
   Bug,
   FileText,
   Bell,
+  BellOff,
+  Scale,
+  ScanLine,
 } from 'lucide-react-native';
 
 const __ICON_HOME = Home;
@@ -115,6 +118,7 @@ const ICONS = {
   'create-outline': Pencil,
   ellipse: Circle,
   'ellipse-outline': Circle,
+  'ellipsis-horizontal': Ellipsis,
   fitness: Dumbbell,
   'fitness-outline': Dumbbell,
   flag: Flag,
@@ -130,6 +134,8 @@ const ICONS = {
   'information-circle-outline': Info,
   'lock-closed': Lock,
   'log-out-outline': LogOut,
+  'globe-outline': Globe2,
+  'globe': Globe2,
   'logo-google': Chrome,
   'map-outline': Map,
   'medal-outline': Medal,
@@ -137,6 +143,8 @@ const ICONS = {
   'options-outline': Ellipsis,
   pause: Pause,
   'people-outline': Users,
+  'users-outline': Users,
+  users: Users,
   person: User,
   'person-circle-outline': CircleUserRound,
   play: Play,
@@ -160,6 +168,8 @@ const ICONS = {
   sync: RefreshCw,
   'time-outline': Clock,
   'trash-outline': Trash2,
+  trash: Trash2,
+  'trash-2': Trash2,
   trophy: Trophy,
   walk: Footprints,
   'walk-outline': Footprints,
@@ -193,6 +203,7 @@ const ICONS = {
   'bug-outline': Bug,
   notifications: Bell,
   'notifications-outline': Bell,
+  'notifications-off-outline': BellOff,
   'bell-outline': Bell,
   'document-text-outline': FileText,
   'download-outline': Download,
@@ -207,6 +218,8 @@ const ICONS = {
   'share-outline': Share2,
   'bicycle-outline': Bike,
   'body-outline': PersonStanding,
+  'scale-outline': Scale,
+  'scan-outline': ScanLine,
 };
 
 export default function LucideIcon({ name, size = 24, color = 'currentColor', strokeWidth = 2, style, ...props }) {

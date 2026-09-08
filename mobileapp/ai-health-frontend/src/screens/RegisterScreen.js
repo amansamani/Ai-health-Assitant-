@@ -112,7 +112,7 @@ export default function RegisterScreen() {
         <FormField
           label="Password"
           icon="lock-closed-outline"
-          placeholder="At least 6 characters"
+          placeholder="At least 8 characters"
           value={password}
           onChangeText={setPassword}
           secureTextEntry
@@ -132,6 +132,7 @@ export default function RegisterScreen() {
 
       <Divider />
 
+      {/* Keep registration Google auth visually identical to Login via the shared button. */}
       <GoogleSignInButton
         onSuccess={(data) => {
           if (data.hasHealthProfile) {
