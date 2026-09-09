@@ -1,274 +1,538 @@
 <div align="center">
 
-# 🥗FITLIP - AI Health Assistant
+# 🥗 FITLIP
 
-**Your AI-powered nutrition & fitness coach — built for Indian diets, personalized in real time.**
+### Your Personal AI Fitness & Health Companion
 
-Generate clinically-aware, macro-perfect Indian meal plans in seconds. Track water, workouts, and daily vitals. Chat with an AI nutrition coach that actually knows your health profile.
+**Train smarter. Eat better. Track everything. Stay consistent.**
 
-[![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js&logoColor=white)](#)
-[![Express](https://img.shields.io/badge/Express-5.x-000000?logo=express&logoColor=white)](#)
-[![MongoDB](https://img.shields.io/badge/MongoDB-Mongoose-47A248?logo=mongodb&logoColor=white)](#)
-[![Redis](https://img.shields.io/badge/Redis-BullMQ-DC382D?logo=redis&logoColor=white)](#)
-[![Expo](https://img.shields.io/badge/Expo-React%20Native-000020?logo=expo&logoColor=white)](#)
-[![Gemini](https://img.shields.io/badge/Google-Gemini%202.5-4285F4?logo=googlegemini&logoColor=white)](#)
-[![License](https://img.shields.io/badge/License-MIT-lightgrey)](#license)
+Fitlip brings **AI-powered nutrition, workouts, running, health tracking, progress insights, and social fitness** together in one mobile experience.
+
+<br />
+
+### Built by Aman Samani
 
 </div>
 
 ---
 
-## 📖 About
+# 🌱 What is Fitlip?
 
-**AI Health Assistant** is a full-stack health & nutrition platform consisting of a **React Native (Expo) mobile app** and a **Node.js/Express API**. It uses **Google Gemini** to generate personalized, medically-aware Indian meal plans — tuned to a user's calorie and macro targets, dietary preferences, allergies, and medical conditions (diabetes, hypertension, thyroid, PCOD/PCOS, cholesterol) — and keeps those plans up to date week over week based on real logged progress.
+**Fitlip** is an AI-powered fitness and health companion designed to bring the most important parts of a person's wellness journey into one place.
 
-Beyond meal planning, it's a daily companion: log meals and water, track steps and sleep, follow structured workouts, and ask an AI coach questions in a chat interface that already knows your profile and current plan.
+Instead of treating nutrition, workouts, running, daily activity, and progress as separate experiences, Fitlip connects them into a single personalized system.
 
-> Built for real people managing real conditions — not just calorie counting.
+The app can understand a user's:
 
----
+* Fitness goals
+* Health profile
+* Nutrition preferences
+* Dietary restrictions
+* Allergies
+* Activity
+* Workout progress
+* Running activity
+* Daily habits
 
-## ✨ Features
+and use that information to make the experience more personalized.
 
-### 🍽️ AI-Powered Nutrition
-- **Personalized meal plan generation** — Gemini builds a full day (breakfast, lunch, dinner, snack) matched to exact calorie & macro targets, using realistic Indian portion sizes.
-- **Medical-condition aware** — automatically adapts meals for diabetes, hypertension, thyroid, PCOD/PCOS, and high cholesterol; excludes user-declared allergens.
-- **Response validation** — every AI-generated plan is schema-validated (Zod) and auto-corrected if it drifts from calorie/macro budgets, so you never see a broken or wildly inaccurate plan.
-- **Weekly auto-adjustment** — a background job (BullMQ + Redis) reviews the week's actual logs and re-tunes next week's targets automatically.
-- **Meal swapping** — don't like a suggested meal? Swap it for an equivalent alternative that still fits your macros.
-- **AI nutrition chat** — a context-aware chat assistant that knows your health profile, current plan, and history, and gives specific, actionable advice.
-
-### 📊 Tracking & Insights
-- Daily meal logging with full nutrition history
-- Water intake tracking with goals and undo support
-- Steps, water, and sleep tracking with weekly summaries and trend insights
-- Weekly insight reports generated from your logged data
-
-### 💪 Workouts
-- Goal-based workout plans (bulk / lean / fit) for both equipment and bodyweight training
-
-### 🔐 Accounts & Profile
-- Email/password authentication with JWT
-- Google Sign-In
-- OTP-based password reset (email delivery via Resend/Nodemailer)
-- Editable health profile (age, weight, height, activity level, diet type, conditions, allergies)
-- Push notifications (Expo push tokens) for reminders and updates
+> **Fitlip is built around one idea: consistency becomes easier when everything you need is in one place.**
 
 ---
 
-## 🏗️ Architecture
+# ✨ What Fitlip Can Do
 
-```mermaid
-flowchart TD
-    Mobile["📱 Expo React Native App"] -->|REST / JWT| API["⚙️ Node.js + Express API"]
-    API -->|Mongoose| Mongo[("🍃 MongoDB")]
-    API -->|Queue Jobs| Redis[("🧠 Redis")]
-    Redis --> Worker["👷 BullMQ Worker\n(weekly plan adjustment)"]
-    API -->|Prompt + Validate| Gemini["✨ Google Gemini 2.5 Flash"]
-    API -->|OTP / Alerts| Email["📧 Resend / Nodemailer"]
-    API -->|Push| Expo["🔔 Expo Push Service"]
-```
+## 🤖 AI Nutrition Assistant
 
-**Flow in short:** the mobile app talks to the Express API over authenticated REST calls → the API reads/writes MongoDB, calls Gemini for AI meal plans and chat, and queues periodic recalculation jobs onto Redis/BullMQ, which a separate worker process picks up.
+Fitlip uses AI to help users plan, understand, and improve their nutrition.
 
----
+### 🍽️ Personalized Meal Plans
 
-## 🧰 Tech Stack
+Generate personalized meal plans based on the user's goals, nutritional requirements, food preferences, allergies, and health profile.
 
-| Layer | Technology |
-|---|---|
-| **Mobile App** | Expo (React Native 0.81, React 19), Expo Router, React Navigation |
-| **Backend API** | Node.js, Express 5 |
-| **Database** | MongoDB + Mongoose |
-| **Queue / Jobs** | Redis + BullMQ (weekly plan adjustment worker) |
-| **AI** | Google Gemini 2.5 Flash (`@google/generative-ai`), Zod for output validation |
-| **Auth** | JWT, bcrypt, Google OAuth (`google-auth-library`) |
-| **Email** | Resend / Nodemailer (OTP delivery) |
-| **Push Notifications** | Expo Server SDK |
-| **Security** | Helmet, express-rate-limit, CORS |
+Plans can include:
 
----
+**Breakfast · Lunch · Dinner · Snacks**
 
-## 📁 Project Structure
+The system is designed around realistic foods and portions, with a strong focus on Indian diets.
 
-```
-Ai-health-Assitant-/
-├── backend/                        # Express API
-│   ├── server.js                   # App entry point
-│   └── src/
-│       ├── config/                 # MongoDB & Redis connections
-│       ├── controllers/            # Auth, user, workout, tracking logic
-│       ├── middleware/             # JWT auth middleware
-│       ├── models/                 # User, WorkoutPlan, DailyLog schemas
-│       ├── modules/
-│       │   ├── health/             # Health profile module
-│       │   └── nutrition/          # Meal plans, meal logging, water,
-│       │                           # AI chat, weekly insights
-│       ├── jobs/ & queues/         # Scheduled + queued background jobs
-│       ├── workers/                # BullMQ worker process
-│       ├── services/               # Gemini AI prompt/response service
-│       └── utils/                  # Email, push notification helpers
-│
-└── mobileapp/
-    └── ai-health-frontend/         # Expo React Native app
-        ├── app/                    # Expo Router entry
-        └── src/
-            ├── screens/            # Auth, tracking, workouts, profile
-            │   └── nutrition/      # Meal logging, dashboard, AI chat, water
-            ├── navigation/         # Auth & main navigators
-            ├── context/            # AuthContext (JWT session state)
-            ├── services/           # Axios API client
-            └── components/         # Shared UI components
-```
+### 🎯 Calorie & Macro Targeting
+
+Nutrition recommendations can be tailored around:
+
+* Calories
+* Protein
+* Carbohydrates
+* Fats
+* Personal goals
+
+### 🩺 Health-Aware Nutrition
+
+Nutrition recommendations can account for declared health conditions and dietary restrictions.
+
+Current supported health considerations include:
+
+**Diabetes · Hypertension · Thyroid · PCOD/PCOS · High Cholesterol**
+
+### 🔄 Meal Swapping
+
+Not every recommendation will be something you want to eat.
+
+Fitlip allows users to swap meals for alternatives while keeping the nutrition target in consideration.
+
+### 📸 AI Meal Photo Analysis
+
+Users can take a photo of their food and send it for AI-powered meal analysis.
+
+Fitlip can use the image to help identify and estimate nutrition information for the meal, making food logging faster than manually entering everything.
+
+### 🧠 AI Fitness & Nutrition Coach
+
+The built-in AI coach can use relevant user context such as the health profile, nutrition plan, and history to provide personalized guidance.
+
+Instead of only answering generic questions, the assistant is designed to understand the user's current situation.
 
 ---
 
-## 🚀 Getting Started
+# 📊 Health & Daily Tracking
 
-### Prerequisites
+Fitlip lets users track the everyday information that matters to their fitness journey.
 
-- **Node.js** v18+
-- **MongoDB** (local or Atlas)
-- **Redis** (local or hosted, e.g. Upstash)
-- **Expo CLI** (`npx expo`) and the **Expo Go** app, or an Android/iOS build environment
-- A **Google Gemini API key**
-- (Optional) Google OAuth client ID, and a Resend/SMTP account for OTP emails
+### 🍛 Meal Tracking
 
-### 1. Clone the repository
+Log meals and maintain nutrition history throughout the day.
 
-```bash
-git clone https://github.com/amansamani/Ai-health-Assitant-.git
-cd Ai-health-Assitant-
-```
+### 💧 Water Tracking
 
-### 2. Backend setup
+Track daily water consumption, set hydration goals, and manage water logs.
 
-```bash
-cd backend
-npm install
-```
+### 👟 Steps
 
-Create a `.env` file inside `backend/`:
+Track daily step activity and use it as part of overall progress.
 
-```env
-# Server
-PORT=5000
+### 😴 Sleep
 
-# Database
-MONGO_URI=mongodb://localhost:27017/ai_health_assistant
+Track sleep information and include it in daily and weekly health summaries.
 
-# Auth
-JWT_SECRET=your_jwt_secret_here
-GOOGLE_WEB_CLIENT_ID=your_google_oauth_client_id
+### 🔥 Active Calories
 
-# AI
-GEMINI_API_KEY=your_gemini_api_key
+Track estimated active calorie expenditure alongside other daily activity.
 
-# Queue / Cache
-REDIS_URL=redis://localhost:6379
+### 📈 Weekly Progress
 
-# Email (OTP delivery — use one)
-RESEND_API_KEY=your_resend_api_key
-```
-
-Start the API:
-
-```bash
-npm run dev          # start the API server (nodemon)
-npm run dev:worker    # in a second terminal — start the BullMQ worker
-```
-
-The API will be live at `http://localhost:5000`. Confirm with `GET /health`.
-
-### 3. Mobile app setup
-
-```bash
-cd mobileapp/ai-health-frontend
-npm install
-```
-
-Update the API base URL in `src/services/api.js` to point at your machine's local IP (so a physical device/emulator can reach it):
-
-```js
-const API = axios.create({
-  baseURL: "http://<YOUR_LOCAL_IP>:5000/api",
-  timeout: 15000,
-});
-```
-
-Then start Expo:
-
-```bash
-npm start
-```
-
-Scan the QR code with **Expo Go**, or run:
-
-```bash
-npm run android   # Android
-npm run ios       # iOS
-```
+Review activity and nutrition trends through summaries and progress insights.
 
 ---
 
-## 🔌 Core API Endpoints
+# 💪 Workouts
 
-All authenticated routes require `Authorization: Bearer <token>`.
+Fitlip includes structured workout experiences for different fitness goals.
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/api/auth/register` | Create a new account |
-| `POST` | `/api/auth/login` | Log in and receive a JWT |
-| `POST` | `/api/auth/google` | Google Sign-In |
-| `POST` | `/api/auth/forgot-password` → `/verify-otp` → `/reset-password` | OTP-based password reset flow |
-| `GET` / `POST` `/api/health` | Get or create the user's health profile |
-| `POST` | `/api/nutrition/generate` | Generate a new AI meal plan |
-| `GET` | `/api/nutrition/current` | Fetch the active meal plan |
-| `POST` | `/api/nutrition/swap` | Swap a meal for an alternative |
-| `POST` | `/api/nutrition/log-meal` | Log a consumed meal |
-| `POST` | `/api/nutrition/ai-chat` | Chat with the AI nutrition coach |
-| `GET` / `POST` `/api/nutrition/water` | Track water intake |
-| `GET` | `/api/workouts?goal=&mode=` | Fetch workout plans by goal & mode |
-| `GET` / `POST` `/api/track/today` | Get or save today's steps/water/sleep |
-| `GET` | `/api/track/weekly` | Weekly activity summary |
+### 🎯 Goal-Based Training
 
----
+Workout experiences can be built around goals such as:
 
-## 🗺️ Roadmap
+**Bulk · Lean · Fit**
 
-- [ ] Photo-based meal logging (snap a plate, get instant macros)
-- [ ] Wearable integration (Google Fit / Apple Health)
-- [ ] AI-personalized workout generation (parity with nutrition module)
-- [ ] Exportable weekly PDF/CSV reports for doctors & trainers
-- [ ] Multi-language support (Hindi and other regional languages)
+### 🏋️ Equipment & Bodyweight
+
+Support for both:
+
+* Equipment-based workouts
+* Bodyweight workouts
+
+### ✅ Exercise Tracking
+
+Users can track exercise completion and workout progress over time.
+
+### 🔁 Workout Retry
+
+Missed or incomplete workouts can be revisited and retried.
+
+### 🧩 Custom Workouts
+
+Fitlip also includes a custom workout builder, allowing users to create training routines beyond the standard workout plans.
 
 ---
 
-## 🤝 Contributing
+# 🏃 Running & Activity Tracking
 
-Contributions are welcome!
+Fitlip goes beyond basic step tracking with dedicated activity tracking.
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/your-feature`)
-3. Commit your changes with clear messages
-4. Open a pull request describing what changed and why
+### 📍 GPS-Based Activity Tracking
 
-Please open an issue first for large changes so we can discuss direction before you invest time.
+Users can record outdoor activities using location data.
+
+Supported activity types include:
+
+**Run · Walk · Cycle**
+
+### ⏱️ Activity Metrics
+
+Tracked activities can include information such as:
+
+* Distance
+* Duration
+* Pace
+* Route
+* Calories burned
+* Activity type
+
+### 🗺️ Route Visualization
+
+Recorded activities can be visualized with route information, allowing users to review where they moved during an activity.
+
+### ⏸️ Pause & Resume
+
+Running sessions support active session controls such as pausing and continuing an activity.
+
+### 🌐 Background Tracking
+
+On supported native devices, location tracking can continue while the application is running in the background.
 
 ---
 
-## 📄 License
+# ❤️ Connected Health Data
 
-Distributed under the **MIT License**. See `LICENSE` for details.
+Fitlip can connect with device health platforms to bring health information into the app.
+
+### 🍎 Apple Health
+
+Supported iOS health integration can read relevant fitness data from Apple Health / HealthKit.
+
+### 🤖 Android Health Connect
+
+Android devices can use Health Connect to provide supported health metrics.
+
+### 📥 Connected Metrics
+
+The current health-sync system can work with:
+
+* Steps
+* Sleep
+* Active calories
+
+This allows Fitlip to combine manually tracked information with compatible device health data.
 
 ---
 
-## 💬 Contact & Support
+# 👥 Social Fitness
 
-Questions, bugs, or feature ideas? Open an issue on GitHub or reach out via the maintainer's profile.
+Fitlip includes a social layer designed to make fitness more engaging and consistent.
+
+### 👤 Social Profiles
+
+Users can have fitness-oriented profiles with activity and progress information.
+
+### 🔎 Discover People
+
+Users can discover other Fitlip users and connect with them.
+
+### 🤝 Friends & Following
+
+The social system supports:
+
+* Friend connections
+* Following
+* Followers
+* Follow requests
+* Public profiles
+
+### 🏃 Activity Sharing
+
+Users can share fitness activity and running activity with their social connections.
+
+### ❤️ Likes
+
+Shared activities can receive likes, bringing social interaction into the fitness experience.
+
+---
+
+# ⚔️ Fitness Duels
+
+Fitlip introduces competition through **fitness duels**.
+
+Users can challenge friends and participate in competitive fitness activity.
+
+The system supports:
+
+* Creating duels
+* Accepting or responding to challenges
+* Viewing active and past duels
+* Duel progress
+* Duel outcomes
+
+The goal is to turn personal fitness into something that can also be motivating with friends.
+
+---
+
+# 🏆 Gamification
+
+Fitlip uses gamification to encourage consistency.
+
+### ⭐ XP System
+
+Users can earn experience points for different fitness activities and achievements.
+
+### 🏅 Achievements
+
+The app includes achievement-based progress and milestone recognition.
+
+### 📊 Leaderboards
+
+Users can compare progress through fitness leaderboards.
+
+### 🔥 Streaks
+
+Fitlip tracks consistency streaks across different areas of activity.
+
+### ⚔️ Streak Battles
+
+Users can compare streak performance with other users through dedicated streak rankings.
+
+Current streak comparisons can include areas such as:
+
+* Workouts
+* Steps
+* Active calorie burn
+
+---
+
+# 🔔 Smart Notifications
+
+Fitlip includes push notification support for reminders, activity, and social events.
+
+Notifications can be used for things such as:
+
+* Fitness reminders
+* Water reminders
+* Workout activity
+* Streak-related events
+* Social interactions
+* Follow activity
+* Duel activity
+* Other engagement events
+
+The aim is to help users stay consistent rather than simply opening the app once in a while.
+
+---
+
+# 👤 Personalized Health Profile
+
+Fitlip maintains a health and fitness profile that can be used to personalize recommendations.
+
+Information can include:
+
+* Age
+* Height
+* Weight
+* Activity level
+* Diet type
+* Fitness goal
+* Health conditions
+* Allergies
+
+This profile becomes the foundation for personalized nutrition and fitness experiences across the application.
+
+---
+
+# 🔐 Account & Security
+
+Fitlip includes a complete account system.
+
+### Authentication
+
+Supported authentication includes:
+
+* Email & password
+* Google Sign-In
+* JWT-based authentication
+* OTP-based password reset
+
+### Security
+
+The backend includes security-oriented controls such as:
+
+* Authentication middleware
+* Request validation
+* Rate limiting
+* Helmet security headers
+* Controlled CORS
+* Protected authenticated routes
+
+---
+
+# 🧠 The Fitlip Experience
+
+The core Fitlip workflow looks like this:
+
+```text
+                    YOUR PROFILE
+                         │
+          ┌──────────────┼──────────────┐
+          ▼              ▼              ▼
+      NUTRITION       FITNESS        ACTIVITY
+          │              │              │
+          ▼              ▼              ▼
+      AI MEALS        WORKOUTS       RUNNING
+          │              │              │
+          └──────────────┼──────────────┘
+                         ▼
+                    DAILY TRACKING
+                         │
+                         ▼
+                    YOUR PROGRESS
+                         │
+                ┌────────┴────────┐
+                ▼                 ▼
+             INSIGHTS          SOCIAL
+                │                 │
+                └────────┬────────┘
+                         ▼
+                    CONSISTENCY
+```
+
+Fitlip is designed so that these experiences complement each other rather than functioning as disconnected tools.
+
+---
+
+# 🧩 Core Product Areas
+
+| Area              | What Fitlip Provides                                |
+| ----------------- | --------------------------------------------------- |
+| 🤖 AI Nutrition   | Personalized meal planning, AI coach, meal analysis |
+| 🍽️ Food Tracking | Meal logging, history, meal swapping                |
+| 📸 Food Vision    | AI-powered meal photo analysis                      |
+| 💧 Hydration      | Water goals and tracking                            |
+| 👟 Activity       | Steps, active calories, sleep                       |
+| 💪 Workouts       | Goal-based and custom workouts                      |
+| 🏃 Running        | GPS-based run, walk and cycle tracking              |
+| ❤️ Health Sync    | Apple Health / Android Health Connect               |
+| 👥 Social         | Profiles, friends, followers, activity sharing      |
+| ⚔️ Competition    | Duels and streak battles                            |
+| 🏆 Gamification   | XP, achievements and leaderboards                   |
+| 🔔 Engagement     | Fitness and social notifications                    |
+| 📈 Progress       | Daily and weekly summaries                          |
+
+---
+
+# 🛠️ Built With
+
+Fitlip is powered by a full-stack architecture combining mobile development, backend services, AI, health integrations, background processing, and social systems.
+
+### Mobile
+
+**React Native · Expo · Expo Router**
+
+### Backend
+
+**Node.js · Express**
+
+### Data
+
+**MongoDB · Mongoose**
+
+### AI
+
+**Google Gemini**
+
+### Background Processing
+
+**Redis · BullMQ**
+
+### Authentication
+
+**JWT · Google Authentication · bcrypt**
+
+### Health Integrations
+
+**Apple HealthKit · Android Health Connect**
+
+### Activity & Location
+
+**Expo Location · GPS tracking**
+
+### Notifications
+
+**Expo Push Notifications**
+
+### Validation & Security
+
+**Zod · Helmet · express-rate-limit · CORS**
+
+---
+
+# 🎯 Vision
+
+Fitlip is being built to make health and fitness more **personal, understandable, social, and consistent**.
+
+The goal isn't simply to show users numbers.
+
+The goal is to help connect:
+
+**What you eat → How you train → How you move → How you recover → How you progress**
+
+into one continuous experience.
+
+---
+
+# ⚠️ Important Disclaimer
+
+Fitlip is an **independent personal project created and maintained by Aman Samani**.
+
+It is not a medical device, medical service, or substitute for professional healthcare.
+
+AI-generated nutrition, fitness, meal-analysis, health, or workout information may contain errors or may not be appropriate for every individual.
+
+Users should use their own judgment and consult an appropriately qualified healthcare professional for medical, dietary, or exercise decisions—especially when managing a medical condition.
+
+The AI meal-photo analysis feature provides **estimates**, not guaranteed nutritional measurements.
+
+---
+
+# 🚫 Contribution Policy
+
+Fitlip is **not an open-source community project**.
+
+The project is independently designed and developed by **Aman Samani**.
+
+### External contributions are not accepted.
+
+This includes:
+
+* Pull requests
+* Feature contributions
+* Unsolicited code changes
+* External development work intended for merging
+
+The repository is primarily available to **showcase the Fitlip project, its capabilities, architecture, and development work**.
+
+Please do not submit a pull request expecting it to be merged.
+
+---
+
+# 👨‍💻 Creator
 
 <div align="center">
 
-**If this project helps you, consider giving it a ⭐ — it really helps!**
+## Aman Samani
+
+### Developer & Creator of Fitlip
+
+**AI × Fitness × Nutrition × Health × Social**
+
+Fitlip is independently designed, developed, and maintained by Aman Samani.
+
+</div>
+
+---
+
+<div align="center">
+
+# 🥗 FITLIP
+
+### Train smarter. Track better. Stay consistent.
+
+**Built with ❤️ by Aman Samani**
 
 </div>
