@@ -34,6 +34,24 @@ const isValidEmail = (email) =>
   /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
 /**
+ * Password policy shared by registration and password reset.
+ * Requires 8-128 characters, at least one uppercase letter and
+ * at least one special character.
+ */
+const getPasswordValidationError = (password) => {
+  if (password.length < 8 || password.length > 128) {
+    return "Password must be between 8 and 128 characters.";
+  }
+  if (!/[A-Z]/.test(password)) {
+    return "Password must contain at least one uppercase letter.";
+  }
+  if (!/[^A-Za-z0-9\s]/.test(password)) {
+    return "Password must contain at least one special character (for example: ! @ # $ %).";
+  }
+  return null;
+};
+
+/**
  * Create a short-lived access token + long-lived, revocable refresh session.
  */
 const issueSession = async (user, req) => {
@@ -91,9 +109,10 @@ const registerUser = async (req, res) => {
       });
     }
 
-    if (password.length < 8 || password.length > 128) {
+    const passwordError = getPasswordValidationError(password);
+    if (passwordError) {
       return res.status(400).json({
-        message: "Password must be between 8 and 128 characters",
+        message: passwordError,
       });
     }
 
@@ -483,13 +502,10 @@ const resetPassword = async (req, res) => {
       });
     }
 
-    if (
-      newPassword.length < 8 ||
-      newPassword.length > 128
-    ) {
+    const passwordError = getPasswordValidationError(newPassword);
+    if (passwordError) {
       return res.status(400).json({
-        message:
-          "Password must be between 8 and 128 characters.",
+        message: passwordError,
       });
     }
 

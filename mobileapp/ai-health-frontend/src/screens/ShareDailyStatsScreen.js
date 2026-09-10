@@ -16,6 +16,8 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { captureRef } from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
 import { LinearGradient } from "expo-linear-gradient";
+import Svg, { Circle, Path, Rect } from "react-native-svg";
+import NativeShare from "react-native-share";
 import LucideIcon from "../components/ui/LucideIcon";
 import { COLORS } from "../constants/theme";
 import { showToast } from "../services/uiFeedback";
@@ -48,6 +50,27 @@ function initials(name) {
 function clampPct(value, goal) {
   if (!goal || goal <= 0) return 0;
   return Math.max(0, Math.min(1, value / goal));
+}
+
+
+function InstagramLogo({ size = 20 }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Rect x="3.2" y="3.2" width="17.6" height="17.6" rx="5" stroke="#FFFFFF" strokeWidth="2" />
+      <Circle cx="12" cy="12" r="4.1" stroke="#FFFFFF" strokeWidth="2" />
+      <Circle cx="17.4" cy="6.7" r="1.2" fill="#FFFFFF" />
+    </Svg>
+  );
+}
+
+function WhatsAppLogo({ size = 20 }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Circle cx="12" cy="12" r="8.6" stroke="#FFFFFF" strokeWidth="2" />
+      <Path d="M8.9 8.8c.2-.3.4-.3.7-.3h.5c.2 0 .4.1.5.4l.8 1.8c.1.2.1.4-.1.6l-.5.6c-.1.1-.1.3 0 .4.4.7 1 1.2 1.7 1.6.2.1.3.1.4-.1l.6-.7c.1-.2.3-.2.5-.1l1.8.8c.2.1.3.3.2.5-.1.7-.4 1.2-.9 1.5-.5.3-1.1.2-1.7 0-1.2-.4-2.3-1.1-3.2-2-.8-.8-1.5-1.8-1.9-2.9-.2-.7-.3-1.4.1-2.1l.5-.7Z" fill="#FFFFFF" />
+      <Path d="M8 18.1 6.8 19l.4-1.7" stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
 }
 
 export default function ShareDailyStatsScreen() {
@@ -84,7 +107,7 @@ export default function ShareDailyStatsScreen() {
     if (!shareRef.current) return null;
     // PNG is mandatory: it is the only format that keeps the transparent
     // (rounded) corners in the exported file.
-    return captureRef(shareRef, { format: "png", quality: 1, result: "tmpfile", width: 1080, height: 1080 });
+    return captureRef(shareRef, { format: "png", quality: 1, result: "tmpfile", width: 1080, height: 810 });
   };
 
   const shareCard = async () => {
@@ -108,6 +131,33 @@ export default function ShareDailyStatsScreen() {
     } catch (error) {
       if (error?.message && !/cancel|dismiss/i.test(error.message)) {
         showToast("We couldn't open the share sheet. Please try again.", {
+          title: "Share failed",
+          type: "error",
+        });
+      }
+    } finally {
+      setSharing(false);
+    }
+  };
+
+  const shareToApp = async (social) => {
+    if (sharing) return;
+    setSharing(true);
+    try {
+      const uri = await captureCard();
+      if (!uri) throw new Error("Could not create the share image.");
+
+      await NativeShare.shareSingle({
+        social,
+        url: uri,
+        type: "image/png",
+        title: "Share your daily progress",
+        message: `Today with FitLip — ${steps.toLocaleString()} steps, ${calories} kcal burned, ${sleep}h sleep.`,
+        forceDialog: social === NativeShare.Social.INSTAGRAM,
+      });
+    } catch (error) {
+      if (error?.message && !/cancel|dismiss|back/i.test(error.message)) {
+        showToast("We couldn't share to that app. Try Share Card instead.", {
           title: "Share failed",
           type: "error",
         });
@@ -157,7 +207,7 @@ export default function ShareDailyStatsScreen() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={styles.pageTitle}>Flex today's progress.</Text>
         <Text style={styles.pageSubtitle}>
-          A share-ready card for Instagram, Snapchat, WhatsApp — or anywhere else that takes an image.
+          Turn today's progress into a polished card you can share anywhere.
         </Text>
 
         <View style={styles.previewWell}>
@@ -237,24 +287,24 @@ export default function ShareDailyStatsScreen() {
           <View style={styles.sharePanelTitleRow}>
             <View>
               <Text style={styles.shareTitle}>Share anywhere</Text>
-              <Text style={styles.shareSubtitle}>Rounded corners & soft shadow are baked into the image.</Text>
+              <Text style={styles.shareSubtitle}>Choose where you want to share your progress card.</Text>
             </View>
             <LucideIcon name="share-outline" size={21} color={COLORS.primary} />
           </View>
 
           <View style={styles.appRow}>
-            <View style={styles.appChip}>
-              <LucideIcon name="camera" size={17} color="#fff" />
+            <Pressable style={styles.appChip} onPress={() => shareToApp(NativeShare.Social.INSTAGRAM)} disabled={sharing} accessibilityRole="button" accessibilityLabel="Share to Instagram">
+              <InstagramLogo size={19} />
               <Text style={styles.appChipText}>Instagram</Text>
-            </View>
-            <View style={styles.appChip}>
-              <LucideIcon name="chatbubble-ellipses-outline" size={17} color="#fff" />
+            </Pressable>
+            <Pressable style={styles.appChip} onPress={() => shareToApp(NativeShare.Social.WHATSAPP)} disabled={sharing} accessibilityRole="button" accessibilityLabel="Share to WhatsApp">
+              <WhatsAppLogo size={19} />
               <Text style={styles.appChipText}>WhatsApp</Text>
-            </View>
-            <View style={styles.appChip}>
-              <LucideIcon name="options-outline" size={17} color="#fff" />
+            </Pressable>
+            <Pressable style={styles.appChip} onPress={shareCard} disabled={sharing} accessibilityRole="button" accessibilityLabel="Share using other apps">
+              <LucideIcon name="options-outline" size={19} color="#fff" />
               <Text style={styles.appChipText}>More</Text>
-            </View>
+            </Pressable>
           </View>
 
           <Pressable style={styles.primaryBtn} onPress={shareCard} disabled={sharing}>
@@ -272,7 +322,7 @@ export default function ShareDailyStatsScreen() {
         <View style={styles.infoCard}>
           <LucideIcon name="information-circle-outline" size={17} color={COLORS.primary} />
           <Text style={styles.infoText}>
-            The exported PNG keeps transparent rounded corners. Tip: use “Save Image” in the share sheet to download it exactly as previewed.
+            Your card is exported as a high-quality PNG. Instagram and WhatsApp buttons open their native sharing flow.
           </Text>
         </View>
       </ScrollView>
@@ -291,7 +341,7 @@ const styles = StyleSheet.create({
 
   previewWell: { backgroundColor: "#0E0C13", borderRadius: 40, padding: 6, overflow: "hidden" },
 
-  captureStage: { width: "100%", aspectRatio: 1, backgroundColor: "transparent", padding: 24 },
+  captureStage: { width: "100%", aspectRatio: 4 / 3, backgroundColor: "transparent", padding: 24 },
   shadowWrap: { flex: 1 },
   bakedShadow: { position: "absolute" },
 
@@ -314,8 +364,8 @@ const styles = StyleSheet.create({
   eliteDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: "#FFFFFF" },
   eliteEyebrowText: { color: "rgba(255,255,255,0.80)", fontSize: 10, fontWeight: "800", letterSpacing: 2 },
 
-  statsStack: { flex: 1, justifyContent: "center", gap: 22 },
-  statRow: { flexDirection: "row", alignItems: "center", gap: 14 },
+  statsStack: { flex: 1, justifyContent: "center", gap: 16, paddingVertical: 10 },
+  statRow: { flexDirection: "row", alignItems: "center", gap: 14, minHeight: 58 },
   statIconWrap: { width: 44, height: 44, borderRadius: 14, borderWidth: 1, alignItems: "center", justifyContent: "center" },
   statMid: { flex: 1, gap: 8 },
   statLabelRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end" },
@@ -324,7 +374,7 @@ const styles = StyleSheet.create({
   progressTrack: { height: 6, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.08)", overflow: "hidden" },
   progressFill: { height: "100%", borderRadius: 3 },
 
-  eliteFooter: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 16, paddingTop: 20, borderTopWidth: 1, borderColor: ELITE.border },
+  eliteFooter: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 16, paddingTop: 16, borderTopWidth: 1, borderColor: ELITE.border },
   eliteAthleteLine: { flexDirection: "row", alignItems: "center", gap: 12, flex: 1 },
   eliteAvatar: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: "rgba(255,255,255,0.15)" },
   eliteAvatarFallback: { width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.08)", alignItems: "center", justifyContent: "center" },

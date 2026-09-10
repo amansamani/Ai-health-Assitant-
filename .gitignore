@@ -30,3 +30,4 @@ mobileapp/ai-health-frontend/.env.local
 
 # Babel typo
 bable.config.js
+.google-services.json

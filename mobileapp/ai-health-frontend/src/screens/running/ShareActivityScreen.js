@@ -16,6 +16,8 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { captureRef } from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
 import { LinearGradient } from "expo-linear-gradient";
+import Svg, { Circle, Path, Rect } from "react-native-svg";
+import NativeShare from "react-native-share";
 import LucideIcon from "../../components/ui/LucideIcon";
 import RunRouteArt from "../../components/RunRouteArt";
 import { COLORS } from "../../constants/theme";
@@ -51,6 +53,27 @@ function initials(name) {
   );
 }
 
+
+function InstagramLogo({ size = 20 }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Rect x="3.2" y="3.2" width="17.6" height="17.6" rx="5" stroke="#FFFFFF" strokeWidth="2" />
+      <Circle cx="12" cy="12" r="4.1" stroke="#FFFFFF" strokeWidth="2" />
+      <Circle cx="17.4" cy="6.7" r="1.2" fill="#FFFFFF" />
+    </Svg>
+  );
+}
+
+function WhatsAppLogo({ size = 20 }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Circle cx="12" cy="12" r="8.6" stroke="#FFFFFF" strokeWidth="2" />
+      <Path d="M8.9 8.8c.2-.3.4-.3.7-.3h.5c.2 0 .4.1.5.4l.8 1.8c.1.2.1.4-.1.6l-.5.6c-.1.1-.1.3 0 .4.4.7 1 1.2 1.7 1.6.2.1.3.1.4-.1l.6-.7c.1-.2.3-.2.5-.1l1.8.8c.2.1.3.3.2.5-.1.7-.4 1.2-.9 1.5-.5.3-1.1.2-1.7 0-1.2-.4-2.3-1.1-3.2-2-.8-.8-1.5-1.8-1.9-2.9-.2-.7-.3-1.4.1-2.1l.5-.7Z" fill="#FFFFFF" />
+      <Path d="M8 18.1 6.8 19l.4-1.7" stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
 export default function ShareActivityScreen() {
   const router = useRouter();
   const { runId } = useLocalSearchParams();
@@ -61,7 +84,7 @@ export default function ShareActivityScreen() {
   const [sharing, setSharing] = useState(false);
   const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [format, setFormat] = useState("story"); // "story" (9:16) | "post" (1:1)
+  const [format, setFormat] = useState("story"); // "story" (9:16) | "post" (4:3)
   const isStory = format === "story";
 
   const fade = useRef(new Animated.Value(0)).current;
@@ -135,7 +158,7 @@ export default function ShareActivityScreen() {
 
   const captureCard = async () => {
     if (!shareRef.current || !run) return null;
-    const dims = isStory ? { width: 1080, height: 1920 } : { width: 1080, height: 1080 };
+    const dims = isStory ? { width: 1080, height: 1920 } : { width: 1080, height: 810 };
     // PNG is mandatory: it is the only format that keeps the transparent
     // (rounded) corners in the exported file.
     return captureRef(shareRef, { format: "png", quality: 1, result: "tmpfile", ...dims });
@@ -164,6 +187,33 @@ export default function ShareActivityScreen() {
       // when image capture is unavailable. Do not leave the button spinning.
       if (error?.message && !/cancel|dismiss/i.test(error.message)) {
         showToast("We couldn't open the share sheet. Please try again.", {
+          title: "Share failed",
+          type: "error",
+        });
+      }
+    } finally {
+      setSharing(false);
+    }
+  };
+
+  const shareToApp = async (social) => {
+    if (!run || sharing) return;
+    setSharing(true);
+    try {
+      const uri = await captureCard();
+      if (!uri) throw new Error("Could not create the share image.");
+
+      await NativeShare.shareSingle({
+        social,
+        url: uri,
+        type: "image/png",
+        title: `Share your ${activityLabel.toLowerCase()}`,
+        message: `${activityLabel} with FitLip — ${distanceStr} km in ${formatDuration(run.durationSeconds)}.`,
+        forceDialog: social === NativeShare.Social.INSTAGRAM,
+      });
+    } catch (error) {
+      if (error?.message && !/cancel|dismiss|back/i.test(error.message)) {
+        showToast("We couldn't share to that app. Try Share Card instead.", {
           title: "Share failed",
           type: "error",
         });
@@ -218,8 +268,8 @@ export default function ShareActivityScreen() {
         <Text style={styles.pageTitle}>{sharedByOther ? "Share their achievement." : "Make it yours."}</Text>
         <Text style={styles.pageSubtitle}>
           {sharedByOther
-            ? `Share ${person}'s activity with your friends, or post it to Instagram, Snapchat, WhatsApp, and more.`
-            : "A share-ready card for Instagram, Snapchat, WhatsApp — or anywhere else that takes an image."}
+            ? `Share ${person}'s activity with your friends.`
+            : "Create a polished activity card and share it anywhere."}
         </Text>
 
         {!!ownerId && (
@@ -249,7 +299,7 @@ export default function ShareActivityScreen() {
             <Text style={[styles.formatBtnText, isStory && styles.formatBtnTextActive]}>Story · 9:16</Text>
           </Pressable>
           <Pressable style={[styles.formatBtn, !isStory && styles.formatBtnActive]} onPress={() => setFormat("post")}>
-            <Text style={[styles.formatBtnText, !isStory && styles.formatBtnTextActive]}>Post · 1:1</Text>
+            <Text style={[styles.formatBtnText, !isStory && styles.formatBtnTextActive]}>Post · 4:3</Text>
           </Pressable>
         </View>
 
@@ -297,7 +347,7 @@ export default function ShareActivityScreen() {
                       <View style={styles.eliteDot} />
                       <Text style={styles.eliteEyebrowText}>{activityLabel.toUpperCase()}</Text>
                     </View>
-                    <Text style={[styles.eliteDistance, { fontSize: isStory ? 100 : 72, lineHeight: isStory ? 90 : 64 }]}>
+                    <Text style={[styles.eliteDistance, { fontSize: isStory ? 100 : 78, lineHeight: isStory ? 90 : 70 }]}>
                       {distanceStr}
                     </Text>
                     <Text style={styles.eliteUnit}>KILOMETERS</Text>
@@ -361,24 +411,24 @@ export default function ShareActivityScreen() {
           <View style={styles.sharePanelTitleRow}>
             <View>
               <Text style={styles.shareTitle}>Share anywhere</Text>
-              <Text style={styles.shareSubtitle}>Rounded corners & soft shadow are baked into the image.</Text>
+              <Text style={styles.shareSubtitle}>Choose where you want to share your activity card.</Text>
             </View>
             <LucideIcon name="share-outline" size={21} color={COLORS.primary} />
           </View>
 
           <View style={styles.appRow}>
-            <View style={styles.appChip}>
-              <LucideIcon name="camera" size={17} color="#fff" />
+            <Pressable style={styles.appChip} onPress={() => shareToApp(NativeShare.Social.INSTAGRAM)} disabled={sharing} accessibilityRole="button" accessibilityLabel="Share to Instagram">
+              <InstagramLogo size={19} />
               <Text style={styles.appChipText}>Instagram</Text>
-            </View>
-            <View style={styles.appChip}>
-              <LucideIcon name="chatbubble-ellipses-outline" size={17} color="#fff" />
+            </Pressable>
+            <Pressable style={styles.appChip} onPress={() => shareToApp(NativeShare.Social.WHATSAPP)} disabled={sharing} accessibilityRole="button" accessibilityLabel="Share to WhatsApp">
+              <WhatsAppLogo size={19} />
               <Text style={styles.appChipText}>WhatsApp</Text>
-            </View>
-            <View style={styles.appChip}>
-              <LucideIcon name="options-outline" size={17} color="#fff" />
+            </Pressable>
+            <Pressable style={styles.appChip} onPress={shareActivity} disabled={sharing} accessibilityRole="button" accessibilityLabel="Share using other apps">
+              <LucideIcon name="options-outline" size={19} color="#fff" />
               <Text style={styles.appChipText}>More</Text>
-            </View>
+            </Pressable>
           </View>
 
           <Pressable style={styles.primaryBtn} onPress={shareActivity} disabled={sharing}>
@@ -396,7 +446,7 @@ export default function ShareActivityScreen() {
         <View style={styles.infoCard}>
           <LucideIcon name="information-circle-outline" size={17} color={COLORS.primary} />
           <Text style={styles.infoText}>
-            The exported PNG keeps transparent rounded corners. Tip: use “Save Image” in the share sheet to download it exactly as previewed.
+            Your card is exported as a high-quality PNG. Instagram and WhatsApp buttons open their native sharing flow.
           </Text>
         </View>
       </ScrollView>
@@ -457,7 +507,7 @@ const styles = StyleSheet.create({
     padding: 24, // room for the baked shadow inside the export
   },
   captureStageStory: { aspectRatio: 9 / 16 },
-  captureStagePost: { aspectRatio: 1 },
+  captureStagePost: { aspectRatio: 4 / 3 },
 
   shadowWrap: { flex: 1 },
   bakedShadow: { position: "absolute" },

@@ -28,6 +28,14 @@ export default function ResetPassword() {
       setError("Password must be at least 8 characters");
       return;
     }
+    if (!/[A-Z]/.test(newPassword)) {
+      setError("Password must contain at least one uppercase letter");
+      return;
+    }
+    if (!/[^A-Za-z0-9\s]/.test(newPassword)) {
+      setError("Password must contain at least one special character (for example: ! @ # $ %)");
+      return;
+    }
     setError("");
     setLoading(true);
     try {
@@ -48,7 +56,7 @@ export default function ResetPassword() {
     <AuthShell>
       <BackLink onPress={() => router.back()} />
       <AuthHero title="New password"
-        subtitle="Make it at least 8 characters"
+        subtitle="Use 8+ characters, 1 uppercase & 1 special character"
         size="compact"
       />
 
@@ -57,7 +65,7 @@ export default function ResetPassword() {
       <FormField
         label="New password"
         icon="lock-closed-outline"
-        placeholder="Enter new password"
+        placeholder="8+ chars, 1 uppercase, 1 special"
         value={newPassword}
         onChangeText={setNewPassword}
         secureTextEntry

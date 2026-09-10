@@ -236,26 +236,19 @@ async function sendFollowNotification(recipientId, actorId, type, vars = {}, rou
       User.findById(recipientId).select("pushToken").lean(),
       User.findById(actorId).select("name username").lean(),
     ]);
-    if (!recipient?.pushToken || !actor) return { sent: false, reason: "notification recipient unavailable" };
-
-    const cutoff = new Date(Date.now() - FOLLOW_NOTIFICATION_COOLDOWN_MS);
-    const existing = await FollowNotificationThrottle.findOne({ recipient: recipientId, actor: actorId, type }).lean();
-    if (existing?.lastSentAt && existing.lastSentAt > cutoff) {
-      return { sent: false, reason: "follow notification cooldown" };
-    }
+    if (!recipient || !actor) return { sent: false, reason: "notification recipient unavailable" };
 
     const content = pick(type, { ...vars, name: actor.name || actor.username || "Someone" });
     if (!content) return { sent: false, reason: "no copy for follow notification" };
 
-    const result = await sendPushNotification(recipient.pushToken, content.title, content.body, {
-      type,
-      route,
-      userId: String(actorId),
-    });
-
-    // Persist the notification for the in-app inbox regardless of push delivery.
+    // The in-app inbox is the source of truth. Store it even when the user
+    // has no push token, has denied OS notifications, or push delivery is
+    // throttled. Previously this function returned before storing the inbox
+    // entry when pushToken was missing, which made follow acceptances appear
+    // to "not work" in the Notifications screen.
     const inboxKey = `${type}:${actorId}`;
     const today = dateKey();
+    let stored = false;
     try {
       await NotificationLog.create({
         user: recipientId,
@@ -265,11 +258,28 @@ async function sendFollowNotification(recipientId, actorId, type, vars = {}, rou
         body: content.body,
         data: { type, route, userId: String(actorId) },
       });
+      stored = true;
     } catch (err) {
-      if (err?.code !== 11000) throw err;
+      if (err?.code === 11000) stored = true;
+      else throw err;
     }
 
-    if (!result.sent) return { ...result, stored: true };
+    if (!recipient.pushToken) return { sent: false, reason: "no push token", stored };
+
+    // Cooldown applies only to push delivery, never to the in-app inbox.
+    const cutoff = new Date(Date.now() - FOLLOW_NOTIFICATION_COOLDOWN_MS);
+    const existing = await FollowNotificationThrottle.findOne({ recipient: recipientId, actor: actorId, type }).lean();
+    if (existing?.lastSentAt && existing.lastSentAt > cutoff) {
+      return { sent: false, reason: "follow notification cooldown", stored };
+    }
+
+    const result = await sendPushNotification(recipient.pushToken, content.title, content.body, {
+      type,
+      route,
+      userId: String(actorId),
+    });
+
+    if (!result.sent) return { ...result, stored };
 
     try {
       await FollowNotificationThrottle.findOneAndUpdate(

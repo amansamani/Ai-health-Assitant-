@@ -30,8 +30,13 @@ const getProfile =
      *
      * Password is excluded by the middleware query.
      */
-    const profile = req.user.toObject();
-    profile.hasProfilePhoto = Boolean(req.user.profileImageUpdatedAt);
+    // profileImageUrl is select:false on User for privacy/safety. The
+    // authenticated profile endpoint is the one place the current user
+    // needs the URL for shareable cards and other first-party UI.
+    const profileUser = await User.findById(req.user.id)
+      .select("+profileImageUrl picture profileImageUpdatedAt name username goal");
+    const profile = profileUser.toObject();
+    profile.hasProfilePhoto = Boolean(profileUser.profileImageUpdatedAt || profileUser.profileImageUrl);
     delete profile.profileImageData;
     delete profile.profileImageContentType;
 

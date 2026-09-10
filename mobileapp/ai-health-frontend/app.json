@@ -115,6 +115,20 @@
           "photosPermission": "Allow FitLip to save your share cards to your photos.",
           "savePhotosPermission": "Allow FitLip to save your share cards to your photos."
         }
+      ],
+      [
+        "react-native-share",
+        {
+          "ios": [
+            "instagram",
+            "instagram-stories",
+            "whatsapp"
+          ],
+          "android": [
+            "com.instagram.android",
+            "com.whatsapp"
+          ]
+        }
       ]
     ],
     "experiments": {

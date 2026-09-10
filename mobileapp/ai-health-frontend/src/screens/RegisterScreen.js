@@ -68,13 +68,22 @@ export default function RegisterScreen() {
       setError("Please enter a valid email");
       return;
     }
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters");
+      return;
+    }
+    if (!/[A-Z]/.test(password)) {
+      setError("Password must contain at least one uppercase letter");
+      return;
+    }
+    if (!/[^A-Za-z0-9\s]/.test(password)) {
+      setError("Password must contain at least one special character (for example: ! @ # $ %)");
+      return;
+    }
+
     setError("");
     setLoading(true);
     try {
-      if (password.length < 8) {
-        setError("Password must be at least 8 characters");
-        return;
-      }
       const { data } = await API.post("/auth/register", { name, email, password, goal });
       await setPendingSession(data.accessToken || data.token, data.refreshToken);
       router.push({
@@ -114,11 +123,12 @@ export default function RegisterScreen() {
         <FormField
           label="Password"
           icon="lock-closed-outline"
-          placeholder="At least 8 characters"
+          placeholder="8+ chars, 1 uppercase, 1 special"
           value={password}
           onChangeText={setPassword}
           secureTextEntry
         />
+        <Text style={styles.passwordHint}>Use 8+ characters, at least 1 uppercase letter and 1 special character.</Text>
       </View>
 
       <View style={styles.card}>
@@ -173,6 +183,7 @@ const styles = StyleSheet.create({
     padding: 20, marginBottom: 16,
     boxShadow: "0px 4px 20px rgba(23,15,54,0.08)",
   },
+  passwordHint: { fontSize: 11, color: COLORS.textMuted, marginTop: -8, lineHeight: 16 },
   cardLabel: { fontSize: 13, fontWeight: "800", color: COLORS.textDark, letterSpacing: 0.2, marginBottom: 14 },
   goalRow: { flexDirection: "row", gap: 10 },
   goalCard: {
