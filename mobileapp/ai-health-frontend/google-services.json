@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "251615663968",
+    "project_id": "fitlip-20",
+    "storage_bucket": "fitlip-20.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:251615663968:android:f93bb388ca9d330d9e3005",
+        "android_client_info": {
+          "package_name": "com.amansamani.aihealthfrontend"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAx_wQSug-2v_keMip9sv6Ox45dlwhsHco"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

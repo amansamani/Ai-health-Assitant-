@@ -181,7 +181,7 @@ export default function PublicProfileScreen() {
                 const date = run.startedAt ? new Date(run.startedAt) : null;
                 const timeLabel = date && !Number.isNaN(date.getTime()) ? date.toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) : "";
                 return (
-                  <Pressable key={run._id} onPress={() => router.push({ pathname: "/(app)/share-activity", params: { runId: run._id } })} style={styles.postRow}>
+                  <Pressable key={run._id} onPress={() => router.push({ pathname: "/(app)/run-detail", params: { runId: run._id } })} style={styles.postRow}>
                     <View style={styles.postIcon}><LucideIcon name={run.activityType === "cycle" ? "bicycle-outline" : run.activityType === "walk" ? "walk-outline" : "footsteps-outline"} size={19} color={COLORS.primary} /></View>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.postActivity}>{run.activityType === "cycle" ? "Cycling" : run.activityType === "walk" ? "Walk" : "Run"}</Text>

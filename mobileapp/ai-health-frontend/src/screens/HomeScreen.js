@@ -417,15 +417,38 @@ export default function HomeScreen() {
         <FadeSlideIn delay={160}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Today&apos;s Stats</Text>
-            <Pressable
-              onPress={() => router.push("/(app)/(tabs)/tracking")}
-              style={styles.editBtn}
-              accessibilityRole="button"
-              accessibilityLabel="Edit today's stats"
-            >
-              <LucideIcon name="create-outline" size={13} color={COLORS.primary} />
-              <Text style={styles.editBtnText}>Edit</Text>
-            </Pressable>
+            <View style={styles.statsHeaderActions}>
+              <Pressable
+                onPress={() =>
+                  router.push({
+                    pathname: "/(app)/share-daily-stats",
+                    params: {
+                      steps: String(steps),
+                      calories: String(calories),
+                      sleep: String(sleep),
+                      stepGoal: String(STEP_GOAL),
+                      calorieGoal: String(activeCalorieGoal),
+                      sleepGoal: String(SLEEP_GOAL),
+                    },
+                  })
+                }
+                style={styles.editBtn}
+                accessibilityRole="button"
+                accessibilityLabel="Share today's stats"
+              >
+                <LucideIcon name="share-outline" size={13} color={COLORS.primary} />
+                <Text style={styles.editBtnText}>Share</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => router.push("/(app)/(tabs)/tracking")}
+                style={styles.editBtn}
+                accessibilityRole="button"
+                accessibilityLabel="Edit today's stats"
+              >
+                <LucideIcon name="create-outline" size={13} color={COLORS.primary} />
+                <Text style={styles.editBtnText}>Edit</Text>
+              </Pressable>
+            </View>
           </View>
 
           <View style={styles.statRow}>
@@ -553,7 +576,7 @@ export default function HomeScreen() {
                   <Pressable
                     key={run._id}
                     style={({ pressed }) => [styles.feedCard, pressed && styles.feedCardPressed]}
-                    onPress={() => router.push({ pathname: "/(app)/share-activity", params: { runId: run._id } })}
+                    onPress={() => router.push({ pathname: "/(app)/run-detail", params: { runId: run._id } })}
                     accessibilityRole="button"
                     accessibilityLabel={`Open ${activityLabel.toLowerCase()} activity by ${run.user?.name || "someone"}`}
                   >
@@ -749,6 +772,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 7, minHeight: 30,
   },
   editBtnText:  { fontSize: 13, fontWeight: "700", color: COLORS.primary },
+  statsHeaderActions: { flexDirection: "row", alignItems: "center", gap: 8 },
 
   statRow:      { flexDirection: "row", justifyContent: "space-between", marginBottom: 22 },
   statSquare: {

@@ -228,7 +228,7 @@ export default function RunFeedScreen() {
   }, [load]);
 
   const handleOpenPost = (run) => {
-    router.push({ pathname: "/(app)/share-activity", params: { runId: run._id } });
+    router.push({ pathname: "/(app)/run-detail", params: { runId: run._id } });
   };
 
   const handleOpenProfile = (identifier) => {

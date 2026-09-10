@@ -12,3 +12,4 @@ expo-env.d.ts
 
 # Local env vars — real client IDs/URLs. .env.example stays tracked as the template.
 .env
+.google-services.json

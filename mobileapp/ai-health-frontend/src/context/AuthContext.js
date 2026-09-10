@@ -2,6 +2,7 @@ import { createContext, useState, useEffect, useCallback } from "react";
 import { setLogoutHandler, setAccessTokenUpdatedHandler, setTokenCache, clearTokenCache } from "../services/api";
 import API from "../services/api";
 import { getToken, getRefreshToken, setToken, setRefreshToken, removeToken, getDeviceId, clearPendingSession } from "../utils/secureToken";
+import { registerForPushNotificationsAsync } from "../services/pushNotifications";
 
 export const AuthContext = createContext();
 
@@ -46,6 +47,10 @@ export function AuthProvider({ children }) {
     setUserToken(accessToken);
     await clearPendingSession();
     await fetchUserGoal();
+    // Fire-and-forget: requests permission + syncs the Expo push token to
+    // the backend. Not awaited so a slow/denied permission prompt never
+    // blocks login navigation.
+    registerForPushNotificationsAsync();
   }, [fetchUserGoal]);
 
   useEffect(() => {
@@ -57,6 +62,9 @@ export function AuthProvider({ children }) {
           setTokenCache(token);
           setUserToken(token);
           fetchUserGoal();
+          // Safe to call every launch — cheap no-op if the token is
+          // already registered and permission was already decided.
+          registerForPushNotificationsAsync();
         } else if (token && !refreshToken) {
           await removeToken();
         }
